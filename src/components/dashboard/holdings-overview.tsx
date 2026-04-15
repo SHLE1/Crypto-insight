@@ -93,22 +93,64 @@ function getGroupPrice(value: number, balance: number) {
   return value / balance
 }
 
+function getChangeColor(change24h: number | null) {
+  if (change24h === null) return 'text-muted-foreground'
+  return change24h < 0 ? 'text-red-500' : 'text-emerald-600'
+}
+
+function MetricBlock({
+  label,
+  value,
+  emphasis = false,
+  toneClassName,
+}: {
+  label: string
+  value: string
+  emphasis?: boolean
+  toneClassName?: string
+}) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/80 px-3 py-2">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p
+        className={[
+          'mt-1 font-mono tabular-nums text-sm',
+          emphasis ? 'font-semibold text-foreground' : 'text-foreground',
+          toneClassName,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {value}
+      </p>
+    </div>
+  )
+}
+
 function SourceRow({ row }: { row: DetailRow }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 py-1.5 pl-4 text-xs text-muted-foreground">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          {row.meta ? (
-            <span className="shrink-0 rounded bg-muted/50 px-1.5 py-0.5 text-[10px]">{row.meta}</span>
-          ) : null}
-          <span className="truncate">{row.title}</span>
+    <div className="rounded-lg border border-border/40 bg-background/80 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate font-medium text-foreground">{row.title}</span>
+            {row.meta ? (
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                {row.meta}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 truncate text-[11px] text-muted-foreground">{row.subtitle}</p>
         </div>
-        <p className="truncate text-[11px] text-muted-foreground/80">{row.subtitle}</p>
+        <span className={`shrink-0 text-xs font-medium ${getChangeColor(row.change24h)}`}>
+          {formatPercent(row.change24h)}
+        </span>
       </div>
-      <span className="shrink-0 font-mono tabular-nums">{formatBalance(row.balance)}</span>
-      <span className="w-20 shrink-0 text-right font-mono tabular-nums">
-        {formatCurrency(row.value)}
-      </span>
+      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
+        <MetricBlock label="持仓" value={formatBalance(row.balance)} />
+        <MetricBlock label="单价" value={formatCurrency(row.price)} />
+        <MetricBlock label="市值" value={formatCurrency(row.value)} emphasis />
+      </div>
     </div>
   )
 }
@@ -123,55 +165,54 @@ function GroupCard({
   onToggle: () => void
 }) {
   return (
-    <div>
-      <div
-        className="grid cursor-pointer gap-2 rounded-lg border border-border/70 p-3 transition-colors hover:bg-muted/30 md:grid-cols-[1.4fr_1fr_1fr_1fr_0.8fr] md:items-center md:gap-4"
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
+      <button
+        type="button"
+        className="w-full p-4 text-left transition-colors hover:bg-muted/20"
         onClick={onToggle}
       >
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            {expanded ? (
-              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            )}
-            <p className="font-medium">{row.title}</p>
-            <Badge variant="outline" className="text-[10px]">
-              {row.badge}
-            </Badge>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {expanded ? (
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              )}
+              <p className="truncate font-medium">{row.title}</p>
+              <Badge variant="outline" className="rounded-full text-[10px]">
+                {row.badge}
+              </Badge>
+            </div>
+            <p className="mt-1 truncate text-xs text-muted-foreground">{row.subtitle}</p>
           </div>
-          <p className="truncate text-xs text-muted-foreground">{row.subtitle}</p>
-        </div>
-        <div className="flex items-center justify-between text-sm md:block md:text-right">
-          <span className="text-muted-foreground md:hidden">持仓</span>
-          <span>{formatBalance(row.balance)}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm md:block md:text-right">
-          <span className="text-muted-foreground md:hidden">单价</span>
-          <span>{formatCurrency(row.price)}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm md:block md:text-right">
-          <span className="text-muted-foreground md:hidden">市值</span>
-          <span className="font-medium">{formatCurrency(row.value)}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm md:block md:text-right">
-          <span className="text-muted-foreground md:hidden">24h</span>
-          <span className={row.change24h !== null && row.change24h < 0 ? 'text-red-500' : 'text-green-500'}>
+          <span className={`shrink-0 text-sm font-medium ${getChangeColor(row.change24h)}`}>
             {formatPercent(row.change24h)}
           </span>
         </div>
-      </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <MetricBlock label="持仓" value={formatBalance(row.balance)} />
+          <MetricBlock label="单价" value={formatCurrency(row.price)} />
+          <MetricBlock label="市值" value={formatCurrency(row.value)} emphasis />
+          <MetricBlock
+            label="24h"
+            value={formatPercent(row.change24h)}
+            toneClassName={getChangeColor(row.change24h)}
+          />
+        </div>
+      </button>
 
       {expanded ? (
-        <div className="mt-1 ml-3 rounded-lg border border-border/40 bg-muted/20 px-3 py-2">
-          <div className="hidden grid-cols-[1fr_auto_auto] gap-3 px-4 py-1 text-[10px] text-muted-foreground/70">
-            <span>明细</span>
-            <span className="shrink-0">持仓</span>
-            <span className="w-20 shrink-0 text-right">市值</span>
+        <div className="border-t border-border/50 bg-muted/20 px-3 py-3">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-medium text-foreground">来源明细</p>
+            <p className="text-[11px] text-muted-foreground">{row.details.length} 项</p>
           </div>
-          {row.details.map((detail) => (
-            <SourceRow key={detail.key} row={detail} />
-          ))}
+          <div className="space-y-2">
+            {row.details.map((detail) => (
+              <SourceRow key={detail.key} row={detail} />
+            ))}
+          </div>
         </div>
       ) : null}
     </div>
@@ -343,6 +384,7 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
 
 function GroupedHoldingsView({ rows, mode }: { rows: GroupRow[]; mode: GroupMode }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(rows[0]?.key ?? null)
+  const activeKey = expandedKey && rows.some((row) => row.key === expandedKey) ? expandedKey : (rows[0]?.key ?? null)
 
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">还没有可展示的资产明细</p>
@@ -350,20 +392,18 @@ function GroupedHoldingsView({ rows, mode }: { rows: GroupRow[]; mode: GroupMode
 
   return (
     <div className="space-y-3">
-      <div className="hidden grid-cols-[1.4fr_1fr_1fr_1fr_0.8fr] gap-4 text-xs text-muted-foreground md:grid">
-        <span>
-          {mode === 'token' ? '资产' : mode === 'wallet' ? '钱包 / 账户' : '链'}
-        </span>
-        <span className="text-right">持仓</span>
-        <span className="text-right">单价</span>
-        <span className="text-right">市值</span>
-        <span className="text-right">24h</span>
-      </div>
+      <p className="text-xs text-muted-foreground">
+        {mode === 'token'
+          ? '同一代币会合并展示不同来源的持仓。'
+          : mode === 'wallet'
+            ? '每张卡代表一个钱包或交易所账户。'
+            : '每张卡代表一条链上的聚合资产。'}
+      </p>
       {rows.map((row) => (
         <GroupCard
           key={row.key}
           row={row}
-          expanded={expandedKey === row.key}
+          expanded={activeKey === row.key}
           onToggle={() => setExpandedKey((current) => (current === row.key ? null : row.key))}
         />
       ))}
@@ -392,18 +432,24 @@ export function HoldingsOverview({ data }: HoldingsOverviewProps) {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="token" className="gap-4">
-          <TabsList>
-            <TabsTrigger value="token">按代币</TabsTrigger>
-            <TabsTrigger value="wallet">按钱包</TabsTrigger>
-            <TabsTrigger value="chain">按链</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-fit">
+            <TabsTrigger className="w-full" value="token">
+              按代币
+            </TabsTrigger>
+            <TabsTrigger className="w-full" value="wallet">
+              按钱包
+            </TabsTrigger>
+            <TabsTrigger className="w-full" value="chain">
+              按链
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="token">
+          <TabsContent className="mt-0" value="token">
             <GroupedHoldingsView rows={groupedData.token} mode="token" />
           </TabsContent>
-          <TabsContent value="wallet">
+          <TabsContent className="mt-0" value="wallet">
             <GroupedHoldingsView rows={groupedData.wallet} mode="wallet" />
           </TabsContent>
-          <TabsContent value="chain">
+          <TabsContent className="mt-0" value="chain">
             <GroupedHoldingsView rows={groupedData.chain} mode="chain" />
           </TabsContent>
         </Tabs>
