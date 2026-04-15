@@ -48,6 +48,10 @@ function toNumber(value: string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function normalizeBinanceMarketSymbol(symbol: string) {
+  return symbol.startsWith('LD') && symbol.length > 2 ? symbol.slice(2) : symbol
+}
+
 function getCoinGeckoHeaders() {
   const demoApiKey = process.env.COINGECKO_DEMO_API_KEY?.trim()
 
@@ -177,29 +181,49 @@ async function fetchCoinGeckoSolanaTokenPriceBatch(mints: string[]) {
 
 export async function getPrices(symbols: string[]) {
   const uniqueSymbols = Array.from(new Set(symbols.map((symbol) => symbol.trim().toUpperCase()))).filter(Boolean)
+  const normalizedSymbolMap = new Map(uniqueSymbols.map((symbol) => [symbol, normalizeBinanceMarketSymbol(symbol)]))
   const prices = new Map<string, PriceData>()
-  const marketSymbols = uniqueSymbols.filter((symbol) => {
+  const marketSymbols = Array.from(new Set(Array.from(normalizedSymbolMap.values()))).filter((symbol) => {
     if (STABLECOINS.has(symbol)) {
-      prices.set(symbol, { symbol, price: 1, change24h: 0 })
       return false
     }
 
     return true
   })
 
+  normalizedSymbolMap.forEach((marketSymbol, originalSymbol) => {
+    if (STABLECOINS.has(marketSymbol)) {
+      prices.set(originalSymbol, { symbol: originalSymbol, price: 1, change24h: 0 })
+    }
+  })
+
   const binanceBatches = await Promise.all(
     chunk(marketSymbols, BINANCE_TICKER_BATCH_SIZE).map((batch) => fetchBinanceTickerBatch(batch))
   )
 
+  const normalizedPrices = new Map<string, PriceData>()
+
   binanceBatches.forEach((batch) => {
     Object.entries(batch).forEach(([symbol, price]) => {
-      prices.set(symbol, price)
+      normalizedPrices.set(symbol, price)
     })
   })
 
   uniqueSymbols.forEach((symbol) => {
     if (!prices.has(symbol)) {
-      prices.set(symbol, { symbol, price: null, change24h: null })
+      const marketSymbol = normalizedSymbolMap.get(symbol) ?? symbol
+      const price = normalizedPrices.get(marketSymbol)
+
+      prices.set(
+        symbol,
+        price
+          ? {
+              symbol,
+              price: price.price,
+              change24h: price.change24h,
+            }
+          : { symbol, price: null, change24h: null }
+      )
     }
   })
 

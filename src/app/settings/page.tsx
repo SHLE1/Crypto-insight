@@ -38,6 +38,7 @@ export default function SettingsPage() {
         refreshInterval: settings.refreshInterval,
         theme: settings.theme,
         defiEnabled: settings.defiEnabled,
+        hideSmallAssets: settings.hideSmallAssets,
       },
       exportedAt: new Date().toISOString(),
     }
@@ -93,6 +94,7 @@ export default function SettingsPage() {
           refreshInterval: data.settings.refreshInterval ?? settings.refreshInterval,
           theme: data.settings.theme ?? settings.theme,
           defiEnabled: data.settings.defiEnabled ?? settings.defiEnabled,
+          hideSmallAssets: data.settings.hideSmallAssets ?? settings.hideSmallAssets,
         })
       }
 
@@ -154,6 +156,19 @@ export default function SettingsPage() {
                 })
               }
               className="w-24 text-center"
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>隐藏小额资产</Label>
+              <p className="text-xs text-muted-foreground">隐藏资产明细里低于 0.1 USD 的项目</p>
+            </div>
+            <Switch
+              checked={settings.hideSmallAssets}
+              onCheckedChange={(checked) => settings.updateSettings({ hideSmallAssets: checked })}
             />
           </div>
 

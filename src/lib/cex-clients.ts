@@ -23,6 +23,22 @@ interface BinanceApiErrorResponse {
   msg?: string
 }
 
+interface BinanceSimpleEarnFlexiblePositionResponse {
+  rows?: Array<{
+    asset: string
+    totalAmount?: string
+  }>
+  total?: number
+}
+
+interface BinanceSimpleEarnLockedPositionResponse {
+  rows?: Array<{
+    asset: string
+    amount?: string
+  }>
+  total?: number
+}
+
 interface OkxBalanceResponse {
   code: string
   msg: string
@@ -50,6 +66,10 @@ function normalizeCexError(exchange: CexAccountInput['exchange'], message: strin
 function toPositiveNumber(value: string | undefined) {
   const parsed = Number(value ?? 0)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
+function normalizeBinanceAssetSymbol(symbol: string) {
+  return symbol.startsWith('LD') && symbol.length > 2 ? symbol.slice(2) : symbol
 }
 
 function mergeBalances(items: Array<{ symbol: string; balance: number }>) {
@@ -124,7 +144,7 @@ async function fetchBinanceBalances(account: CexAccountInput) {
 
   return (data.balances ?? [])
     .map((balance) => ({
-      symbol: balance.asset,
+      symbol: normalizeBinanceAssetSymbol(balance.asset),
       balance: toPositiveNumber(balance.free) + toPositiveNumber(balance.locked),
     }))
     .filter((asset) => asset.balance > 0)
@@ -156,7 +176,7 @@ async function fetchBinanceFundingBalances(account: CexAccountInput) {
 
   return data
     .map((balance) => ({
-      symbol: balance.asset,
+      symbol: normalizeBinanceAssetSymbol(balance.asset),
       balance:
         toPositiveNumber(balance.free) +
         toPositiveNumber(balance.locked) +
@@ -164,6 +184,112 @@ async function fetchBinanceFundingBalances(account: CexAccountInput) {
         toPositiveNumber(balance.withdrawing),
     }))
     .filter((asset) => asset.balance > 0)
+}
+
+async function fetchBinanceSimpleEarnFlexibleBalances(account: CexAccountInput) {
+  const pageSize = 100
+  const assets: Array<{ symbol: string; balance: number }> = []
+  let current = 1
+  let total = 0
+
+  do {
+    const params = new URLSearchParams({
+      current: current.toString(),
+      size: pageSize.toString(),
+      recvWindow: '5000',
+      timestamp: Date.now().toString(),
+    })
+
+    const signature = await signHmac(account.apiSecret, params.toString(), 'hex')
+    const response = await fetch(
+      `https://api.binance.com/sapi/v1/simple-earn/flexible/position?${params.toString()}&signature=${signature}`,
+      {
+        cache: 'no-store',
+        headers: {
+          'X-MBX-APIKEY': account.apiKey,
+        },
+      }
+    )
+
+    const data = (await response.json()) as BinanceSimpleEarnFlexiblePositionResponse | BinanceApiErrorResponse
+
+    if (!response.ok) {
+      throw new Error(('msg' in data && data.msg) || 'Binance 活期理财查询失败')
+    }
+
+    const rows = 'rows' in data ? (data.rows ?? []) : []
+    total = 'total' in data ? Number(data.total ?? rows.length) : rows.length
+
+    assets.push(
+      ...rows
+        .map((position) => ({
+          symbol: normalizeBinanceAssetSymbol(position.asset),
+          balance: toPositiveNumber(position.totalAmount),
+        }))
+        .filter((asset) => asset.balance > 0)
+    )
+
+    if (rows.length < pageSize) {
+      break
+    }
+
+    current += 1
+  } while (current * pageSize < total)
+
+  return assets
+}
+
+async function fetchBinanceSimpleEarnLockedBalances(account: CexAccountInput) {
+  const pageSize = 100
+  const assets: Array<{ symbol: string; balance: number }> = []
+  let current = 1
+  let total = 0
+
+  do {
+    const params = new URLSearchParams({
+      current: current.toString(),
+      size: pageSize.toString(),
+      recvWindow: '5000',
+      timestamp: Date.now().toString(),
+    })
+
+    const signature = await signHmac(account.apiSecret, params.toString(), 'hex')
+    const response = await fetch(
+      `https://api.binance.com/sapi/v1/simple-earn/locked/position?${params.toString()}&signature=${signature}`,
+      {
+        cache: 'no-store',
+        headers: {
+          'X-MBX-APIKEY': account.apiKey,
+        },
+      }
+    )
+
+    const data = (await response.json()) as BinanceSimpleEarnLockedPositionResponse | BinanceApiErrorResponse
+
+    if (!response.ok) {
+      throw new Error(('msg' in data && data.msg) || 'Binance 定期理财查询失败')
+    }
+
+    const rows = 'rows' in data ? (data.rows ?? []) : []
+    total = 'total' in data ? Number(data.total ?? rows.length) : rows.length
+
+    assets.push(
+      ...rows
+        .map((position) => ({
+          symbol: normalizeBinanceAssetSymbol(position.asset),
+          balance: toPositiveNumber(position.amount),
+        }))
+        .filter((asset) => asset.balance > 0)
+    )
+
+    if (rows.length < pageSize) {
+      break
+    }
+
+    current += 1
+  } while (current * pageSize < total)
+
+  return assets
 }
 
 async function fetchOkxBalances(account: CexAccountInput) {
@@ -203,6 +329,8 @@ export async function getCexSnapshot(account: CexAccountInput): Promise<Portfoli
         ? mergeBalances([
             ...(await fetchBinanceBalances(account)),
             ...(await fetchBinanceFundingBalances(account)),
+            ...(await fetchBinanceSimpleEarnFlexibleBalances(account)),
+            ...(await fetchBinanceSimpleEarnLockedBalances(account)),
           ])
         : await fetchOkxBalances(account)
 

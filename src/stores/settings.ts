@@ -13,6 +13,7 @@ export const useSettingsStore = create<SettingsStore>()(
       refreshInterval: 60,
       theme: 'dark',
       defiEnabled: false,
+      hideSmallAssets: false,
       updateSettings: (updates) => set((state) => ({ ...state, ...updates })),
     }),
     { name: 'crypto-insight-settings' }

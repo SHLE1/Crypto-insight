@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const wallets = useWalletStore((s) => s.wallets)
   const accounts = useCexStore((s) => s.accounts)
   const refreshInterval = useSettingsStore((s) => s.refreshInterval)
+  const hideSmallAssets = useSettingsStore((s) => s.hideSmallAssets)
   const { snapshots, errors, lastRefresh, setSnapshot, setLastRefresh, clearErrors, addError, pruneSnapshots } =
     usePortfolioStore()
 
@@ -214,6 +215,7 @@ export default function DashboardPage() {
           change24h: holding.change24h,
           sourceCount: holding.sources.size,
         }))
+        .filter((holding) => !hideSmallAssets || holding.value >= 0.1)
         .sort((a, b) => b.value - a.value)
 
       return {
@@ -225,7 +227,7 @@ export default function DashboardPage() {
         walletTotal: wTotal,
         cexTotal: cTotal,
       }
-    }, [snapshots])
+    }, [hideSmallAssets, snapshots])
 
   const isEmpty = wallets.length === 0 && accounts.length === 0
   const hasValuedAssets = holdingsData.some((asset) => asset.value > 0)

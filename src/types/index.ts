@@ -28,6 +28,7 @@ export interface Settings {
   refreshInterval: number // seconds
   theme: 'dark' | 'light'
   defiEnabled: boolean
+  hideSmallAssets: boolean
 }
 
 // ===== 资产与报价 =====
