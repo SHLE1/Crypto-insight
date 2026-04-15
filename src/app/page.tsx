@@ -40,6 +40,18 @@ function buildSnapshotError(snapshot: PortfolioSnapshot, label: string): ApiErro
     }
   }
 
+  if (snapshot.status === 'partial' && snapshot.error) {
+    return {
+      source: snapshot.sourceType === 'wallet' ? '钱包查询' : '交易所查询',
+      title: '部分资产已做补齐',
+      sourceLabel: label,
+      kind: 'warning',
+      message: snapshot.error,
+      impact: '总资产已尽量对齐交易所返回的总额，但其中一部分暂时不能按真实账户或币种完全展开。',
+      timestamp,
+    }
+  }
+
   const missingPriceAssets = snapshot.assets.filter((asset) => asset.price === null)
   if (missingPriceAssets.length === 0) {
     return null
