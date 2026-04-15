@@ -18,6 +18,7 @@ import { AlertsPanel } from '@/components/dashboard/alerts'
 import { DefiPlaceholder } from '@/components/dashboard/defi-placeholder'
 import { HoldingsOverview } from '@/components/dashboard/holdings-overview'
 import type { QuoteResponse } from '@/types'
+import { EVM_CHAINS } from '@/lib/evm-chains'
 
 export default function DashboardPage() {
   const wallets = useWalletStore((s) => s.wallets)
@@ -163,11 +164,15 @@ export default function DashboardPage() {
           price: number | null
           value: number
           change24h: number | null
-          sources: Set<string>
+          sources: Array<{ sourceId: string; sourceType: 'wallet' | 'cex'; sourceLabel: string; balance: number; chainKey?: string }>
         }
       >()
       let wTotal = 0
       let cTotal = 0
+
+      // Build lookup maps for wallet/exchange names
+      const walletNameMap = new Map(wallets.map((w) => [w.id, w.name || w.address.slice(0, 6) + '...' + w.address.slice(-4)]))
+      const cexLabelMap = new Map(accounts.map((a) => [a.id, a.label || a.exchange]))
 
       Object.values(snapshots).forEach((snap) => {
         total += snap.totalValue
@@ -180,13 +185,38 @@ export default function DashboardPage() {
             weightedChange += a.value * (a.change24h / 100)
           }
 
+          const sourceLabel = snap.sourceType === 'wallet'
+            ? (walletNameMap.get(snap.source) ?? snap.source)
+            : (cexLabelMap.get(snap.source) ?? snap.source)
+
+          // Build per-source details from _chainBreakdowns (EVM) or direct balance
+          const buildSourceDetails = () => {
+            if (a._chainBreakdowns && a._chainBreakdowns.length > 0) {
+              return a._chainBreakdowns
+                .filter((c) => c.balance > 0)
+                .map((c) => ({
+                  sourceId: snap.source,
+                  sourceType: snap.sourceType,
+                  sourceLabel,
+                  balance: c.balance,
+                  chainKey: c.chainKey,
+                }))
+            }
+            return [{
+              sourceId: snap.source,
+              sourceType: snap.sourceType,
+              sourceLabel,
+              balance: a.balance,
+            }]
+          }
+
           const existing = holdingsMap.get(a.symbol)
           if (existing) {
             existing.balance += a.balance
             existing.value += a.value ?? 0
             existing.price = a.price ?? existing.price
             existing.change24h = a.change24h ?? existing.change24h
-            existing.sources.add(snap.source)
+            existing.sources.push(...buildSourceDetails())
           } else {
             holdingsMap.set(a.symbol, {
               symbol: a.symbol,
@@ -195,11 +225,15 @@ export default function DashboardPage() {
               price: a.price,
               value: a.value ?? 0,
               change24h: a.change24h,
-              sources: new Set([snap.source]),
+              sources: buildSourceDetails(),
             })
           }
         })
       })
+
+      // Strip LD prefix from display symbol
+      const stripLdPrefix = (sym: string) =>
+        sym.startsWith('LD') && sym.length > 2 ? sym.slice(2) : sym
 
       const changePercent = total > 0 ? (weightedChange / total) * 100 : 0
       const assetEntries = Array.from(assetMap.entries())
@@ -208,13 +242,17 @@ export default function DashboardPage() {
         .slice(0, 6)
       const holdingsEntries = Array.from(holdingsMap.values())
         .map((holding) => ({
-          symbol: holding.symbol,
+          symbol: stripLdPrefix(holding.symbol),
           name: holding.name,
           balance: holding.balance,
           price: holding.price,
           value: holding.value,
           change24h: holding.change24h,
-          sourceCount: holding.sources.size,
+          sourceCount: new Set(holding.sources.map((s) => s.sourceId)).size,
+          sources: holding.sources.map((s) => ({
+            ...s,
+            chainLabel: s.chainKey ? (EVM_CHAINS[s.chainKey]?.name ?? s.chainKey) : undefined,
+          })),
         }))
         .filter((holding) => !hideSmallAssets || holding.value >= 0.1)
         .sort((a, b) => b.value - a.value)
@@ -228,7 +266,7 @@ export default function DashboardPage() {
         walletTotal: wTotal,
         cexTotal: cTotal,
       }
-    }, [hideSmallAssets, snapshots])
+    }, [hideSmallAssets, snapshots, wallets, accounts])
 
   const isEmpty = wallets.length === 0 && accounts.length === 0
   const hasValuedAssets = holdingsData.some((asset) => asset.value > 0)

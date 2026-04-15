@@ -34,6 +34,15 @@ export interface Settings {
 
 // ===== 资产与报价 =====
 
+/** 单个来源的资产明细 */
+export interface AssetSourceDetail {
+  sourceId: string       // wallet/account id
+  sourceType: 'wallet' | 'cex'
+  sourceLabel: string    // wallet name or exchange label
+  balance: number
+  chainKey?: string      // for EVM wallets, which chain
+}
+
 export interface AssetBalance {
   symbol: string
   name: string
@@ -41,6 +50,8 @@ export interface AssetBalance {
   price: number | null
   value: number | null
   change24h: number | null
+  _chainBreakdowns?: { chainKey: string; balance: number }[]  // internal, used by dashboard to build sources
+  sources?: AssetSourceDetail[]  // per-source breakdown (optional, for UI expansion)
 }
 
 export interface PortfolioSnapshot {

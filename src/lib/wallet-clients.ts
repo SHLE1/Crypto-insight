@@ -511,8 +511,13 @@ export async function getWalletSnapshot(wallet: WalletQuoteInput): Promise<Portf
       const nativeSymbols = allEvmAssets.filter((a) => !a.contractAddress).map((a) => a.symbol)
       const nativePrices = nativeSymbols.length > 0 ? await getPrices(nativeSymbols) : {}
 
-      // Merge and deduplicate
-      const merged = new Map<string, { balance: number; price: number | null; change24h: number | null }>()
+      // Merge and deduplicate, tracking per-chain breakdown
+      const merged = new Map<string, {
+        balance: number
+        price: number | null
+        change24h: number | null
+        chainBreakdowns: { chainKey: string; balance: number }[]
+      }>()
       for (const asset of allEvmAssets) {
         const key = asset.symbol
         const existing = merged.get(key)
@@ -521,23 +526,38 @@ export async function getWalletSnapshot(wallet: WalletQuoteInput): Promise<Portf
           : nativePrices[asset.symbol]
 
         if (existing) {
+          // Update chain breakdown
+          const chainEntry = existing.chainBreakdowns.find((c) => c.chainKey === asset.chainKey)
+          if (chainEntry) {
+            chainEntry.balance += asset.balance
+          } else {
+            existing.chainBreakdowns.push({ chainKey: asset.chainKey, balance: asset.balance })
+          }
           merged.set(key, {
             balance: existing.balance + asset.balance,
             price: existing.price ?? priceInfo?.price ?? null,
             change24h: existing.change24h ?? priceInfo?.change24h ?? null,
+            chainBreakdowns: existing.chainBreakdowns,
           })
         } else {
           merged.set(key, {
             balance: asset.balance,
             price: priceInfo?.price ?? null,
             change24h: priceInfo?.change24h ?? null,
+            chainBreakdowns: [{ chainKey: asset.chainKey, balance: asset.balance }],
           })
         }
       }
 
       rawAssets = Array.from(merged.entries())
         .filter(([, data]) => data.balance > 0)
-        .map(([symbol, data]) => ({ symbol, balance: data.balance, price: data.price, change24h: data.change24h }))
+        .map(([symbol, data]) => ({
+          symbol,
+          balance: data.balance,
+          price: data.price,
+          change24h: data.change24h,
+          chainBreakdowns: data.chainBreakdowns.filter((c) => c.balance > 0),
+        }))
     } else {
       // BTC
       const balance = await fetchBitcoinBalance(wallet.address)
@@ -552,7 +572,13 @@ export async function getWalletSnapshot(wallet: WalletQuoteInput): Promise<Portf
     const fetchedPrices = symbolsNeedingPrice.length > 0 ? await getPrices(symbolsNeedingPrice) : {}
 
     const assets: AssetBalance[] = rawAssets.map((asset) => {
-      const withPrice = asset as { symbol: string; balance: number; price?: number | null; change24h?: number | null }
+      const withPrice = asset as {
+        symbol: string
+        balance: number
+        price?: number | null
+        change24h?: number | null
+        chainBreakdowns?: { chainKey: string; balance: number }[]
+      }
       const fetchedPriceInfo = fetchedPrices[asset.symbol]
       const price = withPrice.price !== undefined ? withPrice.price : (fetchedPriceInfo?.price ?? null)
       const change24h = withPrice.change24h !== undefined ? withPrice.change24h : (fetchedPriceInfo?.change24h ?? null)
@@ -563,6 +589,7 @@ export async function getWalletSnapshot(wallet: WalletQuoteInput): Promise<Portf
         price,
         value: price !== null ? asset.balance * price : null,
         change24h,
+        _chainBreakdowns: withPrice.chainBreakdowns,
       }
     })
 
