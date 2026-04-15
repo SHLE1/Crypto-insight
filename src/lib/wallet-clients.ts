@@ -1,5 +1,5 @@
 import type { AssetBalance, ChainType, PortfolioSnapshot } from '@/types'
-import { getPrices } from '@/lib/market'
+import { getPrices, getSolanaTokenMarketData } from '@/lib/market'
 
 interface WalletQuoteInput {
   id: string
@@ -10,6 +10,13 @@ interface WalletQuoteInput {
 const ETH_RPC_URL = 'https://ethereum-rpc.publicnode.com'
 const SOLANA_RPC_URL = 'https://api.mainnet-beta.solana.com'
 const BTC_API_URL = 'https://blockstream.info/api'
+const SOLANA_TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
+const SOLANA_TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
+
+interface SolanaTokenBalance {
+  mint: string
+  balance: number
+}
 
 function buildSnapshot(
   wallet: WalletQuoteInput,
@@ -104,29 +111,140 @@ async function fetchBitcoinBalance(address: string) {
   return (confirmed + pending) / 1e8
 }
 
+async function fetchSolanaTokenBalancesByProgram(address: string, programId: string) {
+  const response = await fetch(SOLANA_RPC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'getTokenAccountsByOwner',
+      params: [address, { programId }, { encoding: 'jsonParsed', commitment: 'finalized' }],
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Solana Token 查询失败')
+  }
+
+  const data = (await response.json()) as {
+    result?: {
+      value?: Array<{
+        account?: {
+          data?: {
+            parsed?: {
+              info?: {
+                mint?: string
+                tokenAmount?: {
+                  uiAmount?: number | null
+                  uiAmountString?: string
+                  decimals?: number
+                }
+              }
+            }
+          }
+        }
+      }>
+    }
+  }
+
+  return (data.result?.value ?? [])
+    .map((item) => {
+      const info = item.account?.data?.parsed?.info
+      const mint = info?.mint
+      const decimals = info?.tokenAmount?.decimals
+      const balance = Number(info?.tokenAmount?.uiAmountString ?? info?.tokenAmount?.uiAmount ?? 0)
+
+      if (!mint || !Number.isFinite(balance) || balance <= 0 || typeof decimals !== 'number' || decimals <= 0) {
+        return null
+      }
+
+      return {
+        mint,
+        balance,
+      } satisfies SolanaTokenBalance
+    })
+    .filter((item): item is SolanaTokenBalance => item !== null)
+}
+
+async function fetchSolanaTokenBalances(address: string) {
+  const tokenSets = await Promise.all([
+    fetchSolanaTokenBalancesByProgram(address, SOLANA_TOKEN_PROGRAM_ID),
+    fetchSolanaTokenBalancesByProgram(address, SOLANA_TOKEN_2022_PROGRAM_ID),
+  ])
+
+  const mergedBalances = new Map<string, number>()
+
+  tokenSets.flat().forEach((token) => {
+    mergedBalances.set(token.mint, (mergedBalances.get(token.mint) ?? 0) + token.balance)
+  })
+
+  return Array.from(mergedBalances.entries()).map(([mint, balance]) => ({
+    mint,
+    balance,
+  }))
+}
+
 export async function getWalletSnapshot(wallet: WalletQuoteInput): Promise<PortfolioSnapshot> {
   try {
-    const symbol = wallet.chainType === 'evm' ? 'ETH' : wallet.chainType === 'solana' ? 'SOL' : 'BTC'
-    const balance =
-      wallet.chainType === 'evm'
-        ? await fetchEthereumBalance(wallet.address)
-        : wallet.chainType === 'solana'
-        ? await fetchSolanaBalance(wallet.address)
-        : await fetchBitcoinBalance(wallet.address)
+    let assets: AssetBalance[] = []
 
-    const prices = await getPrices([symbol])
-    const priceInfo = prices[symbol]
+    if (wallet.chainType === 'solana') {
+      const [nativeBalance, tokenBalances, nativePrices] = await Promise.all([
+        fetchSolanaBalance(wallet.address),
+        fetchSolanaTokenBalances(wallet.address),
+        getPrices(['SOL']),
+      ])
+      const tokenMarketData = await getSolanaTokenMarketData(tokenBalances.map((token) => token.mint))
+      const nativePrice = nativePrices.SOL
 
-    const assets: AssetBalance[] = [
-      {
-        symbol,
-        name: symbol === 'ETH' ? 'Ethereum' : symbol === 'SOL' ? 'Solana' : 'Bitcoin',
-        balance,
-        price: priceInfo?.price ?? null,
-        value: priceInfo?.price !== null && priceInfo?.price !== undefined ? balance * priceInfo.price : null,
-        change24h: priceInfo?.change24h ?? null,
-      },
-    ]
+      assets = [
+        {
+          symbol: 'SOL',
+          name: 'Solana',
+          balance: nativeBalance,
+          price: nativePrice?.price ?? null,
+          value:
+            nativePrice?.price !== null && nativePrice?.price !== undefined
+              ? nativeBalance * nativePrice.price
+              : null,
+          change24h: nativePrice?.change24h ?? null,
+        },
+        ...tokenBalances.map((token) => {
+          const market = tokenMarketData[token.mint]
+          const price = market?.price ?? null
+
+          return {
+            symbol: market?.symbol ?? `${token.mint.slice(0, 4)}...${token.mint.slice(-4)}`,
+            name: market?.name ?? token.mint,
+            balance: token.balance,
+            price,
+            value: price !== null ? token.balance * price : null,
+            change24h: market?.change24h ?? null,
+          }
+        }),
+      ]
+    } else {
+      const symbol = wallet.chainType === 'evm' ? 'ETH' : 'BTC'
+      const balance =
+        wallet.chainType === 'evm'
+          ? await fetchEthereumBalance(wallet.address)
+          : await fetchBitcoinBalance(wallet.address)
+      const prices = await getPrices([symbol])
+      const priceInfo = prices[symbol]
+
+      assets = [
+        {
+          symbol,
+          name: symbol === 'ETH' ? 'Ethereum' : 'Bitcoin',
+          balance,
+          price: priceInfo?.price ?? null,
+          value: priceInfo?.price !== null && priceInfo?.price !== undefined ? balance * priceInfo.price : null,
+          change24h: priceInfo?.change24h ?? null,
+        },
+      ]
+    }
 
     return buildSnapshot(wallet, assets)
   } catch (error) {

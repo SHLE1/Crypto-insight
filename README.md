@@ -16,6 +16,12 @@ pnpm install
 pnpm dev
 ```
 
+可选环境变量：
+
+```bash
+COINGECKO_DEMO_API_KEY=your_demo_key
+```
+
 常用命令：
 
 ```bash
@@ -30,9 +36,14 @@ pnpm build
 ## 当前范围
 
 - `Ethereum` 钱包当前查询原生 `ETH`
-- `Solana` 钱包当前查询原生 `SOL`
+- `Solana` 钱包当前查询原生 `SOL` 与 `SPL Token`
 - `Bitcoin` 当前按地址余额查询
 - 导出文件不包含交易所密钥
+
+## 数据来源说明
+
+- 行情缺失时会使用 `CoinGecko Demo API` 补充价格数据
+- 页面内已加入 `CoinGecko` 署名，符合其 Attribution Guide 要求
 
 ## 备注
 

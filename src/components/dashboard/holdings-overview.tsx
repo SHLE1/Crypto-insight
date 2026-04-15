@@ -71,6 +71,26 @@ export function HoldingsOverview({ data }: HoldingsOverviewProps) {
                 </div>
               </div>
             ))}
+            <p className="text-xs text-muted-foreground">
+              主流资产价格来自{' '}
+              <a
+                href="https://developers.binance.com/docs/zh-CN/binance-spot-api-docs/rest-api/market-data-endpoints"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                Binance
+              </a>
+              ，部分 Solana 代币价格仍来自{' '}
+              <a
+                href="https://www.coingecko.com/en/api?utm_source=crypto-insight&utm_medium=referral"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                CoinGecko
+              </a>
+            </p>
           </div>
         )}
       </CardContent>

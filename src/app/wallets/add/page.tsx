@@ -38,8 +38,7 @@ export default function AddWalletPage() {
       return
     }
 
-  const normalizedAddress =
-    chainType === 'evm' ? trimmed.toLowerCase() : trimmed
+    const normalizedAddress = chainType === 'evm' ? trimmed.toLowerCase() : trimmed
     const alreadyExists = wallets.some(
       (wallet) =>
         wallet.chainType === chainType &&
@@ -115,7 +114,7 @@ export default function AddWalletPage() {
                 {chainType === 'evm'
                   ? '当前按 Ethereum 主网原生 ETH 查询。'
                   : chainType === 'solana'
-                  ? '当前按原生 SOL 查询。'
+                  ? '当前按原生 SOL + SPL Token 查询。'
                   : '当前按 BTC 地址余额查询。'}
               </p>
             </div>

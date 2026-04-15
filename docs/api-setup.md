@@ -21,7 +21,7 @@
 当前版本支持这三类地址：
 
 - `Ethereum`：查询原生 `ETH`
-- `Solana`：查询原生 `SOL`
+- `Solana`：查询原生 `SOL` 与 `SPL Token`
 - `Bitcoin`：查询地址余额
 
 ### 添加步骤
@@ -37,7 +37,8 @@
 ### 注意
 
 - `Ethereum` 地址目前按原生 `ETH` 余额查询，不会自动列出 ERC-20 代币
-- `Solana` 地址目前按原生 `SOL` 查询，不会自动列出 SPL Token
+- `Solana` 地址会返回原生 `SOL` 与可识别的 `SPL Token`
+- 部分 `SPL Token` 可能没有 CoinGecko 价格，页面会显示为待补充
 - `Bitcoin` 目前按地址余额查询
 
 ## Binance API 配置
@@ -124,7 +125,7 @@
 
 ### 1. 为什么钱包能加，但资产不完整
 
-因为当前版本的钱包只查原生币，不查链上代币。
+`Ethereum` 当前只查原生 `ETH`，不会自动列出 ERC-20。`Solana` 已支持原生 `SOL` 与 `SPL Token`，但部分代币可能没有价格。
 
 ### 2. 为什么交易所绑定后显示异常
 
