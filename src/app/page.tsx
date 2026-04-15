@@ -19,6 +19,7 @@ import { DefiPlaceholder } from '@/components/dashboard/defi-placeholder'
 import { HoldingsOverview } from '@/components/dashboard/holdings-overview'
 import type { ApiErrorState, PortfolioSnapshot, QuoteResponse } from '@/types'
 import { EVM_CHAINS } from '@/lib/evm-chains'
+import { getChainLabel } from '@/lib/validators'
 
 function shortenAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -87,6 +88,16 @@ export default function DashboardPage() {
   const cexLabelMap = useMemo(
     () => new Map(accounts.map((account) => [account.id, account.label || account.exchange.toUpperCase()])),
     [accounts]
+  )
+  const walletChainLabelMap = useMemo(
+    () =>
+      new Map(
+        wallets.map((wallet) => [
+          wallet.id,
+          wallet.chainType === 'evm' ? null : getChainLabel(wallet.chainType),
+        ])
+      ),
+    [wallets]
   )
 
   const fetchPortfolio = useCallback(async () => {
@@ -317,10 +328,15 @@ export default function DashboardPage() {
           value: holding.value,
           change24h: holding.change24h,
           sourceCount: new Set(holding.sources.map((s) => s.sourceId)).size,
-          sources: holding.sources.map((s) => ({
-            ...s,
-            chainLabel: s.chainKey ? (EVM_CHAINS[s.chainKey]?.name ?? s.chainKey) : undefined,
-          })),
+            sources: holding.sources.map((s) => ({
+              ...s,
+              chainLabel:
+                s.sourceType === 'cex'
+                  ? 'CEX'
+                  : s.chainKey
+                    ? (EVM_CHAINS[s.chainKey]?.name ?? s.chainKey)
+                    : (walletChainLabelMap.get(s.sourceId) ?? undefined),
+            })),
         }))
         .filter((holding) => !hideSmallAssets || holding.value >= 0.1)
         .sort((a, b) => b.value - a.value)
@@ -334,7 +350,7 @@ export default function DashboardPage() {
         walletTotal: wTotal,
         cexTotal: cTotal,
       }
-    }, [hideSmallAssets, snapshots, walletNameMap, cexLabelMap])
+    }, [cexLabelMap, hideSmallAssets, snapshots, walletChainLabelMap, walletNameMap])
 
   const isEmpty = wallets.length === 0 && accounts.length === 0
   const hasValuedAssets = holdingsData.some((asset) => asset.value > 0)
