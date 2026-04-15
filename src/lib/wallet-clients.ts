@@ -14,6 +14,39 @@ const BTC_API_URL = 'https://blockstream.info/api'
 const SOLANA_TOKEN_PROGRAM_ID = 'Tokenk...Q5DA'
 const SOLANA_TOKEN_2022_PROGRAM_ID = 'Tokenz...xuEb'
 
+// ---------------------------------------------------------------------------
+// Uniswap community token list — free, no API key, 700+ verified tokens
+// ---------------------------------------------------------------------------
+
+interface UniswapTokenEntry {
+  chainId: number
+  address: string
+  name: string
+  symbol: string
+  decimals: number
+}
+
+let _uniswapTokenCache: UniswapTokenEntry[] | null = null
+
+async function fetchUniswapTokenList(): Promise<UniswapTokenEntry[]> {
+  if (_uniswapTokenCache) return _uniswapTokenCache
+  try {
+    const res = await fetch('https://tokens.uniswap.org', { cache: 'force-cache' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json() as { tokens?: UniswapTokenEntry[] }
+    _uniswapTokenCache = data.tokens ?? []
+    return _uniswapTokenCache
+  } catch {
+    _uniswapTokenCache = []
+    return []
+  }
+}
+
+function getUniswapTokensForChain(chainId: number): UniswapTokenEntry[] {
+  if (!_uniswapTokenCache) return []
+  return _uniswapTokenCache.filter((t) => t.chainId === chainId)
+}
+
 interface SolanaTokenBalance {
   mint: string
   balance: number
@@ -370,77 +403,109 @@ async function fetchEvmChainBalances(
     }
   }
 
-  // 3) Discover ALL other tokens via Transfer event logs
+  // 3) Discover additional tokens via Uniswap list + Transfer logs (parallel)
   try {
-    const knownAddresses = new Set(chain.tokens.map((t) => t.address.toLowerCase()))
-    const discoveredAddresses = await discoverTokensViaLogs(chain.rpcUrl, address, chain.logBlockRange)
-    const unknownAddresses = discoveredAddresses.filter((a) => !knownAddresses.has(a))
+    const checkedAddresses = new Set(
+      assets.map((a) => a.contractAddress?.toLowerCase()).filter((a): a is string => a != null)
+    )
 
-    if (unknownAddresses.length > 0) {
-      const balances = await batchCheckBalances(chain.rpcUrl, unknownAddresses, address)
+    // Run both discovery methods in parallel
+    const [uniswapTokens, logDiscovered] = await Promise.all([
+      (async () => {
+        const all = getUniswapTokensForChain(chain.chainId)
+        return all.filter((t) => !checkedAddresses.has(t.address.toLowerCase()))
+      })(),
+      discoverTokensViaLogs(chain.rpcUrl, address, chain.logBlockRange),
+    ])
+
+    // Collect addresses to check: Uniswap tokens + log-discovered (deduplicated)
+    const uniswapAddresses = uniswapTokens.map((t) => t.address.toLowerCase())
+    const unknownFromLogs = logDiscovered.filter(
+      (a) => !checkedAddresses.has(a) && !uniswapAddresses.includes(a)
+    )
+    const allToCheck = [...uniswapAddresses, ...unknownFromLogs]
+
+    if (allToCheck.length > 0) {
+      const balances = await batchCheckBalances(chain.rpcUrl, allToCheck, address)
+      const uniswapMap = new Map(uniswapTokens.map((t) => [t.address.toLowerCase(), t]))
 
       for (const [tokenAddr, rawBalance] of Array.from(balances.entries())) {
-        try {
-          // decimals() selector = 0x313ce567
-          const decRes = await fetch(chain.rpcUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            cache: 'no-store',
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              id: 99,
-              method: 'eth_call',
-              params: [{ to: tokenAddr, data: '0x313ce567' }, 'latest'],
-            }),
-          })
-          const decData = (await decRes.json()) as { result?: string }
-          const decimals = decData.result ? Number(BigInt(decData.result)) : 18
-
-          // symbol() selector = 0x95d89b41
-          const symRes = await fetch(chain.rpcUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            cache: 'no-store',
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              id: 100,
-              method: 'eth_call',
-              params: [{ to: tokenAddr, data: '0x95d89b41' }, 'latest'],
-            }),
-          })
-          const symData = (await symRes.json()) as { result?: string }
-          let symbol = tokenAddr.slice(2, 6).toUpperCase()
-          if (symData.result && symData.result !== '0x') {
-            try {
-              const hex = symData.result.replace('0x', '')
-              if (hex.length >= 128) {
-                const strLen = parseInt(hex.slice(64, 128), 16)
-                const strHex = hex.slice(128, 128 + strLen * 2)
-                symbol = strHex.match(/.{2}/g)
-                  ?.map((b) => String.fromCharCode(parseInt(b, 16)))
-                  .join('')
-                  .replace(/\0/g, '')
-                  .trim() || symbol
-              }
-            } catch {
-              // use fallback
-            }
-          }
-
-          const balance = Number(rawBalance) / 10 ** decimals
-          if (balance > 0) {
-            assets.push({ symbol, balance, contractAddress: tokenAddr })
-          }
-        } catch {
-          // skip token if metadata fetch fails
+        const uniEntry = uniswapMap.get(tokenAddr)
+        const decimals = uniEntry
+          ? uniEntry.decimals
+          : await getTokenDecimals(chain.rpcUrl, tokenAddr)
+        const symbol = uniEntry
+          ? uniEntry.symbol
+          : await getTokenSymbol(chain.rpcUrl, tokenAddr)
+        const balance = Number(rawBalance) / 10 ** decimals
+        if (balance > 0) {
+          assets.push({ symbol, balance, contractAddress: tokenAddr })
         }
       }
     }
   } catch {
-    // log discovery failed, return what we have from hardcoded list
+    // discovery failed, continue with what we have
   }
 
   return assets
+}
+
+// ---------------------------------------------------------------------------
+// Token metadata helpers
+// ---------------------------------------------------------------------------
+
+async function getTokenDecimals(rpcUrl: string, tokenAddr: string): Promise<number> {
+  try {
+    const res = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 99,
+        method: 'eth_call',
+        params: [{ to: tokenAddr, data: '0x313ce567' }, 'latest'],
+      }),
+    })
+    const data = (await res.json()) as { result?: string }
+    return data.result ? Number(BigInt(data.result)) : 18
+  } catch {
+    return 18
+  }
+}
+
+async function getTokenSymbol(rpcUrl: string, tokenAddr: string): Promise<string> {
+  try {
+    const res = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 100,
+        method: 'eth_call',
+        params: [{ to: tokenAddr, data: '0x95d89b41' }, 'latest'],
+      }),
+    })
+    const data = (await res.json()) as { result?: string }
+    if (data.result && data.result !== '0x') {
+      const hex = data.result.replace('0x', '')
+      if (hex.length >= 128) {
+        const strLen = parseInt(hex.slice(64, 128), 16)
+        const strHex = hex.slice(128, 128 + strLen * 2)
+        const sym = strHex
+          .match(/.{2}/g)
+          ?.map((b) => String.fromCharCode(parseInt(b, 16)))
+          .join('')
+          .replace(/\0/g, '')
+          .trim()
+        if (sym) return sym
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return tokenAddr.slice(2, 6).toUpperCase()
 }
 
 // ---------------------------------------------------------------------------

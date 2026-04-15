@@ -17,7 +17,7 @@ export const EVM_CHAINS: Record<string, EvmChainConfig> = {
     symbol: 'ETH',
     rpcUrl: 'https://ethereum-rpc.publicnode.com',
     multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
-    logBlockRange: 10000, // ~1.4 days at 12s/block
+    logBlockRange: 50000, // ~4.2 days at 12s/block
     tokens: [
       { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', symbol: 'USDT', decimals: 6 },
       { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', symbol: 'USDC', decimals: 6 },
@@ -37,7 +37,7 @@ export const EVM_CHAINS: Record<string, EvmChainConfig> = {
     symbol: 'BNB',
     rpcUrl: 'https://bsc-dataseed1.binance.org',
     multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
-    logBlockRange: 20000, // ~60s at 3s/block
+    logBlockRange: 100000, // ~3.5 days at 3s/block
     tokens: [
       { address: '0x55d398326f99059fF775485246999027B3197955', symbol: 'USDT', decimals: 18 },
       { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', symbol: 'USDC', decimals: 18 },
@@ -54,7 +54,7 @@ export const EVM_CHAINS: Record<string, EvmChainConfig> = {
     symbol: 'ETH',
     rpcUrl: 'https://arb1.arbitrum.io/rpc',
     multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
-    logBlockRange: 50000, // L2 ~100s at 2s/block
+    logBlockRange: 200000, // ~4.6 days at ~0.25s/block
     tokens: [
       { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', symbol: 'USDT', decimals: 6 },
       { address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', symbol: 'USDC', decimals: 6 },
@@ -70,7 +70,7 @@ export const EVM_CHAINS: Record<string, EvmChainConfig> = {
     symbol: 'POL',
     rpcUrl: 'https://polygon-rpc.com',
     multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
-    logBlockRange: 50000, // L2 ~100s at 2s/block
+    logBlockRange: 200000, // ~4.6 days at ~2s/block
     tokens: [
       { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', symbol: 'USDT', decimals: 6 },
       { address: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', symbol: 'USDC', decimals: 6 },
@@ -85,7 +85,7 @@ export const EVM_CHAINS: Record<string, EvmChainConfig> = {
     symbol: 'ETH',
     rpcUrl: 'https://mainnet.base.org',
     multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
-    logBlockRange: 50000,
+    logBlockRange: 200000, // ~4.6 days at ~2s/block
     tokens: [
       { address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', symbol: 'USDT', decimals: 6 },
       { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', symbol: 'USDC', decimals: 6 },
@@ -99,7 +99,7 @@ export const EVM_CHAINS: Record<string, EvmChainConfig> = {
     symbol: 'AVAX',
     rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
     multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
-    logBlockRange: 50000,
+    logBlockRange: 200000, // ~4.6 days at ~2s/block
     tokens: [
       { address: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7', symbol: 'USDT', decimals: 6 },
       { address: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', symbol: 'USDC', decimals: 6 },
