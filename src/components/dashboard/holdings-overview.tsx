@@ -6,22 +6,26 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatPercent } from '@/lib/validators'
+import type { PriceStatus } from '@/types'
 
 interface SourceDetail {
   sourceId: string
   sourceType: 'wallet' | 'cex'
   sourceLabel: string
+  assetId?: string
   balance: number
   chainLabel?: string
 }
 
 interface HoldingRow {
+  assetId: string
   symbol: string
   name: string
   balance: number
   price: number | null
   value: number
   change24h: number | null
+  priceStatus: PriceStatus
   sourceCount: number
   sources?: SourceDetail[]
 }
@@ -40,6 +44,7 @@ interface DetailRow {
   price: number | null
   value: number
   change24h: number | null
+  priceStatus: PriceStatus
   meta?: string
 }
 
@@ -51,6 +56,7 @@ interface GroupRow {
   price: number | null
   value: number
   change24h: number | null
+  priceStatus: PriceStatus
   badge: string
   details: DetailRow[]
 }
@@ -63,10 +69,27 @@ interface PositionRow {
   price: number | null
   value: number
   change24h: number | null
+  priceStatus: PriceStatus
   sourceId: string
   sourceType: 'wallet' | 'cex'
   sourceLabel: string
   chainLabel: string
+}
+
+function getPriceStatusRank(status: PriceStatus) {
+  if (status === 'missing') return 2
+  if (status === 'stale') return 1
+  return 0
+}
+
+function mergePriceStatus(current: PriceStatus, next: PriceStatus) {
+  return getPriceStatusRank(next) > getPriceStatusRank(current) ? next : current
+}
+
+function getPriceStatusLabel(status: PriceStatus) {
+  if (status === 'stale') return '旧价'
+  if (status === 'missing') return '缺价'
+  return null
 }
 
 function formatBalance(value: number) {
@@ -128,12 +151,18 @@ function MetricBlock({
 }
 
 function SourceRow({ row }: { row: DetailRow }) {
+  const priceStatusLabel = getPriceStatusLabel(row.priceStatus)
   return (
     <div className="rounded-lg border border-border/40 bg-background/80 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="truncate font-medium text-foreground">{row.title}</span>
+            {priceStatusLabel ? (
+              <Badge variant="outline" className="rounded-full text-[10px]">
+                {priceStatusLabel}
+              </Badge>
+            ) : null}
             {row.meta ? (
               <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
                 {row.meta}
@@ -164,6 +193,7 @@ function GroupCard({
   expanded: boolean
   onToggle: () => void
 }) {
+  const priceStatusLabel = getPriceStatusLabel(row.priceStatus)
   return (
     <div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
       <button
@@ -183,6 +213,11 @@ function GroupCard({
               <Badge variant="outline" className="rounded-full text-[10px]">
                 {row.badge}
               </Badge>
+              {priceStatusLabel ? (
+                <Badge variant="outline" className="rounded-full text-[10px]">
+                  {priceStatusLabel}
+                </Badge>
+              ) : null}
             </div>
             <p className="mt-1 truncate text-xs text-muted-foreground">{row.subtitle}</p>
           </div>
@@ -226,13 +261,14 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
     }
 
     return holding.sources.map((source, index) => ({
-      tokenKey: `${holding.symbol}-${source.sourceId}-${source.chainLabel ?? 'unknown'}-${index}`,
+      tokenKey: `${holding.assetId}-${source.sourceId}-${source.chainLabel ?? 'unknown'}-${index}`,
       symbol: holding.symbol,
       name: holding.name,
       balance: source.balance,
       price: holding.price,
       value: holding.price !== null ? source.balance * holding.price : 0,
       change24h: holding.change24h,
+      priceStatus: holding.priceStatus,
       sourceId: source.sourceId,
       sourceType: source.sourceType,
       sourceLabel: source.sourceLabel,
@@ -249,15 +285,17 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
       price: holding.price,
       value: holding.value,
       change24h: holding.change24h,
+      priceStatus: holding.priceStatus,
       badge: `${holding.sourceCount} 来源`,
       details: (holding.sources ?? []).map((source, index) => ({
-        key: `${holding.symbol}-${source.sourceId}-${source.chainLabel ?? 'unknown'}-${index}`,
+        key: `${holding.assetId}-${source.sourceId}-${source.chainLabel ?? 'unknown'}-${index}`,
         title: source.sourceLabel,
         subtitle: source.sourceType === 'cex' ? '交易所账户' : '钱包',
         balance: source.balance,
         price: holding.price,
         value: holding.price !== null ? source.balance * holding.price : 0,
         change24h: holding.change24h,
+        priceStatus: holding.priceStatus,
         meta: source.chainLabel,
       })),
     }))
@@ -277,6 +315,7 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
         price: position.price,
         value: position.value,
         change24h: position.change24h,
+        priceStatus: position.priceStatus,
         meta: position.chainLabel,
       }
 
@@ -293,6 +332,7 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
           price: getGroupPrice(position.value, position.balance),
           value: position.value,
           change24h: position.change24h,
+          priceStatus: position.priceStatus,
           badge: `${position.sourceType === 'cex' ? '交易所' : '钱包'}`,
           details: [detail],
         })
@@ -304,6 +344,10 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
         ...group,
         price: getGroupPrice(group.value, group.balance),
         change24h: getWeightedChange(group.details),
+        priceStatus: group.details.reduce<PriceStatus>(
+          (status, detail) => mergePriceStatus(status, detail.priceStatus),
+          'live'
+        ),
         badge: `${group.details.length} 资产`,
         details: group.details.sort((a, b) => b.value - a.value),
       }))
@@ -325,6 +369,7 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
         price: getGroupPrice(position.value, position.balance),
         value: position.value,
         change24h: position.change24h,
+        priceStatus: position.priceStatus,
         badge: '1 资产',
         details: [
           {
@@ -335,6 +380,7 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
             price: position.price,
             value: position.value,
             change24h: position.change24h,
+            priceStatus: position.priceStatus,
             meta: position.sourceLabel,
           },
         ],
@@ -348,33 +394,39 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
     const detail = existing.details.find((item) => item.title === position.symbol)
     if (detail) {
       detail.balance += position.balance
-      detail.value += position.value
-      detail.subtitle = position.name
-      detail.meta = undefined
-    } else {
-      existing.details.push({
-        key: `${position.chainLabel}-${position.symbol}`,
-        title: position.symbol,
-        subtitle: position.name,
-        balance: position.balance,
-        price: position.price,
-        value: position.value,
-        change24h: position.change24h,
-        meta: position.sourceLabel,
-      })
-    }
+        detail.value += position.value
+        detail.subtitle = position.name
+        detail.priceStatus = mergePriceStatus(detail.priceStatus, position.priceStatus)
+        detail.meta = undefined
+      } else {
+        existing.details.push({
+          key: `${position.chainLabel}-${position.symbol}`,
+          title: position.symbol,
+          subtitle: position.name,
+          balance: position.balance,
+          price: position.price,
+          value: position.value,
+          change24h: position.change24h,
+          priceStatus: position.priceStatus,
+          meta: position.sourceLabel,
+        })
+      }
   })
 
   return Array.from(chainMap.values())
     .map((group) => ({
       ...group,
-      price: getGroupPrice(group.value, group.balance),
-      change24h: getWeightedChange(group.details),
-      badge: `${group.details.length} 资产`,
-      details: group.details
-        .map((detail) => ({
-          ...detail,
-          price: getGroupPrice(detail.value, detail.balance),
+        price: getGroupPrice(group.value, group.balance),
+        change24h: getWeightedChange(group.details),
+        priceStatus: group.details.reduce<PriceStatus>(
+          (status, detail) => mergePriceStatus(status, detail.priceStatus),
+          'live'
+        ),
+        badge: `${group.details.length} 资产`,
+        details: group.details
+          .map((detail) => ({
+            ...detail,
+            price: getGroupPrice(detail.value, detail.balance),
           change24h: detail.change24h,
         }))
         .sort((a, b) => b.value - a.value),

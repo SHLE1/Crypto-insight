@@ -11,11 +11,12 @@ export async function POST(request: NextRequest) {
       symbol: symbol.toUpperCase(),
       price: null,
       change24h: null,
+      status: 'missing' as const,
     })
 
     const response: PriceResponse = {
       prices,
-      status: prices.some((p) => p.price === null) ? 'partial' : 'success',
+      status: prices.some((price) => price.status !== 'live') ? 'partial' : 'success',
       updatedAt: new Date().toISOString(),
     }
 

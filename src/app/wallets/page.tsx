@@ -15,10 +15,19 @@ import { toast } from 'sonner'
 export default function WalletsPage() {
   const { wallets, removeWallet, toggleWallet } = useWalletStore()
   const snapshots = usePortfolioStore((s) => s.snapshots)
+  const removeSnapshot = usePortfolioStore((s) => s.removeSnapshot)
 
   const handleRemove = (id: string, name: string) => {
     removeWallet(id)
+    removeSnapshot(id)
     toast.success(`已删除钱包: ${name}`)
+  }
+
+  const handleToggle = (id: string, enabled: boolean) => {
+    toggleWallet(id)
+    if (enabled) {
+      removeSnapshot(id)
+    }
   }
 
   return (
@@ -50,7 +59,7 @@ export default function WalletsPage() {
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <Switch
                       checked={w.enabled}
-                      onCheckedChange={() => toggleWallet(w.id)}
+                      onCheckedChange={() => handleToggle(w.id, w.enabled)}
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">

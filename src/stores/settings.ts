@@ -16,6 +16,20 @@ export const useSettingsStore = create<SettingsStore>()(
       hideSmallAssets: false,
       updateSettings: (updates) => set((state) => ({ ...state, ...updates })),
     }),
-    { name: 'crypto-insight-settings' }
+    {
+      name: 'crypto-insight-settings',
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<SettingsStore> | undefined
+
+        return {
+          quoteCurrency: state?.quoteCurrency ?? 'USD',
+          refreshInterval: state?.refreshInterval ?? 60,
+          theme: state?.theme ?? 'dark',
+          defiEnabled: state?.defiEnabled ?? false,
+          hideSmallAssets: state?.hideSmallAssets ?? false,
+        }
+      },
+    }
   )
 )

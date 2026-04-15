@@ -12,15 +12,17 @@ import { useCexStore } from '@/stores/cex'
 import { usePortfolioStore } from '@/stores/portfolio'
 import { formatCurrency, getExchangeLabel } from '@/lib/validators'
 import type { ExchangeType } from '@/types'
-import { Plus, Trash2, X } from 'lucide-react'
+import { KeyRound, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 const EXCHANGE_OPTIONS: ExchangeType[] = ['binance', 'okx']
 
 export default function CexPage() {
-  const { accounts, addAccount, removeAccount, toggleAccount } = useCexStore()
+  const { accounts, addAccount, removeAccount, toggleAccount, updateAccount } = useCexStore()
   const snapshots = usePortfolioStore((s) => s.snapshots)
+  const removeSnapshot = usePortfolioStore((s) => s.removeSnapshot)
   const [showForm, setShowForm] = useState(false)
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null)
   const [exchange, setExchange] = useState<ExchangeType>('binance')
   const [label, setLabel] = useState('')
   const [apiKey, setApiKey] = useState('')
@@ -32,7 +34,21 @@ export default function CexPage() {
     setApiKey('')
     setApiSecret('')
     setPassphrase('')
+    setEditingAccountId(null)
     setShowForm(false)
+  }
+
+  const startEditing = (accountId: string) => {
+    const account = accounts.find((item) => item.id === accountId)
+    if (!account) return
+
+    setEditingAccountId(account.id)
+    setExchange(account.exchange)
+    setLabel(account.label)
+    setApiKey('')
+    setApiSecret('')
+    setPassphrase('')
+    setShowForm(true)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,6 +65,7 @@ export default function CexPage() {
 
     const alreadyExists = accounts.some(
       (account) =>
+        account.id !== editingAccountId &&
         account.exchange === exchange &&
         account.apiKey.trim() === apiKey.trim()
     )
@@ -58,23 +75,43 @@ export default function CexPage() {
       return
     }
 
-    addAccount({
-      id: crypto.randomUUID(),
-      exchange,
-      label: label.trim() || getExchangeLabel(exchange),
-      apiKey: apiKey.trim(),
-      apiSecret: apiSecret.trim(),
-      passphrase: exchange === 'okx' ? passphrase.trim() : undefined,
-      enabled: true,
-    })
+    if (editingAccountId) {
+      updateAccount(editingAccountId, {
+        exchange,
+        label: label.trim() || getExchangeLabel(exchange),
+        apiKey: apiKey.trim(),
+        apiSecret: apiSecret.trim(),
+        passphrase: exchange === 'okx' ? passphrase.trim() : undefined,
+      })
+      removeSnapshot(editingAccountId)
+      toast.success('交易所密钥已更新')
+    } else {
+      addAccount({
+        id: crypto.randomUUID(),
+        exchange,
+        label: label.trim() || getExchangeLabel(exchange),
+        apiKey: apiKey.trim(),
+        apiSecret: apiSecret.trim(),
+        passphrase: exchange === 'okx' ? passphrase.trim() : undefined,
+        enabled: true,
+      })
+      toast.success('交易所账户已添加')
+    }
 
-    toast.success('交易所账户已添加')
     resetForm()
   }
 
   const handleRemove = (id: string, label: string) => {
     removeAccount(id)
+    removeSnapshot(id)
     toast.success(`已删除账户: ${label}`)
+  }
+
+  const handleToggle = (id: string, enabled: boolean) => {
+    toggleAccount(id)
+    if (enabled) {
+      removeSnapshot(id)
+    }
   }
 
   return (
@@ -92,7 +129,7 @@ export default function CexPage() {
       {showForm && (
         <Card className="max-w-lg">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">绑定交易所账户</CardTitle>
+            <CardTitle className="text-base">{editingAccountId ? '补填或更新密钥' : '绑定交易所账户'}</CardTitle>
             <Button variant="ghost" size="icon" onClick={resetForm}>
               <X className="h-4 w-4" />
             </Button>
@@ -108,6 +145,7 @@ export default function CexPage() {
                       type="button"
                       variant={exchange === ex ? 'default' : 'outline'}
                       size="sm"
+                      disabled={editingAccountId !== null}
                       onClick={() => setExchange(ex)}
                     >
                       {getExchangeLabel(ex)}
@@ -196,7 +234,7 @@ export default function CexPage() {
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <Switch
                       checked={a.enabled}
-                      onCheckedChange={() => toggleAccount(a.id)}
+                      onCheckedChange={() => handleToggle(a.id, a.enabled)}
                     />
                     <div>
                       <div className="flex items-center gap-2">
@@ -204,6 +242,11 @@ export default function CexPage() {
                         <Badge variant="secondary" className="text-xs">
                           {getExchangeLabel(a.exchange)}
                         </Badge>
+                        {!a.apiKey.trim() && (
+                          <Badge variant="outline" className="text-xs">
+                            需重填密钥
+                          </Badge>
+                        )}
                         {snapshot?.status === 'error' && (
                           <Badge variant="destructive" className="text-xs">
                             异常
@@ -211,7 +254,9 @@ export default function CexPage() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground font-mono">
-                        Key: {a.apiKey.slice(0, 6)}...{a.apiKey.slice(-4)}
+                        {a.apiKey.trim()
+                          ? `Key: ${a.apiKey.slice(0, 6)}...${a.apiKey.slice(-4)}`
+                          : '当前浏览器未保存密钥，需要重新填写后才能刷新。'}
                       </p>
                     </div>
                   </div>
@@ -226,6 +271,13 @@ export default function CexPage() {
                         </p>
                       )}
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => startEditing(a.id)}
+                    >
+                      <KeyRound className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

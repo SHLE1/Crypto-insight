@@ -10,10 +10,10 @@ export async function POST(request: NextRequest) {
     const wallets: { id: string; chainType: ChainType; address: string; evmChains?: string[] }[] = body.wallets || []
     const results = await Promise.all(wallets.map((wallet) => getWalletSnapshot(wallet)))
 
-    const hasError = results.some((r) => r.status === 'error')
+    const hasNonSuccess = results.some((result) => result.status !== 'success')
     const response: QuoteResponse = {
       results,
-      status: hasError ? 'partial' : 'success',
+      status: hasNonSuccess ? 'partial' : 'success',
       updatedAt: new Date().toISOString(),
     }
 

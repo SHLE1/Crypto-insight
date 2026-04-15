@@ -17,12 +17,81 @@ import { CexSummary } from '@/components/dashboard/cex-summary'
 import { AlertsPanel } from '@/components/dashboard/alerts'
 import { DefiPlaceholder } from '@/components/dashboard/defi-placeholder'
 import { HoldingsOverview } from '@/components/dashboard/holdings-overview'
-import type { ApiErrorState, PortfolioSnapshot, QuoteResponse } from '@/types'
+import type { ApiErrorState, PortfolioSnapshot, PriceStatus, QuoteResponse } from '@/types'
 import { EVM_CHAINS } from '@/lib/evm-chains'
 import { getChainLabel } from '@/lib/validators'
 
 function shortenAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+function getPriceStatusRank(status: PriceStatus | undefined) {
+  if (status === 'missing') return 2
+  if (status === 'stale') return 1
+  return 0
+}
+
+function mergePriceStatus(current: PriceStatus | undefined, next: PriceStatus | undefined): PriceStatus {
+  return getPriceStatusRank(next) > getPriceStatusRank(current) ? (next ?? 'live') : (current ?? 'live')
+}
+
+function getAssetChainLabel(chainKey?: string) {
+  if (!chainKey) return null
+  if (chainKey in EVM_CHAINS) {
+    return EVM_CHAINS[chainKey]?.name ?? chainKey
+  }
+  if (chainKey === 'solana' || chainKey === 'btc' || chainKey === 'evm') {
+    return getChainLabel(chainKey)
+  }
+  return chainKey
+}
+
+function getAssetDisplayName(snapshot: PortfolioSnapshot, asset: PortfolioSnapshot['assets'][number]) {
+  if (snapshot.sourceType === 'cex') {
+    return asset.symbol
+  }
+
+  const chainLabel = getAssetChainLabel(asset.chainKey)
+  return chainLabel ? `${asset.symbol} · ${chainLabel}` : asset.symbol
+}
+
+function shouldRetainPreviousSnapshot(previous: PortfolioSnapshot | undefined, next: PortfolioSnapshot) {
+  if (!previous || previous.assets.length === 0) {
+    return false
+  }
+
+  if (next.status === 'error') {
+    return true
+  }
+
+  if (next.status === 'partial' && next.assets.length === 0) {
+    return true
+  }
+
+  if (
+    next.status === 'partial' &&
+    next.error?.includes('Solana Token 查询失败') &&
+    next.totalValue === 0 &&
+    previous.totalValue > 0
+  ) {
+    return true
+  }
+
+  return false
+}
+
+function withRetainedSnapshotDetail(errorState: ApiErrorState | null, retained: boolean): ApiErrorState | null {
+  if (!errorState || !retained) {
+    return errorState
+  }
+
+  return {
+    ...errorState,
+    detail: errorState.detail
+      ? `${errorState.detail} 当前继续显示上次成功结果。`
+      : '当前继续显示上次成功结果。',
+    impact: '本轮刷新失败，但页面暂时保留上次成功结果。',
+  }
 }
 
 function buildSnapshotError(snapshot: PortfolioSnapshot, label: string): ApiErrorState | null {
@@ -52,16 +121,48 @@ function buildSnapshotError(snapshot: PortfolioSnapshot, label: string): ApiErro
     }
   }
 
-  const missingPriceAssets = snapshot.assets.filter((asset) => asset.price === null)
-  if (missingPriceAssets.length === 0) {
+  const missingPriceAssets = snapshot.assets.filter((asset) => asset.priceStatus === 'missing')
+  const stalePriceAssets = snapshot.assets.filter((asset) => asset.priceStatus === 'stale')
+  if (missingPriceAssets.length === 0 && stalePriceAssets.length === 0) {
     return null
   }
 
-  const preview = missingPriceAssets
+  const preview = [...missingPriceAssets, ...stalePriceAssets]
     .slice(0, 3)
     .map((asset) => asset.symbol)
     .join('、')
-  const remaining = missingPriceAssets.length - Math.min(3, missingPriceAssets.length)
+  const affectedCount = missingPriceAssets.length + stalePriceAssets.length
+  const remaining = affectedCount - Math.min(3, affectedCount)
+
+  if (missingPriceAssets.length > 0 && stalePriceAssets.length > 0) {
+    return {
+      source: snapshot.sourceType === 'wallet' ? '钱包查询' : '交易所查询',
+      title: '价格部分缺失',
+      sourceLabel: label,
+      kind: 'warning',
+      message: `有 ${missingPriceAssets.length} 个资产缺少价格，另有 ${stalePriceAssets.length} 个资产暂用上次成功价格。`,
+      detail: preview
+        ? `受影响资产：${preview}${remaining > 0 ? ` 等 ${affectedCount} 个` : ''}。`
+        : undefined,
+      impact: '缺少价格的资产不会计入总额，旧价格资产会继续计入但可能与最新市价有偏差。',
+      timestamp,
+    }
+  }
+
+  if (stalePriceAssets.length > 0) {
+    return {
+      source: snapshot.sourceType === 'wallet' ? '钱包查询' : '交易所查询',
+      title: '部分资产使用旧价格',
+      sourceLabel: label,
+      kind: 'warning',
+      message: `有 ${stalePriceAssets.length} 个资产暂时沿用上次成功价格。`,
+      detail: preview
+        ? `受影响资产：${preview}${remaining > 0 ? ` 等 ${affectedCount} 个` : ''}。`
+        : undefined,
+      impact: '这些资产仍会计入总资产，但和最新市价可能有偏差。',
+      timestamp,
+    }
+  }
 
   return {
     source: snapshot.sourceType === 'wallet' ? '钱包查询' : '交易所查询',
@@ -70,7 +171,7 @@ function buildSnapshotError(snapshot: PortfolioSnapshot, label: string): ApiErro
     kind: 'warning',
     message: `有 ${missingPriceAssets.length} 个资产暂时没有价格。`,
     detail: preview
-      ? `受影响资产：${preview}${remaining > 0 ? ` 等 ${missingPriceAssets.length} 个` : ''}。`
+      ? `受影响资产：${preview}${remaining > 0 ? ` 等 ${affectedCount} 个` : ''}。`
       : undefined,
     impact: '这些资产会继续显示余额，但不会计入总资产估值。',
     timestamp,
@@ -134,8 +235,16 @@ export default function DashboardPage() {
         const data: QuoteResponse = await res.json()
         results.push(data)
         data.results.forEach((r) => {
-          setSnapshot(r.source, r)
-          const nextError = buildSnapshotError(r, walletNameMap.get(r.source) ?? r.source)
+          const previousSnapshot = snapshots[r.source]
+          const retained = shouldRetainPreviousSnapshot(previousSnapshot, r)
+          if (!retained) {
+            setSnapshot(r.source, r)
+          }
+
+          const nextError = withRetainedSnapshotDetail(
+            buildSnapshotError(r, walletNameMap.get(r.source) ?? r.source),
+            retained
+          )
           if (nextError) {
             addError(nextError)
           }
@@ -184,8 +293,16 @@ export default function DashboardPage() {
         const data: QuoteResponse = await res.json()
         results.push(data)
         data.results.forEach((r) => {
-          setSnapshot(r.source, r)
-          const nextError = buildSnapshotError(r, cexLabelMap.get(r.source) ?? r.source)
+          const previousSnapshot = snapshots[r.source]
+          const retained = shouldRetainPreviousSnapshot(previousSnapshot, r)
+          if (!retained) {
+            setSnapshot(r.source, r)
+          }
+
+          const nextError = withRetainedSnapshotDetail(
+            buildSnapshotError(r, cexLabelMap.get(r.source) ?? r.source),
+            retained
+          )
           if (nextError) {
             addError(nextError)
           }
@@ -217,6 +334,7 @@ export default function DashboardPage() {
     setLastRefresh(new Date().toISOString())
     return results
   }, [
+    snapshots,
     activeSourceIds,
     addError,
     clearErrors,
@@ -253,12 +371,14 @@ export default function DashboardPage() {
       const holdingsMap = new Map<
         string,
         {
+          assetId: string
           symbol: string
           name: string
           balance: number
           price: number | null
           value: number
           change24h: number | null
+          priceStatus: PriceStatus
           sources: Array<{ sourceId: string; sourceType: 'wallet' | 'cex'; sourceLabel: string; balance: number; chainKey?: string }>
         }
       >()
@@ -271,7 +391,10 @@ export default function DashboardPage() {
         else cTotal += snap.totalValue
 
         snap.assets.forEach((a) => {
-          assetMap.set(a.symbol, (assetMap.get(a.symbol) ?? 0) + (a.value ?? 0))
+          const assetKey = a.assetId ?? `${snap.source}:${a.symbol}`
+          const displaySymbol = getAssetDisplayName(snap, a)
+
+          assetMap.set(displaySymbol, (assetMap.get(displaySymbol) ?? 0) + (a.value ?? 0))
           if (a.value && a.change24h !== null) {
             weightedChange += a.value * (a.change24h / 100)
           }
@@ -289,6 +412,7 @@ export default function DashboardPage() {
                   sourceId: snap.source,
                   sourceType: snap.sourceType,
                   sourceLabel,
+                  assetId: a.assetId,
                   balance: c.balance,
                   chainKey: c.chainKey,
                 }))
@@ -297,25 +421,29 @@ export default function DashboardPage() {
               sourceId: snap.source,
               sourceType: snap.sourceType,
               sourceLabel,
+              assetId: a.assetId,
               balance: a.balance,
             }]
           }
 
-          const existing = holdingsMap.get(a.symbol)
+          const existing = holdingsMap.get(assetKey)
           if (existing) {
             existing.balance += a.balance
             existing.value += a.value ?? 0
             existing.price = a.price ?? existing.price
             existing.change24h = a.change24h ?? existing.change24h
+            existing.priceStatus = mergePriceStatus(existing.priceStatus, a.priceStatus)
             existing.sources.push(...buildSourceDetails())
           } else {
-            holdingsMap.set(a.symbol, {
-              symbol: a.symbol,
+            holdingsMap.set(assetKey, {
+              assetId: assetKey,
+              symbol: displaySymbol,
               name: a.name,
               balance: a.balance,
               price: a.price,
               value: a.value ?? 0,
               change24h: a.change24h,
+              priceStatus: a.priceStatus ?? 'missing',
               sources: buildSourceDetails(),
             })
           }
@@ -333,12 +461,14 @@ export default function DashboardPage() {
         .slice(0, 6)
       const holdingsEntries = Array.from(holdingsMap.values())
         .map((holding) => ({
+          assetId: holding.assetId,
           symbol: stripLdPrefix(holding.symbol),
           name: holding.name,
           balance: holding.balance,
           price: holding.price,
           value: holding.value,
           change24h: holding.change24h,
+          priceStatus: holding.priceStatus,
           sourceCount: new Set(holding.sources.map((s) => s.sourceId)).size,
             sources: holding.sources.map((s) => ({
               ...s,

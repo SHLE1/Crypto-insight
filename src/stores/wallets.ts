@@ -33,6 +33,28 @@ export const useWalletStore = create<WalletStore>()(
           ),
         })),
     }),
-    { name: 'crypto-insight-wallets' }
+    {
+      name: 'crypto-insight-wallets',
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<WalletStore> | undefined
+        const wallets = Array.isArray(state?.wallets)
+          ? state.wallets.map((wallet) => ({
+              ...wallet,
+              enabled: wallet.enabled ?? true,
+              evmChains:
+                wallet.chainType === 'evm'
+                  ? wallet.evmChains && wallet.evmChains.length > 0
+                    ? wallet.evmChains
+                    : undefined
+                  : undefined,
+            }))
+          : []
+
+        return {
+          wallets,
+        }
+      },
+    }
   )
 )

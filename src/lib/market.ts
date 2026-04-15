@@ -3,14 +3,11 @@ import type { PriceData } from '@/types'
 const STABLECOINS = new Set(['USDT', 'USDC', 'FDUSD', 'TUSD', 'USDE', 'DAI'])
 const COINGECKO_API_BASE = 'https://api.coingecko.com/api/v3'
 const COINGECKO_BATCH_SIZE = 50
-const COINGECKO_CACHE_TTL = 24 * 60 * 60 * 1000 // 24h
-const COINGECKO_PRICE_CACHE_TTL = 5 * 60 * 1000 // 5m
-const COINGECKO_STALE_CACHE_TTL = 60 * 60 * 1000 // 1h
-const COINGECKO_MAX_BATCHES_PER_CALL = 1
-const DEFAULT_COINGECKO_MAX_REQUESTS_PER_MINUTE = 8
 const BINANCE_TICKER_BATCH_SIZE = 20
+const COINGECKO_CACHE_TTL = 24 * 60 * 60 * 1000
+const PRICE_CACHE_TTL = 5 * 60 * 1000
+const STALE_PRICE_CACHE_TTL = 60 * 60 * 1000
 
-// Supported EVM chains for CoinGecko simple/token_price
 const EVM_CG_CHAINS: Record<string, string> = {
   eth: 'ethereum',
   bsc: 'binance-smart-chain',
@@ -20,11 +17,48 @@ const EVM_CG_CHAINS: Record<string, string> = {
   avax: 'avalanche',
 }
 
+const STATIC_SYMBOL_TO_COINGECKO_ID = new Map<string, string>([
+  ['AAVE', 'aave'],
+  ['ARB', 'arbitrum'],
+  ['AVAX', 'avalanche-2'],
+  ['BNB', 'binancecoin'],
+  ['BTC', 'bitcoin'],
+  ['BTCB', 'bitcoin-bep2'],
+  ['BUSD', 'binance-usd'],
+  ['DAI', 'dai'],
+  ['DEGEN', 'degen-base'],
+  ['ETH', 'ethereum'],
+  ['GMX', 'gmx'],
+  ['LINK', 'chainlink'],
+  ['POL', 'polygon-ecosystem-token'],
+  ['SHIB', 'shiba-inu'],
+  ['SOL', 'solana'],
+  ['UNI', 'uniswap'],
+  ['USDE', 'ethena-usde'],
+  ['WBNB', 'wbnb'],
+  ['WBTC', 'wrapped-bitcoin'],
+  ['WETH', 'weth'],
+  ['WETH.E', 'weth'],
+  ['XRP', 'ripple'],
+])
+
+const STATIC_SOLANA_TOKEN_METADATA = new Map<
+  string,
+  {
+    symbol: string
+    name: string
+  }
+>([
+  ['EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', { symbol: 'USDC', name: 'USD Coin' }],
+  ['Es9vMFrzaCERmJfrF4H2FyM4syjzAm8h1Hn3pV3Dg4eL', { symbol: 'USDT', name: 'Tether USD' }],
+  ['DezXAZ8z7PnrnRJjz3wXBoRgixCa6Nn6x1V7ebJ6jRjm', { symbol: 'BONK', name: 'Bonk' }],
+  ['JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', { symbol: 'JUP', name: 'Jupiter' }],
+  ['So11111111111111111111111111111111111111112', { symbol: 'wSOL', name: 'Wrapped SOL' }],
+])
+
 interface CoinGeckoCoinListResponseItem {
   id: string
   symbol: string
-  name: string
-  platforms?: Record<string, string>
 }
 
 interface CoinGeckoTokenPriceResponseItem {
@@ -37,11 +71,7 @@ interface SolanaTokenMarketData {
   name: string
   price: number | null
   change24h: number | null
-}
-
-interface SolanaTokenMetadata {
-  symbol: string
-  name: string
+  status: PriceData['status']
 }
 
 interface TimedCacheEntry<T> {
@@ -55,47 +85,30 @@ interface BinanceTickerResponse {
   priceChangePercent: string
 }
 
-// Local reference table: contract address → CoinGecko ID
-// Also: symbol → CoinGecko ID (for known symbols)
+interface CachedPriceValue {
+  symbol: string
+  price: number | null
+  change24h: number | null
+}
+
 let coinListCache:
   | {
       fetchedAt: number
-      // EVM platform key → contract address → coin id
-      byPlatform: Map<string, Map<string, string>>
-      // symbol (uppercase) → coin id
       bySymbol: Map<string, string>
     }
   | null = null
 
-let solanaTokenMetadataCache:
-  | {
-      fetchedAt: number
-      items: Map<string, SolanaTokenMetadata>
-    }
-  | null = null
+const symbolPriceCache = new Map<string, TimedCacheEntry<CachedPriceValue>>()
+const evmTokenPriceCache = new Map<string, TimedCacheEntry<CachedPriceValue>>()
+const solanaTokenPriceCache = new Map<string, TimedCacheEntry<CachedPriceValue>>()
 
-const symbolPriceCache = new Map<string, TimedCacheEntry<PriceData>>()
-const evmTokenPriceCache = new Map<string, TimedCacheEntry<PriceData>>()
-const solanaTokenPriceCache = new Map<string, TimedCacheEntry<CoinGeckoTokenPriceResponseItem>>()
+const symbolRequestInFlight = new Map<string, Promise<Record<string, PriceData>>>()
+const evmRequestInFlight = new Map<string, Promise<Map<string, PriceData>>>()
+const solanaRequestInFlight = new Map<string, Promise<Record<string, CachedPriceValue>>>()
 
-const coingeckoRateState = {
-  windowStartedAt: 0,
-  usedRequests: 0,
-  cursors: new Map<string, number>(),
-}
-
-function toNumber(value: string | null | undefined) {
+function toNumber(value: string | number | null | undefined) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
-}
-
-function normalizeBinanceMarketSymbol(symbol: string) {
-  return symbol.startsWith('LD') && symbol.length > 2 ? symbol.slice(2) : symbol
-}
-
-function getCoinGeckoHeaders() {
-  const demoApiKey = process.env.COINGECKO_DEMO_API_KEY?.trim()
-  return demoApiKey ? { 'x-cg-demo-api-key': demoApiKey } : undefined
 }
 
 function chunk<T>(items: T[], size: number) {
@@ -110,135 +123,92 @@ function shortenAddress(address: string) {
   return `${address.slice(0, 4)}...${address.slice(-4)}`
 }
 
-function getCoinGeckoRequestLimit() {
-  const parsed = Number(process.env.COINGECKO_MAX_REQUESTS_PER_MINUTE)
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed
-  }
-
-  return DEFAULT_COINGECKO_MAX_REQUESTS_PER_MINUTE
+function normalizeBinanceMarketSymbol(symbol: string) {
+  return symbol.startsWith('LD') && symbol.length > 2 ? symbol.slice(2) : symbol
 }
 
-function resetCoinGeckoWindowIfNeeded(now = Date.now()) {
-  if (now - coingeckoRateState.windowStartedAt >= 60_000) {
-    coingeckoRateState.windowStartedAt = now
-    coingeckoRateState.usedRequests = 0
-  }
+function getCoinGeckoHeaders() {
+  const demoApiKey = process.env.COINGECKO_DEMO_API_KEY?.trim()
+  return demoApiKey ? { 'x-cg-demo-api-key': demoApiKey } : undefined
 }
 
-function reserveCoinGeckoRequests(requested: number) {
-  resetCoinGeckoWindowIfNeeded()
-
-  const limit = getCoinGeckoRequestLimit()
-  const remaining = Math.max(0, limit - coingeckoRateState.usedRequests)
-  const granted = Math.max(0, Math.min(requested, remaining))
-  coingeckoRateState.usedRequests += granted
-  return granted
-}
-
-function rotateSelection(items: string[], namespace: string, count: number) {
-  if (items.length === 0 || count <= 0) return []
-
-  const cursor = coingeckoRateState.cursors.get(namespace) ?? 0
-  const selected: string[] = []
-
-  for (let index = 0; index < Math.min(count, items.length); index++) {
-    selected.push(items[(cursor + index) % items.length])
-  }
-
-  coingeckoRateState.cursors.set(namespace, (cursor + selected.length) % items.length)
-  return selected
-}
-
-function selectCoinGeckoRefreshItems(namespace: string, items: string[]) {
-  const uniqueItems = Array.from(new Set(items))
-  if (uniqueItems.length === 0) return []
-
-  const requestedBatches = Math.ceil(uniqueItems.length / COINGECKO_BATCH_SIZE)
-  const grantedBatches = reserveCoinGeckoRequests(Math.min(requestedBatches, COINGECKO_MAX_BATCHES_PER_CALL))
-  return rotateSelection(uniqueItems, namespace, grantedBatches * COINGECKO_BATCH_SIZE)
-}
-
-function getFreshCacheValue<T>(cache: Map<string, TimedCacheEntry<T>>, key: string, ttl = COINGECKO_PRICE_CACHE_TTL) {
-  const entry = cache.get(key)
-  if (!entry) return null
-  if (Date.now() - entry.fetchedAt > ttl) return null
-  return entry.value
-}
-
-function getStaleCacheValue<T>(cache: Map<string, TimedCacheEntry<T>>, key: string, ttl = COINGECKO_STALE_CACHE_TTL) {
-  const entry = cache.get(key)
-  if (!entry) return null
-  if (Date.now() - entry.fetchedAt > ttl) return null
-  return entry.value
-}
-
-function setCacheValue<T>(cache: Map<string, TimedCacheEntry<T>>, key: string, value: T) {
+function setCacheValue(cache: Map<string, TimedCacheEntry<CachedPriceValue>>, key: string, value: CachedPriceValue) {
   cache.set(key, {
     fetchedAt: Date.now(),
     value,
   })
 }
 
-// ---------------------------------------------------------------------------
-// CoinGecko local reference table (contract address → ID, symbol → ID)
-// ---------------------------------------------------------------------------
+function getFreshCacheValue(cache: Map<string, TimedCacheEntry<CachedPriceValue>>, key: string): PriceData | null {
+  const entry = cache.get(key)
+  if (!entry || Date.now() - entry.fetchedAt > PRICE_CACHE_TTL) return null
 
-async function getCoinListMap() {
-  const now = Date.now()
+  return {
+    ...entry.value,
+    status: 'live',
+  }
+}
 
-  if (coinListCache && now - coinListCache.fetchedAt < COINGECKO_CACHE_TTL) {
-    return coinListCache
+function getStaleCacheValue(cache: Map<string, TimedCacheEntry<CachedPriceValue>>, key: string): PriceData | null {
+  const entry = cache.get(key)
+  if (!entry || Date.now() - entry.fetchedAt > STALE_PRICE_CACHE_TTL) return null
+
+  return {
+    ...entry.value,
+    status: 'stale',
+  }
+}
+
+async function withInFlight<T>(map: Map<string, Promise<T>>, key: string, factory: () => Promise<T>) {
+  const existing = map.get(key)
+  if (existing) {
+    return existing
   }
 
-  const response = await fetch(`${COINGECKO_API_BASE}/coins/list?include_platform=true`, {
-    cache: 'no-store',
-    headers: getCoinGeckoHeaders(),
+  const task = factory().finally(() => {
+    map.delete(key)
   })
+  map.set(key, task)
+  return task
+}
 
-  if (!response.ok) {
-    throw new Error('CoinGecko 代币索引不可用')
-  }
+async function fetchWithRetry<T>(
+  url: string,
+  init?: RequestInit,
+  maxRetries = 3
+): Promise<T | null> {
+  let waitMs = 1000
 
-  const data = (await response.json()) as CoinGeckoCoinListResponseItem[]
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, init)
 
-  const byPlatform = new Map<string, Map<string, string>>()
-  const bySymbol = new Map<string, string>()
+      if (res.ok) {
+        return (await res.json()) as T
+      }
 
-  for (const item of data) {
-    // Symbol → ID mapping (first wins for duplicates)
-    const upperSymbol = item.symbol.toUpperCase()
-    if (!bySymbol.has(upperSymbol)) {
-      bySymbol.set(upperSymbol, item.id)
-    }
+      if (res.status === 429 && attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, waitMs))
+        waitMs *= 2
+        continue
+      }
 
-    // Platform contract → ID mapping
-    if (item.platforms) {
-      for (const [platform, address] of Object.entries(item.platforms)) {
-        if (!address) continue
-        const normalizedAddr = address.toLowerCase()
-        if (!byPlatform.has(platform)) {
-          byPlatform.set(platform, new Map())
-        }
-        const platformMap = byPlatform.get(platform)!
-        if (!platformMap.has(normalizedAddr)) {
-          platformMap.set(normalizedAddr, item.id)
-        }
+      return null
+    } catch {
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, waitMs))
+        waitMs *= 2
+        continue
       }
     }
   }
 
-  coinListCache = { fetchedAt: now, byPlatform, bySymbol }
-  return coinListCache
+  return null
 }
-
-// ---------------------------------------------------------------------------
-// Binance ticker (primary price source, fast and free)
-// ---------------------------------------------------------------------------
 
 async function fetchBinanceTickerBatch(symbols: string[]) {
   if (symbols.length === 0) {
-    return {} as Record<string, PriceData>
+    return {} as Record<string, CachedPriceValue>
   }
 
   const query = new URLSearchParams({
@@ -251,24 +221,19 @@ async function fetchBinanceTickerBatch(symbols: string[]) {
   })
 
   if (!response.ok) {
-    return {} as Record<string, PriceData>
+    return {} as Record<string, CachedPriceValue>
   }
 
   const data = (await response.json()) as BinanceTickerResponse[]
-
   if (!Array.isArray(data)) {
-    return {} as Record<string, PriceData>
+    return {} as Record<string, CachedPriceValue>
   }
 
-  const prices = new Map<string, PriceData>()
-
+  const prices = new Map<string, CachedPriceValue>()
   data.forEach((ticker) => {
     const symbol = ticker.symbol.replace(/USDT$/, '')
     const price = toNumber(ticker.lastPrice)
-
-    if (!symbol || price === null) {
-      return
-    }
+    if (!symbol || price === null) return
 
     prices.set(symbol, {
       symbol,
@@ -280,20 +245,12 @@ async function fetchBinanceTickerBatch(symbols: string[]) {
   return Object.fromEntries(prices.entries())
 }
 
-// ---------------------------------------------------------------------------
-// CoinGecko batched price fetch (fallback for non-Binance tokens)
-// ---------------------------------------------------------------------------
-
-/**
- * Fetch prices for multiple CoinGecko IDs in a single call.
- * Uses /simple/price with comma-separated ids, up to 50 per call.
- */
-async function fetchCoinGeckoPriceBatch(coinIds: string[]): Promise<Map<string, PriceData>> {
-  const result = new Map<string, PriceData>()
+async function fetchCoinGeckoPriceBatch(coinIds: string[]) {
+  const result = new Map<string, CachedPriceValue>()
   if (coinIds.length === 0) return result
 
-  const batches = chunk(coinIds, COINGECKO_BATCH_SIZE)
   const headers = getCoinGeckoHeaders()
+  const batches = chunk(coinIds, COINGECKO_BATCH_SIZE)
 
   for (const batch of batches) {
     const query = new URLSearchParams({
@@ -311,9 +268,9 @@ async function fetchCoinGeckoPriceBatch(coinIds: string[]): Promise<Map<string, 
 
     for (const [coinId, item] of Object.entries(data)) {
       result.set(coinId, {
-        symbol: coinId, // caller will remap to actual symbol
-        price: toNumber(item.usd?.toString()),
-        change24h: toNumber(item.usd_24h_change?.toString()),
+        symbol: coinId,
+        price: toNumber(item.usd),
+        change24h: toNumber(item.usd_24h_change),
       })
     }
   }
@@ -321,15 +278,11 @@ async function fetchCoinGeckoPriceBatch(coinIds: string[]): Promise<Map<string, 
   return result
 }
 
-/**
- * Fetch prices for EVM contract addresses using /simple/token_price/{chain}.
- * Batches up to 50 addresses per call.
- */
 async function fetchEvmContractPriceBatch(
   chainPlatform: string,
   addresses: string[]
-): Promise<Map<string, CoinGeckoTokenPriceResponseItem>> {
-  const result = new Map<string, CoinGeckoTokenPriceResponseItem>()
+) {
+  const result = new Map<string, CachedPriceValue>()
   if (addresses.length === 0) return result
 
   const headers = getCoinGeckoHeaders()
@@ -349,94 +302,21 @@ async function fetchEvmContractPriceBatch(
 
     if (!data) continue
 
-    for (const [addr, item] of Object.entries(data)) {
-      result.set(addr.toLowerCase(), item)
+    for (const [address, item] of Object.entries(data)) {
+      result.set(address.toLowerCase(), {
+        symbol: address,
+        price: toNumber(item.usd),
+        change24h: toNumber(item.usd_24h_change),
+      })
     }
   }
 
   return result
 }
 
-// ---------------------------------------------------------------------------
-// Exponential backoff retry for 429 errors
-// ---------------------------------------------------------------------------
-
-async function fetchWithRetry<T>(
-  url: string,
-  init?: RequestInit,
-  maxRetries = 3
-): Promise<T | null> {
-  let waitMs = 1000
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const res = await fetch(url, init)
-
-      if (res.ok) {
-        return (await res.json()) as T
-      }
-
-      if (res.status === 429) {
-        if (attempt < maxRetries) {
-          console.warn(`[CoinGecko 429] retry in ${waitMs}ms (${attempt + 1}/${maxRetries})`)
-          await new Promise((r) => setTimeout(r, waitMs))
-          waitMs *= 2 // 1s → 2s → 4s
-          continue
-        }
-      }
-
-      // Other errors: don't retry
-      return null
-    } catch {
-      if (attempt < maxRetries) {
-        await new Promise((r) => setTimeout(r, waitMs))
-        waitMs *= 2
-        continue
-      }
-    }
-  }
-
-  return null
-}
-
-// ---------------------------------------------------------------------------
-// Solana token metadata & prices
-// ---------------------------------------------------------------------------
-
-async function getSolanaTokenMetadataMap() {
-  const now = Date.now()
-
-  if (solanaTokenMetadataCache && now - solanaTokenMetadataCache.fetchedAt < COINGECKO_CACHE_TTL) {
-    return solanaTokenMetadataCache.items
-  }
-
-  // Reuse the shared coin list instead of a separate call
-  const listMap = await getCoinListMap().catch(() => null)
-  if (!listMap) return new Map<string, SolanaTokenMetadata>()
-
-  const items = new Map<string, SolanaTokenMetadata>()
-  const solanaMap = listMap.byPlatform.get('solana')
-
-  if (solanaMap) {
-    for (const [mintAddr, coinId] of solanaMap.entries()) {
-      // Reverse lookup: find the coin entry to get symbol/name
-      // We stored bySymbol, but we need the reverse. Use coinId → symbol from bySymbol.
-      // Actually, let's just store symbol/name from the original data.
-      // For simplicity, we use the coinId as fallback.
-      items.set(mintAddr, {
-        symbol: coinId.toUpperCase().slice(0, 10),
-        name: coinId,
-      })
-    }
-  }
-
-  solanaTokenMetadataCache = { fetchedAt: now, items }
-  return items
-}
-
-async function fetchCoinGeckoSolanaTokenPriceBatch(mints: string[]) {
+async function fetchSolanaTokenPriceBatch(mints: string[]) {
   if (mints.length === 0) {
-    return {} as Record<string, CoinGeckoTokenPriceResponseItem>
+    return {} as Record<string, CachedPriceValue>
   }
 
   const query = new URLSearchParams({
@@ -450,234 +330,312 @@ async function fetchCoinGeckoSolanaTokenPriceBatch(mints: string[]) {
     { cache: 'no-store', headers: getCoinGeckoHeaders() }
   )
 
-  return data ?? ({} as Record<string, CoinGeckoTokenPriceResponseItem>)
+  if (!data) {
+    return {} as Record<string, CachedPriceValue>
+  }
+
+  return Object.fromEntries(
+    Object.entries(data).map(([mint, item]) => [
+      mint,
+      {
+        symbol: mint,
+        price: toNumber(item.usd),
+        change24h: toNumber(item.usd_24h_change),
+      },
+    ])
+  )
 }
 
-// ---------------------------------------------------------------------------
-// Public API: getPrices — unified price lookup
-// ---------------------------------------------------------------------------
+async function getCoinListMap() {
+  const now = Date.now()
+  if (coinListCache && now - coinListCache.fetchedAt < COINGECKO_CACHE_TTL) {
+    return coinListCache.bySymbol
+  }
 
-export async function getPrices(symbols: string[]) {
-  const uniqueSymbols = Array.from(new Set(symbols.map((symbol) => symbol.trim().toUpperCase()))).filter(Boolean)
-  const normalizedSymbolMap = new Map(uniqueSymbols.map((symbol) => [symbol, normalizeBinanceMarketSymbol(symbol)]))
-  const prices = new Map<string, PriceData>()
+  const response = await fetch(`${COINGECKO_API_BASE}/coins/list`, {
+    cache: 'no-store',
+    headers: getCoinGeckoHeaders(),
+  })
 
-  // 1) Stablecoins → $1
-  const marketSymbols = Array.from(new Set(Array.from(normalizedSymbolMap.values()))).filter(
-    (symbol) => !STABLECOINS.has(symbol)
-  )
+  if (!response.ok) {
+    throw new Error('CoinGecko 代币索引不可用')
+  }
 
-  normalizedSymbolMap.forEach((marketSymbol, originalSymbol) => {
-    if (STABLECOINS.has(marketSymbol)) {
-      prices.set(originalSymbol, { symbol: originalSymbol, price: 1, change24h: 0 })
+  const data = (await response.json()) as CoinGeckoCoinListResponseItem[]
+  const bySymbol = new Map<string, string>()
+
+  for (const item of data) {
+    const symbol = item.symbol.toUpperCase()
+    if (!bySymbol.has(symbol)) {
+      bySymbol.set(symbol, item.id)
+    }
+  }
+
+  coinListCache = {
+    fetchedAt: now,
+    bySymbol,
+  }
+
+  return bySymbol
+}
+
+async function resolveCoinGeckoIds(symbols: string[]) {
+  const resolved = new Map<string, string>()
+  const unresolved: string[] = []
+
+  symbols.forEach((symbol) => {
+    const staticId = STATIC_SYMBOL_TO_COINGECKO_ID.get(symbol)
+    if (staticId) {
+      resolved.set(symbol, staticId)
+    } else {
+      unresolved.push(symbol)
     }
   })
 
-  // 2) Try Binance ticker first (fast, no rate limit issues)
-  const binanceBatches = await Promise.all(
-    chunk(marketSymbols, BINANCE_TICKER_BATCH_SIZE).map((batch) => fetchBinanceTickerBatch(batch))
-  )
+  if (unresolved.length === 0) {
+    return resolved
+  }
 
-  const binancePrices = new Map<string, PriceData>()
+  const listMap = await getCoinListMap().catch(() => null)
+  if (!listMap) {
+    return resolved
+  }
+
+  unresolved.forEach((symbol) => {
+    const coinId = listMap.get(symbol)
+    if (coinId) {
+      resolved.set(symbol, coinId)
+    }
+  })
+
+  return resolved
+}
+
+async function fetchBatchedSymbolPrices(symbols: string[]) {
+  const uniqueSymbols = Array.from(new Set(symbols))
+  const normalizedSymbols = Array.from(new Set(uniqueSymbols.map((symbol) => normalizeBinanceMarketSymbol(symbol))))
+  const result = new Map<string, PriceData>()
+
+  const binanceBatches = await Promise.all(
+    chunk(normalizedSymbols, BINANCE_TICKER_BATCH_SIZE).map((batch) => fetchBinanceTickerBatch(batch))
+  )
+  const binancePrices = new Map<string, CachedPriceValue>()
+
   binanceBatches.forEach((batch) => {
     Object.entries(batch).forEach(([symbol, price]) => {
       binancePrices.set(symbol, price)
     })
   })
 
-  // 3) Find symbols not found on Binance → try CoinGecko
-  const missingSymbols: string[] = []
+  const unresolvedSymbols: string[] = []
   uniqueSymbols.forEach((symbol) => {
-    if (prices.has(symbol)) return
-    const marketSymbol = normalizedSymbolMap.get(symbol) ?? symbol
+    const marketSymbol = normalizeBinanceMarketSymbol(symbol)
     const binancePrice = binancePrices.get(marketSymbol)
     if (binancePrice) {
-      prices.set(symbol, binancePrice)
+      const nextPrice = { symbol, price: binancePrice.price, change24h: binancePrice.change24h, status: 'live' as const }
+      result.set(symbol, nextPrice)
+      setCacheValue(symbolPriceCache, symbol, nextPrice)
     } else {
-      const cachedPrice = getFreshCacheValue(symbolPriceCache, symbol)
-      if (cachedPrice) {
-        prices.set(symbol, cachedPrice)
-      } else {
-        missingSymbols.push(symbol)
-      }
+      unresolvedSymbols.push(symbol)
     }
   })
 
-  // 4) For missing symbols, try CoinGecko via symbol → coin ID mapping
-  if (missingSymbols.length > 0) {
-    const listMap = await getCoinListMap().catch(() => null)
-    if (listMap) {
-      const refreshSymbols = selectCoinGeckoRefreshItems('symbols', missingSymbols)
-      const refreshCoinIds: string[] = []
-      const coinIdToSymbol = new Map<string, string>()
+  if (unresolvedSymbols.length > 0) {
+    const idLookupSymbols = Array.from(
+      new Set(unresolvedSymbols.map((symbol) => normalizeBinanceMarketSymbol(symbol)))
+    )
+    const symbolToCoinId = await resolveCoinGeckoIds(idLookupSymbols)
+    const coinIds = Array.from(new Set(Array.from(symbolToCoinId.values())))
+    const cgPrices = await fetchCoinGeckoPriceBatch(coinIds)
 
-      for (const sym of refreshSymbols) {
-        const coinId = listMap.bySymbol.get(sym)
-        if (coinId) {
-          refreshCoinIds.push(coinId)
-          coinIdToSymbol.set(coinId, sym)
-        }
+    unresolvedSymbols.forEach((symbol) => {
+      const marketSymbol = normalizeBinanceMarketSymbol(symbol)
+      const coinId = symbolToCoinId.get(marketSymbol)
+      const cgPrice = coinId ? cgPrices.get(coinId) : undefined
+      if (!cgPrice) return
+
+      const nextPrice = {
+        symbol,
+        price: cgPrice.price,
+        change24h: cgPrice.change24h,
+        status: 'live' as const,
       }
-
-      if (refreshCoinIds.length > 0) {
-        const cgPrices = await fetchCoinGeckoPriceBatch(refreshCoinIds)
-        for (const [coinId, priceData] of Array.from(cgPrices)) {
-          const sym = coinIdToSymbol.get(coinId)
-          if (sym) {
-            const nextPrice = { symbol: sym, price: priceData.price, change24h: priceData.change24h }
-            prices.set(sym, nextPrice)
-            setCacheValue(symbolPriceCache, sym, nextPrice)
-          }
-        }
-
-        refreshSymbols.forEach((sym) => {
-          if (prices.has(sym)) return
-
-          const stalePrice = getStaleCacheValue(symbolPriceCache, sym)
-          if (stalePrice) {
-            prices.set(sym, stalePrice)
-          }
-        })
-      }
-    }
+      result.set(symbol, nextPrice)
+      setCacheValue(symbolPriceCache, symbol, nextPrice)
+    })
   }
 
-  // 5) Fill remaining with null
-  uniqueSymbols.forEach((symbol) => {
-    if (!prices.has(symbol)) {
-      const stalePrice = getStaleCacheValue(symbolPriceCache, symbol)
-      if (stalePrice) {
-        prices.set(symbol, stalePrice)
-      } else {
-        prices.set(symbol, { symbol, price: null, change24h: null })
-      }
-    }
-  })
-
-  return Object.fromEntries(prices.entries())
+  return Object.fromEntries(result.entries())
 }
 
-// ---------------------------------------------------------------------------
-// Public API: getEvmTokenPrices — batch EVM contract address → price
-// ---------------------------------------------------------------------------
-
-/**
- * Fetch prices for EVM token contract addresses.
- * Returns { [lowercase_address]: PriceData }
- */
-export async function getEvmTokenPrices(
+async function fetchBatchedEvmTokenPrices(
   tokens: Array<{ address: string; symbol: string }>,
   chainKey: string
-): Promise<Map<string, PriceData>> {
+) {
   const result = new Map<string, PriceData>()
-  if (tokens.length === 0) return result
-
   const cgPlatform = EVM_CG_CHAINS[chainKey]
+
   if (!cgPlatform) {
-    // Unknown chain, return null prices
-    for (const t of tokens) {
-      result.set(t.address.toLowerCase(), { symbol: t.symbol, price: null, change24h: null })
-    }
+    tokens.forEach((token) => {
+      result.set(token.address.toLowerCase(), {
+        symbol: token.symbol,
+        price: null,
+        change24h: null,
+        status: 'missing',
+      })
+    })
     return result
   }
 
-  const missingTokens: Array<{ address: string; symbol: string }> = []
-  for (const token of tokens) {
-    const cacheKey = `${chainKey}:${token.address.toLowerCase()}`
-    const cachedPrice = getFreshCacheValue(evmTokenPriceCache, cacheKey)
-    if (cachedPrice) {
-      result.set(token.address.toLowerCase(), cachedPrice)
-    } else {
-      missingTokens.push(token)
+  const byAddress = new Map(tokens.map((token) => [token.address.toLowerCase(), token]))
+  const pricesByContract = await fetchEvmContractPriceBatch(cgPlatform, Array.from(byAddress.keys()))
+
+  pricesByContract.forEach((price, address) => {
+    const token = byAddress.get(address)
+    if (!token) return
+
+    const nextPrice = {
+      symbol: token.symbol,
+      price: price.price,
+      change24h: price.change24h,
+      status: 'live' as const,
     }
-  }
+    result.set(address, nextPrice)
+    setCacheValue(evmTokenPriceCache, `${chainKey}:${address}`, nextPrice)
+  })
 
-  // 1) Try CoinGecko /simple/token_price/{chain} by contract address
-  const refreshTokens = selectCoinGeckoRefreshItems(
-    `evm-contract:${chainKey}`,
-    missingTokens.map((token) => token.address.toLowerCase())
-  )
-  const refreshTokenSet = new Set(refreshTokens)
-  const contractLookupTokens = missingTokens.filter((token) => refreshTokenSet.has(token.address.toLowerCase()))
-  const cgPrices = await fetchEvmContractPriceBatch(
-    cgPlatform,
-    contractLookupTokens.map((token) => token.address.toLowerCase())
-  )
+  const unresolvedTokens = tokens.filter((token) => !result.has(token.address.toLowerCase()))
+  if (unresolvedTokens.length > 0) {
+    const symbolToCoinId = await resolveCoinGeckoIds(
+      Array.from(new Set(unresolvedTokens.map((token) => token.symbol.toUpperCase())))
+    )
+    const coinIds = Array.from(new Set(Array.from(symbolToCoinId.values())))
+    const cgPrices = await fetchCoinGeckoPriceBatch(coinIds)
 
-  for (const t of contractLookupTokens) {
-    const addr = t.address.toLowerCase()
-    const cgData = cgPrices.get(addr)
-    if (cgData) {
+    unresolvedTokens.forEach((token) => {
+      const address = token.address.toLowerCase()
+      const coinId = symbolToCoinId.get(token.symbol.toUpperCase())
+      const cgPrice = coinId ? cgPrices.get(coinId) : undefined
+      if (!cgPrice) return
+
       const nextPrice = {
-        symbol: t.symbol,
-        price: toNumber(cgData.usd?.toString()),
-        change24h: toNumber(cgData.usd_24h_change?.toString()),
+        symbol: token.symbol,
+        price: cgPrice.price,
+        change24h: cgPrice.change24h,
+        status: 'live' as const,
       }
-      result.set(addr, nextPrice)
-      setCacheValue(evmTokenPriceCache, `${chainKey}:${addr}`, nextPrice)
-    }
-  }
-
-  // 2) For tokens not found by contract, try symbol lookup via local reference table
-  const stillMissing = contractLookupTokens.filter((t) => !result.has(t.address.toLowerCase()))
-  if (stillMissing.length > 0) {
-    const listMap = await getCoinListMap().catch(() => null)
-    if (listMap) {
-      const refreshByIdTokens = selectCoinGeckoRefreshItems(
-        `evm-id:${chainKey}`,
-        stillMissing.map((token) => token.address.toLowerCase())
-      )
-      const refreshByIdTokenSet = new Set(refreshByIdTokens)
-      const coinIds: string[] = []
-      const coinIdToAddr = new Map<string, string>()
-
-      for (const t of stillMissing) {
-        if (!refreshByIdTokenSet.has(t.address.toLowerCase())) continue
-        const coinId = listMap.bySymbol.get(t.symbol.toUpperCase())
-        if (coinId) {
-          coinIds.push(coinId)
-          coinIdToAddr.set(coinId, t.address.toLowerCase())
-        }
-      }
-
-      if (coinIds.length > 0) {
-        const cgIdPrices = await fetchCoinGeckoPriceBatch(coinIds)
-        for (const [coinId, priceData] of Array.from(cgIdPrices)) {
-          const addr = coinIdToAddr.get(coinId)
-          if (addr) {
-            const token = tokens.find((t) => t.address.toLowerCase() === addr)
-            const nextPrice = {
-              symbol: token?.symbol ?? priceData.symbol,
-              price: priceData.price,
-              change24h: priceData.change24h,
-            }
-            result.set(addr, nextPrice)
-            setCacheValue(evmTokenPriceCache, `${chainKey}:${addr}`, nextPrice)
-          }
-        }
-      }
-    }
-  }
-
-  // 3) Fill remaining with null
-  for (const t of tokens) {
-    const addr = t.address.toLowerCase()
-    if (!result.has(addr)) {
-      const stalePrice = getStaleCacheValue(evmTokenPriceCache, `${chainKey}:${addr}`)
-      if (stalePrice) {
-        result.set(addr, stalePrice)
-      } else {
-        result.set(addr, { symbol: t.symbol, price: null, change24h: null })
-      }
-    }
+      result.set(address, nextPrice)
+      setCacheValue(evmTokenPriceCache, `${chainKey}:${address}`, nextPrice)
+    })
   }
 
   return result
 }
 
-// ---------------------------------------------------------------------------
-// Public API: getSolanaTokenMarketData (unchanged)
-// ---------------------------------------------------------------------------
+export async function getPrices(symbols: string[]) {
+  const uniqueSymbols = Array.from(new Set(symbols.map((symbol) => symbol.trim().toUpperCase()))).filter(Boolean)
+  const result = new Map<string, PriceData>()
+  const unresolvedSymbols: string[] = []
+
+  uniqueSymbols.forEach((symbol) => {
+    if (STABLECOINS.has(normalizeBinanceMarketSymbol(symbol))) {
+      result.set(symbol, { symbol, price: 1, change24h: 0, status: 'live' })
+      return
+    }
+
+    const cachedPrice = getFreshCacheValue(symbolPriceCache, symbol)
+    if (cachedPrice) {
+      result.set(symbol, cachedPrice)
+      return
+    }
+
+    unresolvedSymbols.push(symbol)
+  })
+
+  if (unresolvedSymbols.length > 0) {
+    const batchKey = unresolvedSymbols.slice().sort().join(',')
+    const livePrices = await withInFlight(symbolRequestInFlight, batchKey, () =>
+      fetchBatchedSymbolPrices(unresolvedSymbols)
+    )
+
+    unresolvedSymbols.forEach((symbol) => {
+      const price = livePrices[symbol]
+      if (price) {
+        result.set(symbol, price)
+      }
+    })
+  }
+
+  uniqueSymbols.forEach((symbol) => {
+    if (result.has(symbol)) return
+
+    const stalePrice = getStaleCacheValue(symbolPriceCache, symbol)
+    if (stalePrice) {
+      result.set(symbol, stalePrice)
+      return
+    }
+
+    result.set(symbol, {
+      symbol,
+      price: null,
+      change24h: null,
+      status: 'missing',
+    })
+  })
+
+  return Object.fromEntries(result.entries())
+}
+
+export async function getEvmTokenPrices(
+  tokens: Array<{ address: string; symbol: string }>,
+  chainKey: string
+): Promise<Map<string, PriceData>> {
+  const result = new Map<string, PriceData>()
+  const dedupedTokens = Array.from(
+    new Map(tokens.map((token) => [token.address.toLowerCase(), { ...token, address: token.address.toLowerCase() }])).values()
+  )
+  const unresolvedTokens: Array<{ address: string; symbol: string }> = []
+
+  dedupedTokens.forEach((token) => {
+    const cacheKey = `${chainKey}:${token.address}`
+    const cachedPrice = getFreshCacheValue(evmTokenPriceCache, cacheKey)
+    if (cachedPrice) {
+      result.set(token.address, cachedPrice)
+      return
+    }
+
+    unresolvedTokens.push(token)
+  })
+
+  if (unresolvedTokens.length > 0) {
+    const batchKey = `${chainKey}:${unresolvedTokens.map((token) => token.address).sort().join(',')}`
+    const livePrices = await withInFlight(evmRequestInFlight, batchKey, () =>
+      fetchBatchedEvmTokenPrices(unresolvedTokens, chainKey)
+    )
+    livePrices.forEach((price, address) => {
+      result.set(address, price)
+    })
+  }
+
+  dedupedTokens.forEach((token) => {
+    if (result.has(token.address)) return
+
+    const stalePrice = getStaleCacheValue(evmTokenPriceCache, `${chainKey}:${token.address}`)
+    if (stalePrice) {
+      result.set(token.address, stalePrice)
+      return
+    }
+
+    result.set(token.address, {
+      symbol: token.symbol,
+      price: null,
+      change24h: null,
+      status: 'missing',
+    })
+  })
+
+  return result
+}
 
 export async function getSolanaTokenMarketData(mints: string[]) {
   const uniqueMints = Array.from(new Set(mints.map((mint) => mint.trim()).filter(Boolean)))
@@ -686,45 +644,58 @@ export async function getSolanaTokenMarketData(mints: string[]) {
     return {} as Record<string, SolanaTokenMarketData>
   }
 
-  const metadataMap = await getSolanaTokenMetadataMap().catch(() => new Map<string, SolanaTokenMetadata>())
-  const prices: Record<string, CoinGeckoTokenPriceResponseItem> = {}
-  const uncachedMints: string[] = []
+  const livePrices: Record<string, CachedPriceValue> = {}
+  const unresolvedMints: string[] = []
 
   uniqueMints.forEach((mint) => {
     const cachedPrice = getFreshCacheValue(solanaTokenPriceCache, mint)
     if (cachedPrice) {
-      prices[mint] = cachedPrice
+      livePrices[mint] = cachedPrice
     } else {
-      uncachedMints.push(mint)
+      unresolvedMints.push(mint)
     }
   })
 
-  const refreshMints = selectCoinGeckoRefreshItems('solana', uncachedMints)
-  const priceBatches = await Promise.all(
-    chunk(refreshMints, COINGECKO_BATCH_SIZE).map((batch) => fetchCoinGeckoSolanaTokenPriceBatch(batch))
-  )
+  if (unresolvedMints.length > 0) {
+    const batchKey = unresolvedMints.slice().sort().join(',')
+    const fetchedPrices = await withInFlight(solanaRequestInFlight, batchKey, () =>
+      Promise.all(
+        chunk(unresolvedMints, COINGECKO_BATCH_SIZE).map((batch) => fetchSolanaTokenPriceBatch(batch))
+      ).then((batches) => Object.assign({} as Record<string, CachedPriceValue>, ...batches))
+    )
 
-  priceBatches.forEach((batch) => {
-    Object.entries(batch).forEach(([mint, price]) => {
-      prices[mint] = price
+    ;(Object.entries(fetchedPrices) as Array<[string, CachedPriceValue]>).forEach(([mint, price]) => {
+      livePrices[mint] = price
       setCacheValue(solanaTokenPriceCache, mint, price)
     })
-  })
+  }
 
-  const entries = uniqueMints.map((mint) => {
-    const metadata = metadataMap.get(mint)
-    const priceEntry = prices[mint] ?? getStaleCacheValue(solanaTokenPriceCache, mint) ?? undefined
+  return Object.fromEntries(
+    uniqueMints.map((mint) => {
+      const metadata = STATIC_SOLANA_TOKEN_METADATA.get(mint)
+      const livePrice = livePrices[mint]
+      const stalePrice = livePrice ? null : getStaleCacheValue(solanaTokenPriceCache, mint)
+      const resolvedPrice = livePrice
+        ? { ...livePrice, status: 'live' as const }
+        : stalePrice
+          ? stalePrice
+          : {
+              symbol: metadata?.symbol ?? shortenAddress(mint),
+              price: null,
+              change24h: null,
+              status: 'missing' as const,
+            }
 
-    return [
-      mint,
-      {
-        symbol: metadata?.symbol ?? shortenAddress(mint),
-        name: metadata?.name ?? shortenAddress(mint),
-        price: toNumber(priceEntry?.usd?.toString()),
-        change24h: toNumber(priceEntry?.usd_24h_change?.toString()),
-      },
-    ] as const
-  })
-
-  return Object.fromEntries(entries)
+      return [
+        mint,
+        {
+          symbol: metadata?.symbol ?? resolvedPrice.symbol,
+          name: metadata?.name ?? shortenAddress(mint),
+          price: resolvedPrice.price,
+          change24h: resolvedPrice.change24h,
+          status: resolvedPrice.status,
+        },
+      ] as const
+    })
+  )
 }

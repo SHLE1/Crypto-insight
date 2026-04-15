@@ -21,18 +21,25 @@ export default function SettingsPage() {
   const setWallets = useWalletStore((s) => s.setWallets)
   const accounts = useCexStore((s) => s.accounts)
   const setAccounts = useCexStore((s) => s.setAccounts)
-  const { snapshots, replacePortfolio, clearAll } = usePortfolioStore()
+  const clearPortfolio = usePortfolioStore((s) => s.clearAll)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleExport = () => {
     const data = {
-      wallets: wallets.map((w) => ({ id: w.id, name: w.name, chainType: w.chainType, address: w.address })),
+      wallets: wallets.map((wallet) => ({
+        id: wallet.id,
+        name: wallet.name,
+        chainType: wallet.chainType,
+        address: wallet.address,
+        enabled: wallet.enabled,
+        evmChains: wallet.evmChains,
+      })),
       cexAccounts: accounts.map((a) => ({
         id: a.id,
         exchange: a.exchange,
         label: a.label,
+        enabled: a.enabled,
       })),
-      snapshots,
       settings: {
         quoteCurrency: settings.quoteCurrency,
         refreshInterval: settings.refreshInterval,
@@ -61,14 +68,22 @@ export default function SettingsPage() {
       const raw = await file.text()
       const data = JSON.parse(raw) as {
         wallets?: typeof wallets
-        cexAccounts?: Array<Pick<(typeof accounts)[number], 'id' | 'exchange' | 'label'>>
-        snapshots?: typeof snapshots
+        cexAccounts?: Array<Pick<(typeof accounts)[number], 'id' | 'exchange' | 'label' | 'enabled'>>
         settings?: Partial<typeof settings>
       }
 
       setWallets(
         Array.isArray(data.wallets)
-          ? data.wallets.map((wallet) => ({ ...wallet, enabled: wallet.enabled ?? true }))
+          ? data.wallets.map((wallet) => ({
+              ...wallet,
+              enabled: wallet.enabled ?? true,
+              evmChains:
+                wallet.chainType === 'evm'
+                  ? wallet.evmChains && wallet.evmChains.length > 0
+                    ? wallet.evmChains
+                    : undefined
+                  : undefined,
+            }))
           : []
       )
       setAccounts(
@@ -78,15 +93,11 @@ export default function SettingsPage() {
               apiKey: '',
               apiSecret: '',
               passphrase: undefined,
-              enabled: true,
+              enabled: account.enabled ?? true,
             }))
           : []
       )
-      replacePortfolio({
-        snapshots: data.snapshots ?? {},
-        errors: [],
-        lastRefresh: null,
-      })
+      clearPortfolio()
 
       if (data.settings) {
         settings.updateSettings({
@@ -113,7 +124,7 @@ export default function SettingsPage() {
 
     setWallets([])
     setAccounts([])
-    clearAll()
+    clearPortfolio()
     toast.success('本地数据已清空')
   }
 
@@ -200,7 +211,7 @@ export default function SettingsPage() {
             <div>
               <Label>导出数据</Label>
               <p className="text-xs text-muted-foreground">
-                导出钱包配置、账户标签、资产快照与设置（不含 API Key）
+                导出钱包配置、账户标签与设置（不含快照与任何密钥）
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={handleExport}>
@@ -215,7 +226,7 @@ export default function SettingsPage() {
             <div>
               <Label>导入数据</Label>
               <p className="text-xs text-muted-foreground">
-                可从导出的 JSON 恢复钱包、标签、快照与设置
+                可从导出的 JSON 恢复钱包、标签与设置，导入后需要重新刷新数据
               </p>
             </div>
             <>
@@ -254,7 +265,7 @@ export default function SettingsPage() {
             <div>
               <Label>清空本地数据</Label>
               <p className="text-xs text-muted-foreground">
-                清空钱包、交易所配置与资产快照
+                清空钱包、交易所配置与当前会话数据
               </p>
             </div>
             <Button variant="destructive" size="sm" onClick={handleReset}>

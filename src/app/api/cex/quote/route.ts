@@ -10,10 +10,10 @@ export async function POST(request: NextRequest) {
     const accounts: CexAccountInput[] = body.accounts || []
     const results = await Promise.all(accounts.map((account) => getCexSnapshot(account)))
 
-    const hasError = results.some((r) => r.status === 'error')
+    const hasNonSuccess = results.some((result) => result.status !== 'success')
     const response: QuoteResponse = {
       results,
-      status: hasError ? 'partial' : 'success',
+      status: hasNonSuccess ? 'partial' : 'success',
       updatedAt: new Date().toISOString(),
     }
 

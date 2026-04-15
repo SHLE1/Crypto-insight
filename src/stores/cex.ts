@@ -35,6 +35,36 @@ export const useCexStore = create<CexStore>()(
           ),
         })),
     }),
-    { name: 'crypto-insight-cex' }
+    {
+      name: 'crypto-insight-cex',
+      version: 2,
+      partialize: (state) => ({
+        accounts: state.accounts.map((account) => ({
+          id: account.id,
+          exchange: account.exchange,
+          label: account.label,
+          enabled: account.enabled,
+          apiKey: '',
+          apiSecret: '',
+          passphrase: undefined,
+        })),
+      }),
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<CexStore> | undefined
+        const accounts = Array.isArray(state?.accounts)
+          ? state.accounts.map((account) => ({
+              ...account,
+              apiKey: '',
+              apiSecret: '',
+              passphrase: undefined,
+              enabled: account.enabled ?? true,
+            }))
+          : []
+
+        return {
+          accounts,
+        }
+      },
+    }
   )
 )

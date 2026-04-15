@@ -95,8 +95,8 @@ function buildSnapshot(
   options?: { error?: string; warning?: string }
 ): PortfolioSnapshot {
   const totalValue = assets.reduce((sum, asset) => sum + (asset.value ?? 0), 0)
-  const hasMissingPrice = assets.some((asset) => asset.price === null)
-  const status = options?.error ? 'error' : hasMissingPrice || options?.warning ? 'partial' : 'success'
+  const hasNonLivePrice = assets.some((asset) => asset.priceStatus && asset.priceStatus !== 'live')
+  const status = options?.error ? 'error' : hasNonLivePrice || options?.warning ? 'partial' : 'success'
 
   return {
     source: account.id,
@@ -213,12 +213,14 @@ export async function getCexSnapshot(account: CexAccountInput): Promise<Portfoli
       const price = priceInfo?.price ?? null
 
       return {
+        assetId: `cex:${asset.symbol.toUpperCase()}`,
         symbol: asset.symbol,
         name: asset.symbol,
         balance: asset.balance,
         price,
         value: price !== null ? asset.balance * price : null,
         change24h: priceInfo?.change24h ?? null,
+        priceStatus: priceInfo?.status ?? 'missing',
       }
     })
 

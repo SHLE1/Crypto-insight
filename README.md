@@ -5,7 +5,7 @@
 - 链上钱包地址查询
 - `Binance` 只读 API 查询
 - `OKX` 只读 API 查询
-- 本地保存配置与快照
+- 本地保存配置
 
 ## 开发
 
@@ -35,14 +35,15 @@ pnpm build
 
 ## 当前范围
 
-- `Ethereum` 钱包当前查询原生 `ETH`
+- `EVM` 钱包支持多链原生币与 ERC-20 余额查询
 - `Solana` 钱包当前查询原生 `SOL` 与 `SPL Token`
 - `Bitcoin` 当前按地址余额查询
 - 导出文件不包含交易所密钥
+- 导出文件不包含资产快照
 
 ## 数据来源说明
 
-- 行情缺失时会使用 `CoinGecko Demo API` 补充价格数据
+- 主流行情优先使用 `Binance`，不足时再回退到 `CoinGecko`
 - 页面内已加入 `CoinGecko` 署名，符合其 Attribution Guide 要求
 
 ## 备注
