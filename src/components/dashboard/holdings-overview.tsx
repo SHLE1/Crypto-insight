@@ -435,8 +435,11 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
 }
 
 function GroupedHoldingsView({ rows, mode }: { rows: GroupRow[]; mode: GroupMode }) {
-  const [expandedKey, setExpandedKey] = useState<string | null>(rows[0]?.key ?? null)
-  const activeKey = expandedKey && rows.some((row) => row.key === expandedKey) ? expandedKey : (rows[0]?.key ?? null)
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
+  const activeKey =
+    expandedKey !== null && rows.some((row) => row.key === expandedKey)
+      ? expandedKey
+      : null
 
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">还没有可展示的资产明细</p>
