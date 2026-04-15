@@ -115,5 +115,5 @@ export const EVM_CHAIN_OPTIONS = Object.entries(EVM_CHAINS).map(([key, cfg]) => 
   symbol: cfg.symbol,
 }))
 
-/** 默认启用的 EVM 链 */
-export const DEFAULT_EVM_CHAINS: string[] = ['eth']
+/** 默认启用的 EVM 链 — 包含所有已配置的链 */
+export const DEFAULT_EVM_CHAINS: string[] = Object.keys(EVM_CHAINS)
