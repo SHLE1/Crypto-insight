@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import { useWalletStore } from '@/stores/wallets'
 import { usePortfolioStore } from '@/stores/portfolio'
 import { formatCurrency, shortAddress, getChainLabel } from '@/lib/validators'
+import { EVM_CHAINS } from '@/lib/evm-chains'
 import { Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -59,6 +60,11 @@ export default function WalletsPage() {
                         <Badge variant="secondary" className="text-xs shrink-0">
                           {getChainLabel(w.chainType)}
                         </Badge>
+                        {w.chainType === 'evm' && w.evmChains && w.evmChains.length > 0 && (
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {w.evmChains.map((k) => EVM_CHAINS[k]?.name ?? k).join(', ')}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground font-mono truncate">
                         {w.address}

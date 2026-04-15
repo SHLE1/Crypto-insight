@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useWalletStore } from '@/stores/wallets'
 import { validateAddress, getChainLabel } from '@/lib/validators'
+import { EVM_CHAIN_OPTIONS, DEFAULT_EVM_CHAINS } from '@/lib/evm-chains'
 import type { ChainType } from '@/types'
 import { toast } from 'sonner'
 
@@ -22,6 +23,13 @@ export default function AddWalletPage() {
   const [address, setAddress] = useState('')
   const [name, setName] = useState('')
   const [error, setError] = useState('')
+  const [selectedEvmChains, setSelectedEvmChains] = useState<string[]>(DEFAULT_EVM_CHAINS)
+
+  const toggleEvmChain = (key: string) => {
+    setSelectedEvmChains((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    )
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +43,11 @@ export default function AddWalletPage() {
 
     if (!validateAddress(trimmed, chainType)) {
       setError(`无效的 ${getChainLabel(chainType)} 地址`)
+      return
+    }
+
+    if (chainType === 'evm' && selectedEvmChains.length === 0) {
+      setError('请至少选择一条 EVM 链')
       return
     }
 
@@ -56,6 +69,7 @@ export default function AddWalletPage() {
       chainType,
       address: trimmed,
       enabled: true,
+      evmChains: chainType === 'evm' ? selectedEvmChains : undefined,
     })
 
     toast.success('钱包已添加')
@@ -92,6 +106,28 @@ export default function AddWalletPage() {
               </div>
             </div>
 
+            {chainType === 'evm' && (
+              <div className="space-y-2">
+                <Label>查询链</Label>
+                <div className="flex flex-wrap gap-2">
+                  {EVM_CHAIN_OPTIONS.map((opt) => (
+                    <Button
+                      key={opt.key}
+                      type="button"
+                      variant={selectedEvmChains.includes(opt.key) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => toggleEvmChain(opt.key)}
+                    >
+                      {opt.name} ({opt.symbol})
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  选择要查询的链，同一地址在不同链上可能持有不同代币。
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="address">钱包地址</Label>
               <Input
@@ -112,7 +148,7 @@ export default function AddWalletPage() {
               />
               <p className="text-xs text-muted-foreground">
                 {chainType === 'evm'
-                  ? '当前按 Ethereum 主网原生 ETH 查询。'
+                  ? 'EVM 地址在多条链上通用，会查询每条链上的原生代币和热门 ERC-20 代币。'
                   : chainType === 'solana'
                   ? '当前按原生 SOL + SPL Token 查询。'
                   : '当前按 BTC 地址余额查询。'}

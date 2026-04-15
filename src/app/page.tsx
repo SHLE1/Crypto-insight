@@ -51,6 +51,7 @@ export default function DashboardPage() {
               id: w.id,
               chainType: w.chainType,
               address: w.address,
+              evmChains: w.evmChains,
             })),
           }),
         })

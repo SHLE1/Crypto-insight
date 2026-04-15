@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const wallets: { id: string; chainType: ChainType; address: string }[] = body.wallets || []
+    const wallets: { id: string; chainType: ChainType; address: string; evmChains?: string[] }[] = body.wallets || []
     const results = await Promise.all(wallets.map((wallet) => getWalletSnapshot(wallet)))
 
     const hasError = results.some((r) => r.status === 'error')

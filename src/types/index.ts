@@ -11,6 +11,7 @@ export interface WalletInput {
   chainType: ChainType
   address: string
   enabled: boolean
+  evmChains?: string[] // selected EVM chain keys, e.g. ['eth','arb','base']
 }
 
 export interface CexAccountInput {
