@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency, shortAddress, getChainLabel } from '@/lib/validators'
+import { formatCurrency, shortAddress } from '@/lib/validators'
 import type { WalletInput, PortfolioSnapshot } from '@/types'
 
 interface WalletSummaryProps {

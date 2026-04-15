@@ -42,6 +42,22 @@ export default function CexPage() {
       return
     }
 
+    if (exchange === 'okx' && !passphrase.trim()) {
+      toast.error('OKX 账户需要填写 Passphrase')
+      return
+    }
+
+    const alreadyExists = accounts.some(
+      (account) =>
+        account.exchange === exchange &&
+        account.apiKey.trim() === apiKey.trim()
+    )
+
+    if (alreadyExists) {
+      toast.error('这个交易所账户已经绑定过了')
+      return
+    }
+
     addAccount({
       id: crypto.randomUUID(),
       exchange,
@@ -147,7 +163,7 @@ export default function CexPage() {
               )}
 
               <p className="text-xs text-muted-foreground">
-                ⚠️ API Key 仅保存在浏览器本地，不会上传至服务端。请确保使用只读权限的 Key。
+                仅保存于当前浏览器，导出文件不会包含密钥。请确保使用只读权限的 Key。
               </p>
 
               <div className="flex gap-3">

@@ -5,6 +5,7 @@ import type { WalletInput } from '@/types'
 interface WalletStore {
   wallets: WalletInput[]
   addWallet: (wallet: WalletInput) => void
+  setWallets: (wallets: WalletInput[]) => void
   removeWallet: (id: string) => void
   toggleWallet: (id: string) => void
   updateWallet: (id: string, updates: Partial<WalletInput>) => void
@@ -16,6 +17,7 @@ export const useWalletStore = create<WalletStore>()(
       wallets: [],
       addWallet: (wallet) =>
         set((state) => ({ wallets: [...state.wallets, wallet] })),
+      setWallets: (wallets) => set({ wallets }),
       removeWallet: (id) =>
         set((state) => ({ wallets: state.wallets.filter((w) => w.id !== id) })),
       toggleWallet: (id) =>

@@ -19,7 +19,7 @@ export function validateAddress(address: string, chainType: ChainType): boolean 
 
 export function getChainLabel(chainType: ChainType): string {
   const labels: Record<ChainType, string> = {
-    evm: 'EVM (Ethereum/BSC/Polygon...)',
+    evm: 'Ethereum (ETH)',
     solana: 'Solana',
     btc: 'Bitcoin',
   }

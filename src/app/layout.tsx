@@ -1,34 +1,20 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { Providers } from "@/components/providers";
-import { AppSidebar, MobileNav } from "@/components/layout/app-sidebar";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import type { Metadata } from 'next'
+import './globals.css'
+import { Providers } from '@/components/providers'
+import { AppSidebar, MobileNav } from '@/components/layout/app-sidebar'
 
 export const metadata: Metadata = {
-  title: "Crypto Insight - 个人加密资产面板",
-  description: "管理和追踪你的链上与交易所加密资产",
-};
+  title: 'Crypto Insight - 个人加密资产面板',
+  description: '管理和追踪你的链上与交易所加密资产',
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
-    <html
-      lang="zh-CN"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
-    >
+    <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full flex">
         <Providers>
           <AppSidebar />
@@ -41,5 +27,5 @@ export default function RootLayout({
         </Providers>
       </body>
     </html>
-  );
+  )
 }

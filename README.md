@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Crypto Insight
 
-## Getting Started
+个人加密资产面板。当前支持：
 
-First, run the development server:
+- 链上钱包地址查询
+- `Binance` 只读 API 查询
+- `OKX` 只读 API 查询
+- 本地保存配置与快照
+
+## 开发
+
+使用 `pnpm`：
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+常用命令：
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm lint
+pnpm build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 使用说明
 
-## Learn More
+- API 和钱包配置说明见 `docs/api-setup.md`
 
-To learn more about Next.js, take a look at the following resources:
+## 当前范围
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `Ethereum` 钱包当前查询原生 `ETH`
+- `Solana` 钱包当前查询原生 `SOL`
+- `Bitcoin` 当前按地址余额查询
+- 导出文件不包含交易所密钥
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 备注
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 这个仓库使用 `pnpm`
+- `pnpm dev` 当前固定走 `webpack`，不要随手切回 `Turbopack`

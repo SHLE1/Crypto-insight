@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -12,13 +13,16 @@ import { useWalletStore } from '@/stores/wallets'
 import { useCexStore } from '@/stores/cex'
 import { usePortfolioStore } from '@/stores/portfolio'
 import { toast } from 'sonner'
-import { Download, Cloud, Lock } from 'lucide-react'
+import { Download, Upload, Cloud, Lock, RotateCcw } from 'lucide-react'
 
 export default function SettingsPage() {
   const settings = useSettingsStore()
   const wallets = useWalletStore((s) => s.wallets)
+  const setWallets = useWalletStore((s) => s.setWallets)
   const accounts = useCexStore((s) => s.accounts)
-  const { snapshots } = usePortfolioStore()
+  const setAccounts = useCexStore((s) => s.setAccounts)
+  const { snapshots, replacePortfolio, clearAll } = usePortfolioStore()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleExport = () => {
     const data = {
@@ -29,6 +33,12 @@ export default function SettingsPage() {
         label: a.label,
       })),
       snapshots,
+      settings: {
+        quoteCurrency: settings.quoteCurrency,
+        refreshInterval: settings.refreshInterval,
+        theme: settings.theme,
+        defiEnabled: settings.defiEnabled,
+      },
       exportedAt: new Date().toISOString(),
     }
 
@@ -40,6 +50,69 @@ export default function SettingsPage() {
     a.click()
     URL.revokeObjectURL(url)
     toast.success('数据已导出')
+  }
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const raw = await file.text()
+      const data = JSON.parse(raw) as {
+        wallets?: typeof wallets
+        cexAccounts?: Array<Pick<(typeof accounts)[number], 'id' | 'exchange' | 'label'>>
+        snapshots?: typeof snapshots
+        settings?: Partial<typeof settings>
+      }
+
+      setWallets(
+        Array.isArray(data.wallets)
+          ? data.wallets.map((wallet) => ({ ...wallet, enabled: wallet.enabled ?? true }))
+          : []
+      )
+      setAccounts(
+        Array.isArray(data.cexAccounts)
+          ? data.cexAccounts.map((account) => ({
+              ...account,
+              apiKey: '',
+              apiSecret: '',
+              passphrase: undefined,
+              enabled: true,
+            }))
+          : []
+      )
+      replacePortfolio({
+        snapshots: data.snapshots ?? {},
+        errors: [],
+        lastRefresh: null,
+      })
+
+      if (data.settings) {
+        settings.updateSettings({
+          quoteCurrency: data.settings.quoteCurrency ?? settings.quoteCurrency,
+          refreshInterval: data.settings.refreshInterval ?? settings.refreshInterval,
+          theme: data.settings.theme ?? settings.theme,
+          defiEnabled: data.settings.defiEnabled ?? settings.defiEnabled,
+        })
+      }
+
+      toast.success('数据已导入')
+    } catch {
+      toast.error('导入失败，文件格式不正确')
+    } finally {
+      event.target.value = ''
+    }
+  }
+
+  const handleReset = () => {
+    if (!window.confirm('确认清空当前浏览器内的全部数据吗？这个操作无法撤销。')) {
+      return
+    }
+
+    setWallets([])
+    setAccounts([])
+    clearAll()
+    toast.success('本地数据已清空')
   }
 
   return (
@@ -89,7 +162,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <Label>深色模式</Label>
-              <p className="text-xs text-muted-foreground">默认深色，可切换浅色</p>
+              <p className="text-xs text-muted-foreground">主题会保存在当前浏览器</p>
             </div>
             <Switch
               checked={settings.theme === 'dark'}
@@ -112,13 +185,37 @@ export default function SettingsPage() {
             <div>
               <Label>导出数据</Label>
               <p className="text-xs text-muted-foreground">
-                导出钱包配置与资产快照（不含 API Key）
+                导出钱包配置、账户标签、资产快照与设置（不含 API Key）
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
               导出 JSON
             </Button>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>导入数据</Label>
+              <p className="text-xs text-muted-foreground">
+                可从导出的 JSON 恢复钱包、标签、快照与设置
+              </p>
+            </div>
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={handleImport}
+              />
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-2" />
+                导入 JSON
+              </Button>
+            </>
           </div>
 
           <Separator />
@@ -134,6 +231,21 @@ export default function SettingsPage() {
               <Lock className="h-3 w-3 mr-1" />
               仅本地
             </Badge>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>清空本地数据</Label>
+              <p className="text-xs text-muted-foreground">
+                清空钱包、交易所配置与资产快照
+              </p>
+            </div>
+            <Button variant="destructive" size="sm" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              清空
+            </Button>
           </div>
         </CardContent>
       </Card>

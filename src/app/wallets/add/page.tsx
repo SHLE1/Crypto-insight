@@ -16,6 +16,7 @@ const CHAIN_OPTIONS: ChainType[] = ['evm', 'solana', 'btc']
 export default function AddWalletPage() {
   const router = useRouter()
   const addWallet = useWalletStore((s) => s.addWallet)
+  const wallets = useWalletStore((s) => s.wallets)
 
   const [chainType, setChainType] = useState<ChainType>('evm')
   const [address, setAddress] = useState('')
@@ -34,6 +35,19 @@ export default function AddWalletPage() {
 
     if (!validateAddress(trimmed, chainType)) {
       setError(`无效的 ${getChainLabel(chainType)} 地址`)
+      return
+    }
+
+  const normalizedAddress =
+    chainType === 'evm' ? trimmed.toLowerCase() : trimmed
+    const alreadyExists = wallets.some(
+      (wallet) =>
+        wallet.chainType === chainType &&
+        (chainType === 'evm' ? wallet.address.toLowerCase() : wallet.address) === normalizedAddress
+    )
+
+    if (alreadyExists) {
+      setError('这个地址已经添加过了')
       return
     }
 
@@ -97,6 +111,13 @@ export default function AddWalletPage() {
                 }}
                 className="font-mono"
               />
+              <p className="text-xs text-muted-foreground">
+                {chainType === 'evm'
+                  ? '当前按 Ethereum 主网原生 ETH 查询。'
+                  : chainType === 'solana'
+                  ? '当前按原生 SOL 查询。'
+                  : '当前按 BTC 地址余额查询。'}
+              </p>
             </div>
 
             <div className="space-y-2">
