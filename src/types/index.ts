@@ -84,7 +84,12 @@ export interface PriceResponse {
 
 export interface ApiErrorState {
   source: string
+  title?: string
+  sourceLabel?: string
+  kind?: 'error' | 'warning'
   message: string
+  detail?: string
+  impact?: string
   timestamp: string
 }
 

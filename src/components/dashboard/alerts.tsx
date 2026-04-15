@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, CircleAlert } from 'lucide-react'
 import type { ApiErrorState } from '@/types'
 
 interface AlertsPanelProps {
@@ -20,18 +20,23 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {errors.map((err, i) => (
             <div
               key={i}
-              className="flex items-start gap-2 text-sm"
+              className="rounded-lg border border-border/60 bg-muted/30 p-3"
             >
-              <span className="text-destructive shrink-0">●</span>
-              <div>
-                <span className="font-medium">{err.source}</span>
-                <span className="text-muted-foreground ml-1">
-                  {err.message}
-                </span>
+              <div className="flex items-start gap-3 text-sm">
+                <CircleAlert className={`mt-0.5 h-4 w-4 shrink-0 ${err.kind === 'warning' ? 'text-amber-500' : 'text-destructive'}`} />
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="font-medium">{err.title ?? err.source}</span>
+                    {err.sourceLabel ? <span className="text-muted-foreground">[{err.sourceLabel}]</span> : null}
+                  </div>
+                  <p className="text-foreground">{err.message}</p>
+                  {err.detail ? <p className="text-muted-foreground">{err.detail}</p> : null}
+                  {err.impact ? <p className="text-muted-foreground">影响：{err.impact}</p> : null}
+                </div>
               </div>
             </div>
           ))}

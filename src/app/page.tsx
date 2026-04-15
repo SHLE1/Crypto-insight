@@ -17,8 +17,52 @@ import { CexSummary } from '@/components/dashboard/cex-summary'
 import { AlertsPanel } from '@/components/dashboard/alerts'
 import { DefiPlaceholder } from '@/components/dashboard/defi-placeholder'
 import { HoldingsOverview } from '@/components/dashboard/holdings-overview'
-import type { QuoteResponse } from '@/types'
+import type { ApiErrorState, PortfolioSnapshot, QuoteResponse } from '@/types'
 import { EVM_CHAINS } from '@/lib/evm-chains'
+
+function shortenAddress(address: string) {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+function buildSnapshotError(snapshot: PortfolioSnapshot, label: string): ApiErrorState | null {
+  const timestamp = new Date().toISOString()
+
+  if (snapshot.status === 'error') {
+    return {
+      source: snapshot.sourceType === 'wallet' ? '钱包查询' : '交易所查询',
+      title: '查询失败',
+      sourceLabel: label,
+      kind: 'error',
+      message: snapshot.error || '这次刷新没有拿到数据。',
+      impact: '该来源本轮未更新，资产总额可能偏低。',
+      timestamp,
+    }
+  }
+
+  const missingPriceAssets = snapshot.assets.filter((asset) => asset.price === null)
+  if (missingPriceAssets.length === 0) {
+    return null
+  }
+
+  const preview = missingPriceAssets
+    .slice(0, 3)
+    .map((asset) => asset.symbol)
+    .join('、')
+  const remaining = missingPriceAssets.length - Math.min(3, missingPriceAssets.length)
+
+  return {
+    source: snapshot.sourceType === 'wallet' ? '钱包查询' : '交易所查询',
+    title: '部分资产缺少价格',
+    sourceLabel: label,
+    kind: 'warning',
+    message: `有 ${missingPriceAssets.length} 个资产暂时没有价格。`,
+    detail: preview
+      ? `受影响资产：${preview}${remaining > 0 ? ` 等 ${missingPriceAssets.length} 个` : ''}。`
+      : undefined,
+    impact: '这些资产会继续显示余额，但不会计入总资产估值。',
+    timestamp,
+  }
+}
 
 export default function DashboardPage() {
   const wallets = useWalletStore((s) => s.wallets)
@@ -36,6 +80,14 @@ export default function DashboardPage() {
   )
   const activeSourceKey = useMemo(() => activeSourceIds.join('|'), [activeSourceIds])
   const hasSources = activeSourceIds.length > 0
+  const walletNameMap = useMemo(
+    () => new Map(wallets.map((wallet) => [wallet.id, wallet.name || shortenAddress(wallet.address)])),
+    [wallets]
+  )
+  const cexLabelMap = useMemo(
+    () => new Map(accounts.map((account) => [account.id, account.label || account.exchange.toUpperCase()])),
+    [accounts]
+  )
 
   const fetchPortfolio = useCallback(async () => {
     clearErrors()
@@ -60,23 +112,32 @@ export default function DashboardPage() {
         results.push(data)
         data.results.forEach((r) => {
           setSnapshot(r.source, r)
-          if (r.status !== 'success') {
-            addError({
-              source: '钱包查询',
-              message: r.error || '部分资产暂不可用',
-              timestamp: new Date().toISOString(),
-            })
+          const nextError = buildSnapshotError(r, walletNameMap.get(r.source) ?? r.source)
+          if (nextError) {
+            addError(nextError)
           }
         })
         if (!res.ok && data.results.length === 0) {
           addError({
             source: '钱包查询',
-            message: '请求失败',
+            title: '接口请求失败',
+            kind: 'error',
+            message: '钱包报价接口返回异常响应。',
+            detail: `状态码：${res.status}`,
+            impact: '这一轮没有拿到任何钱包数据。',
             timestamp: new Date().toISOString(),
           })
         }
-      } catch {
-        addError({ source: '钱包查询', message: '网络错误', timestamp: new Date().toISOString() })
+      } catch (error) {
+        addError({
+          source: '钱包查询',
+          title: '接口连接失败',
+          kind: 'error',
+          message: '钱包报价接口没有成功返回。',
+          detail: error instanceof Error ? error.message : '请求过程中出现未知错误。',
+          impact: '这一轮没有拿到任何钱包数据。',
+          timestamp: new Date().toISOString(),
+        })
       }
     }
 
@@ -101,23 +162,32 @@ export default function DashboardPage() {
         results.push(data)
         data.results.forEach((r) => {
           setSnapshot(r.source, r)
-          if (r.status !== 'success') {
-            addError({
-              source: '交易所查询',
-              message: r.error || '部分资产暂不可用',
-              timestamp: new Date().toISOString(),
-            })
+          const nextError = buildSnapshotError(r, cexLabelMap.get(r.source) ?? r.source)
+          if (nextError) {
+            addError(nextError)
           }
         })
         if (!res.ok && data.results.length === 0) {
           addError({
             source: '交易所查询',
-            message: '请求失败',
+            title: '接口请求失败',
+            kind: 'error',
+            message: '交易所报价接口返回异常响应。',
+            detail: `状态码：${res.status}`,
+            impact: '这一轮没有拿到任何交易所数据。',
             timestamp: new Date().toISOString(),
           })
         }
-      } catch {
-        addError({ source: '交易所查询', message: '网络错误', timestamp: new Date().toISOString() })
+      } catch (error) {
+        addError({
+          source: '交易所查询',
+          title: '接口连接失败',
+          kind: 'error',
+          message: '交易所报价接口没有成功返回。',
+          detail: error instanceof Error ? error.message : '请求过程中出现未知错误。',
+          impact: '这一轮没有拿到任何交易所数据。',
+          timestamp: new Date().toISOString(),
+        })
       }
     }
 
@@ -129,9 +199,11 @@ export default function DashboardPage() {
     clearErrors,
     enabledAccounts,
     enabledWallets,
+    walletNameMap,
     pruneSnapshots,
     setLastRefresh,
     setSnapshot,
+    cexLabelMap,
   ])
 
   const { refetch, isFetching } = useQuery({
@@ -169,10 +241,6 @@ export default function DashboardPage() {
       >()
       let wTotal = 0
       let cTotal = 0
-
-      // Build lookup maps for wallet/exchange names
-      const walletNameMap = new Map(wallets.map((w) => [w.id, w.name || w.address.slice(0, 6) + '...' + w.address.slice(-4)]))
-      const cexLabelMap = new Map(accounts.map((a) => [a.id, a.label || a.exchange]))
 
       Object.values(snapshots).forEach((snap) => {
         total += snap.totalValue
@@ -266,7 +334,7 @@ export default function DashboardPage() {
         walletTotal: wTotal,
         cexTotal: cTotal,
       }
-    }, [hideSmallAssets, snapshots, wallets, accounts])
+    }, [hideSmallAssets, snapshots, walletNameMap, cexLabelMap])
 
   const isEmpty = wallets.length === 0 && accounts.length === 0
   const hasValuedAssets = holdingsData.some((asset) => asset.value > 0)
