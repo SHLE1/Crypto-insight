@@ -110,6 +110,50 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
   })
 }
 
+interface CoinGeckoListItem {
+  id: string
+  symbol: string
+  name: string
+  platforms?: Record<string, string>
+}
+
+let solanaMintMetadataCache: Map<string, { name: string; symbol: string }> | null = null
+let solanaMintMetadataFetchedAt = 0
+const SOLANA_MINT_METADATA_TTL = 24 * 60 * 60 * 1000
+
+async function getSolanaMintMetadataLookup(): Promise<Map<string, { name: string; symbol: string }>> {
+  if (solanaMintMetadataCache && Date.now() - solanaMintMetadataFetchedAt < SOLANA_MINT_METADATA_TTL) {
+    return solanaMintMetadataCache
+  }
+
+  try {
+    const demoApiKey = process.env.COINGECKO_DEMO_API_KEY?.trim()
+    const headers = demoApiKey ? { 'x-cg-demo-api-key': demoApiKey } : undefined
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/coins/list?include_platform=true`,
+      { cache: 'force-cache', headers }
+    )
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+    const coins = (await response.json()) as CoinGeckoListItem[]
+    const lookup = new Map<string, { name: string; symbol: string }>()
+
+    for (const coin of coins) {
+      const solanaMint = coin.platforms?.['solana']
+      if (solanaMint && !lookup.has(solanaMint)) {
+        lookup.set(solanaMint, { name: coin.name, symbol: coin.symbol.toUpperCase() })
+      }
+    }
+
+    solanaMintMetadataCache = lookup
+    solanaMintMetadataFetchedAt = Date.now()
+    return lookup
+  } catch {
+    solanaMintMetadataCache = solanaMintMetadataCache ?? new Map()
+    return solanaMintMetadataCache
+  }
+}
+
 async function fetchBitcoinBalance(address: string) {
   const response = await fetch(`${BTC_API_URL}/address/${address}`, { cache: 'no-store' })
   if (!response.ok) throw new Error('Bitcoin 地址查询失败')
@@ -538,6 +582,7 @@ async function quoteSolanaWallet(wallet: WalletQuoteInput): Promise<WalletQuoteR
   }
 
   const tokenMarketData = tokenBalances.length > 0 ? await getSolanaTokenMarketData(tokenBalances.map((token) => token.mint)) : {}
+  const mintMetadata = tokenBalances.length > 0 ? await getSolanaMintMetadataLookup() : new Map()
   const assets: AssetBalance[] = [
     {
       assetId: 'native:solana:SOL',
@@ -552,12 +597,18 @@ async function quoteSolanaWallet(wallet: WalletQuoteInput): Promise<WalletQuoteR
     },
     ...tokenBalances.map((token) => {
       const marketData = tokenMarketData[token.mint]
+      const cgMeta = mintMetadata.get(token.mint)
       const price = marketData?.price ?? null
+
+      const marketSymbol = marketData?.symbol
+      const marketName = marketData?.name
+      const hasMarketSymbol = marketSymbol && marketSymbol.length < 20 && !marketSymbol.startsWith(token.mint.slice(0, 4))
+      const hasMarketName = marketName && marketName.length < 40 && !marketName.startsWith(token.mint.slice(0, 4))
 
       return {
         assetId: `spl:${token.mint}`,
-        symbol: marketData?.symbol ?? `${token.mint.slice(0, 4)}...${token.mint.slice(-4)}`,
-        name: marketData?.name ?? `${token.mint.slice(0, 4)}...${token.mint.slice(-4)}`,
+        symbol: hasMarketSymbol ? marketSymbol : cgMeta?.symbol ?? `${token.mint.slice(0, 4)}...${token.mint.slice(-4)}`,
+        name: hasMarketName ? marketName : cgMeta?.name ?? `${token.mint.slice(0, 4)}...${token.mint.slice(-4)}`,
         balance: token.balance,
         price,
         value: price !== null ? token.balance * price : null,
