@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,6 +10,7 @@ import { useCexStore } from '@/stores/cex'
 import { usePortfolioStore } from '@/stores/portfolio'
 import { useSettingsStore } from '@/stores/settings'
 import { TotalAssets } from '@/components/dashboard/total-assets'
+import { NetWorthTrend } from '@/components/dashboard/net-worth-trend'
 import { AssetDistribution } from '@/components/dashboard/asset-distribution'
 import { SourceDistribution } from '@/components/dashboard/source-distribution'
 import { WalletSummary } from '@/components/dashboard/wallet-summary'
@@ -183,8 +184,19 @@ export default function DashboardPage() {
   const accounts = useCexStore((s) => s.accounts)
   const refreshInterval = useSettingsStore((s) => s.refreshInterval)
   const hideSmallAssets = useSettingsStore((s) => s.hideSmallAssets)
-  const { snapshots, errors, lastRefresh, setSnapshot, setLastRefresh, clearErrors, addError, pruneSnapshots } =
-    usePortfolioStore()
+  const {
+    hydrated,
+    snapshots,
+    history,
+    errors,
+    lastRefresh,
+    setSnapshot,
+    setLastRefresh,
+    clearErrors,
+    addError,
+    pruneSnapshots,
+    appendHistoryPoint,
+  } = usePortfolioStore()
 
   const enabledWallets = useMemo(() => wallets.filter((wallet) => wallet.enabled), [wallets])
   const enabledAccounts = useMemo(() => accounts.filter((account) => account.enabled), [accounts])
@@ -202,6 +214,8 @@ export default function DashboardPage() {
     () => new Map(accounts.map((account) => [account.id, account.label || account.exchange.toUpperCase()])),
     [accounts]
   )
+  const [hasFetchedThisSession, setHasFetchedThisSession] = useState(false)
+
   const walletChainLabelMap = useMemo(
     () =>
       new Map(
@@ -217,6 +231,7 @@ export default function DashboardPage() {
     clearErrors()
     pruneSnapshots(activeSourceIds)
     const results: QuoteResponse[] = []
+    const nextSnapshots = new Map<string, PortfolioSnapshot>()
 
     if (enabledWallets.length > 0) {
       try {
@@ -237,6 +252,9 @@ export default function DashboardPage() {
         data.results.forEach((r) => {
           const previousSnapshot = snapshots[r.source]
           const retained = shouldRetainPreviousSnapshot(previousSnapshot, r)
+          const effectiveSnapshot = retained && previousSnapshot ? previousSnapshot : r
+
+          nextSnapshots.set(r.source, effectiveSnapshot)
           if (!retained) {
             setSnapshot(r.source, r)
           }
@@ -295,6 +313,9 @@ export default function DashboardPage() {
         data.results.forEach((r) => {
           const previousSnapshot = snapshots[r.source]
           const retained = shouldRetainPreviousSnapshot(previousSnapshot, r)
+          const effectiveSnapshot = retained && previousSnapshot ? previousSnapshot : r
+
+          nextSnapshots.set(r.source, effectiveSnapshot)
           if (!retained) {
             setSnapshot(r.source, r)
           }
@@ -331,7 +352,30 @@ export default function DashboardPage() {
       }
     }
 
+    const effectiveSnapshots = activeSourceIds
+      .map((id) => nextSnapshots.get(id) ?? snapshots[id])
+      .filter((snapshot): snapshot is PortfolioSnapshot => Boolean(snapshot))
+
+    if (effectiveSnapshots.length > 0) {
+      const totalValue = effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalValue, 0)
+      const walletTotal = effectiveSnapshots
+        .filter((snapshot) => snapshot.sourceType === 'wallet')
+        .reduce((sum, snapshot) => sum + snapshot.totalValue, 0)
+      const cexTotal = effectiveSnapshots
+        .filter((snapshot) => snapshot.sourceType === 'cex')
+        .reduce((sum, snapshot) => sum + snapshot.totalValue, 0)
+
+      appendHistoryPoint({
+        timestamp: new Date().toISOString(),
+        totalValue,
+        walletTotal,
+        cexTotal,
+        sourceCount: effectiveSnapshots.length,
+      })
+    }
+
     setLastRefresh(new Date().toISOString())
+    setHasFetchedThisSession(true)
     return results
   }, [
     snapshots,
@@ -345,14 +389,17 @@ export default function DashboardPage() {
     setLastRefresh,
     setSnapshot,
     cexLabelMap,
+    appendHistoryPoint,
   ])
+
+  const shouldAutoRefresh = hydrated && hasSources && (hasFetchedThisSession || Object.keys(snapshots).length === 0)
 
   const { refetch, isFetching } = useQuery({
     queryKey: ['portfolio', activeSourceKey],
     queryFn: fetchPortfolio,
-    enabled: hasSources,
+    enabled: shouldAutoRefresh,
     retry: 0,
-    refetchInterval: hasSources ? refreshInterval * 1000 : false,
+    refetchInterval: shouldAutoRefresh ? refreshInterval * 1000 : false,
   })
 
   useEffect(() => {
@@ -362,6 +409,20 @@ export default function DashboardPage() {
       setLastRefresh(null)
     }
   }, [activeSourceIds, clearErrors, hasSources, pruneSnapshots, setLastRefresh])
+
+  useEffect(() => {
+    if (!hydrated || !hasSources) {
+      return
+    }
+
+    const snapshotIds = Object.keys(snapshots)
+    const hasAnySnapshot = snapshotIds.length > 0
+    const missingActiveSnapshot = activeSourceIds.some((id) => !(id in snapshots))
+
+    if (!hasAnySnapshot || missingActiveSnapshot) {
+      void refetch()
+    }
+  }, [activeSourceIds, hasSources, hydrated, refetch, snapshots])
 
   const { totalValue, change24hValue, change24hPercent, assetData, walletTotal, cexTotal, holdingsData } =
     useMemo(() => {
@@ -496,6 +557,8 @@ export default function DashboardPage() {
 
   const isEmpty = wallets.length === 0 && accounts.length === 0
   const hasValuedAssets = holdingsData.some((asset) => asset.value > 0)
+  const isUsingCachedData =
+    hydrated && !hasFetchedThisSession && !isFetching && Boolean(lastRefresh) && Object.keys(snapshots).length > 0
 
   return (
     <div className="space-y-6">
@@ -534,7 +597,9 @@ export default function DashboardPage() {
             change24hValue={change24hValue}
             change24hPercent={change24hPercent}
             lastRefresh={lastRefresh}
+            isStale={isUsingCachedData}
           />
+          <NetWorthTrend data={history} />
           <HoldingsOverview data={holdingsData} />
           {!isFetching && !hasValuedAssets && hasSources && (
             <Card className="col-span-full border-dashed">

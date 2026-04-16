@@ -103,8 +103,17 @@ export interface ApiErrorState {
 
 // ===== 缓存 =====
 
+export interface PortfolioHistoryPoint {
+  timestamp: string
+  totalValue: number
+  walletTotal: number
+  cexTotal: number
+  sourceCount: number
+}
+
 export interface PortfolioCache {
   snapshots: Record<string, PortfolioSnapshot> // keyed by wallet/cex id
   lastRefresh: string | null
   errors: ApiErrorState[]
+  history: PortfolioHistoryPoint[]
 }

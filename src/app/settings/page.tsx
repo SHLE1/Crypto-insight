@@ -265,7 +265,7 @@ export default function SettingsPage() {
             <div>
               <Label>清空本地数据</Label>
               <p className="text-xs text-muted-foreground">
-                清空钱包、交易所配置与当前会话数据
+                清空钱包、交易所配置、资产缓存与历史看板数据
               </p>
             </div>
             <Button variant="destructive" size="sm" onClick={handleReset}>

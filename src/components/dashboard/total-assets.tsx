@@ -9,6 +9,7 @@ interface TotalAssetsProps {
   change24hValue: number
   change24hPercent: number
   lastRefresh: string | null
+  isStale?: boolean
 }
 
 export function TotalAssets({
@@ -16,6 +17,7 @@ export function TotalAssets({
   change24hValue,
   change24hPercent,
   lastRefresh,
+  isStale = false,
 }: TotalAssetsProps) {
   const isPositive = change24hPercent >= 0
 
@@ -41,9 +43,16 @@ export function TotalAssets({
           <span className="text-xs text-muted-foreground">24h</span>
         </div>
         {lastRefresh && (
-          <p className="text-xs text-muted-foreground mt-2">
-            最近刷新: {new Date(lastRefresh).toLocaleString('zh-CN')}
-          </p>
+          <div className="mt-2 space-y-1">
+            <p className="text-xs text-muted-foreground">
+              最近刷新: {new Date(lastRefresh).toLocaleString('zh-CN')}
+            </p>
+            {isStale ? (
+              <p className="text-xs text-amber-500">
+                当前显示的是本地缓存资产；如需最新结果，请手动点击“刷新”。
+              </p>
+            ) : null}
+          </div>
         )}
       </CardContent>
     </Card>
