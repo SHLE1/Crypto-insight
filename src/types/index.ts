@@ -71,6 +71,28 @@ export interface PortfolioSnapshot {
   error?: string
 }
 
+export interface HoldingSourceDetail {
+  sourceId: string
+  sourceType: 'wallet' | 'cex'
+  sourceLabel: string
+  assetId?: string
+  balance: number
+  chainLabel?: string
+}
+
+export interface HoldingRow {
+  assetId: string
+  symbol: string
+  name: string
+  balance: number
+  price: number | null
+  value: number
+  change24h: number | null
+  priceStatus: PriceStatus
+  sourceCount: number
+  sources?: HoldingSourceDetail[]
+}
+
 export interface QuoteResponse {
   results: PortfolioSnapshot[]
   status: 'success' | 'partial' | 'error'

@@ -6,29 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatPercent } from '@/lib/validators'
-import type { PriceStatus } from '@/types'
-
-interface SourceDetail {
-  sourceId: string
-  sourceType: 'wallet' | 'cex'
-  sourceLabel: string
-  assetId?: string
-  balance: number
-  chainLabel?: string
-}
-
-interface HoldingRow {
-  assetId: string
-  symbol: string
-  name: string
-  balance: number
-  price: number | null
-  value: number
-  change24h: number | null
-  priceStatus: PriceStatus
-  sourceCount: number
-  sources?: SourceDetail[]
-}
+import type { HoldingRow, PriceStatus } from '@/types'
 
 interface HoldingsOverviewProps {
   data: HoldingRow[]

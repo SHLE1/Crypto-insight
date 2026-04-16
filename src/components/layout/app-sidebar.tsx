@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
+  ListTree,
   Wallet,
   Building2,
   Settings,
@@ -12,6 +13,7 @@ import {
 
 const navItems = [
   { href: '/', label: '总览', icon: LayoutDashboard },
+  { href: '/holdings', label: '资产明细', icon: ListTree },
   { href: '/wallets', label: '钱包', icon: Wallet },
   { href: '/cex', label: '交易所', icon: Building2 },
   { href: '/settings', label: '设置', icon: Settings },
