@@ -118,10 +118,10 @@ function HoldingSummaryCard({
   detail: string
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-2 text-lg font-semibold tracking-tight">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+    <div className="rounded-2xl border border-border/50 bg-card p-5 transition-colors hover:border-border">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-2.5 text-xl font-bold tracking-tight">{value}</p>
+      <p className="mt-1.5 text-xs text-muted-foreground">{detail}</p>
     </div>
   )
 }

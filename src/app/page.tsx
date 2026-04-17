@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Wallet, Building2 } from 'lucide-react'
 import { TotalAssets } from '@/components/dashboard/total-assets'
 import { NetWorthTrend } from '@/components/dashboard/net-worth-trend'
 import { AssetDistribution } from '@/components/dashboard/asset-distribution'
@@ -42,14 +42,20 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">总览</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">总览</h1>
+          {hasSources && !isEmpty && (
+            <p className="mt-0.5 text-sm text-muted-foreground">你的加密资产一览</p>
+          )}
+        </div>
         <Button
           variant="outline"
           size="sm"
           onClick={() => refetch()}
           disabled={isFetching || isEmpty}
+          className="gap-2"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
           刷新
         </Button>
       </div>
@@ -57,22 +63,31 @@ export default function DashboardPage() {
       {isRestoring || isInitialLoading ? (
         <DashboardLoadingState />
       ) : isEmpty ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-xl font-medium mb-2">欢迎使用 Crypto Insight</p>
-          <p className="text-muted-foreground mb-6">
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+            <span className="text-3xl font-bold text-primary">C</span>
+          </div>
+          <p className="text-xl font-semibold tracking-tight">欢迎使用 Crypto Insight</p>
+          <p className="mt-2 max-w-sm text-muted-foreground">
             添加钱包地址或绑定交易所账户，开始追踪你的加密资产
           </p>
-          <div className="flex gap-3">
+          <div className="mt-8 flex gap-3">
             <a href="/wallets/add">
-              <Button>添加钱包</Button>
+              <Button className="gap-2">
+                <Wallet className="h-4 w-4" />
+                添加钱包
+              </Button>
             </a>
             <a href="/cex">
-              <Button variant="outline">绑定交易所</Button>
+              <Button variant="outline" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                绑定交易所
+              </Button>
             </a>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <TotalAssets
             totalValue={totalValue}
             change24hValue={change24hValue}
@@ -103,12 +118,12 @@ export default function DashboardPage() {
 
 function DashboardLoadingState() {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div className="col-span-full h-44 animate-pulse rounded-xl bg-muted/60" />
-      <div className="col-span-full h-96 animate-pulse rounded-xl bg-muted/50" />
-      <div className="col-span-full h-64 animate-pulse rounded-xl bg-muted/50" />
-      <div className="h-72 animate-pulse rounded-xl bg-muted/50" />
-      <div className="h-72 animate-pulse rounded-xl bg-muted/50" />
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div className="col-span-full h-44 animate-pulse rounded-2xl bg-muted/40" />
+      <div className="col-span-full h-96 animate-pulse rounded-2xl bg-muted/30" />
+      <div className="col-span-full h-64 animate-pulse rounded-2xl bg-muted/30" />
+      <div className="h-72 animate-pulse rounded-2xl bg-muted/30" />
+      <div className="h-72 animate-pulse rounded-2xl bg-muted/30" />
     </div>
   )
 }

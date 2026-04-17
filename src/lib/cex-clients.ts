@@ -174,6 +174,148 @@ async function fetchBinanceWalletBalances(account: CexAccountInput) {
   return data
 }
 
+async function fetchBinanceSimpleEarnFlexible(account: CexAccountInput) {
+  const assets: Array<{ symbol: string; balance: number }> = []
+  let current = 1
+  const size = 100
+
+  // Paginate through all flexible earn positions
+  for (;;) {
+    const params = new URLSearchParams({
+      current: current.toString(),
+      size: size.toString(),
+      recvWindow: '5000',
+      timestamp: Date.now().toString(),
+    })
+
+    const signature = await signHmac(account.apiSecret, params.toString(), 'hex')
+    const response = await fetch(
+      `https://api.binance.com/sapi/v1/simple-earn/flexible/position?${params.toString()}&signature=${signature}`,
+      {
+        cache: 'no-store',
+        headers: { 'X-MBX-APIKEY': account.apiKey },
+      }
+    )
+
+    const data = (await response.json()) as { rows?: Array<{ asset: string; totalAmount?: string }> }
+    if (!response.ok || !data.rows) break
+
+    for (const row of data.rows) {
+      const amount = toPositiveNumber(row.totalAmount)
+      if (amount > 0) {
+        assets.push({ symbol: row.asset, balance: amount })
+      }
+    }
+
+    if (data.rows.length < size) break
+    current++
+  }
+
+  return assets
+}
+
+async function fetchBinanceSimpleEarnLocked(account: CexAccountInput) {
+  const assets: Array<{ symbol: string; balance: number }> = []
+  let current = 1
+  const size = 100
+
+  for (;;) {
+    const params = new URLSearchParams({
+      current: current.toString(),
+      size: size.toString(),
+      recvWindow: '5000',
+      timestamp: Date.now().toString(),
+    })
+
+    const signature = await signHmac(account.apiSecret, params.toString(), 'hex')
+    const response = await fetch(
+      `https://api.binance.com/sapi/v1/simple-earn/locked/position?${params.toString()}&signature=${signature}`,
+      {
+        cache: 'no-store',
+        headers: { 'X-MBX-APIKEY': account.apiKey },
+      }
+    )
+
+    const data = (await response.json()) as { rows?: Array<{ asset: string; amount?: string }> }
+    if (!response.ok || !data.rows) break
+
+    for (const row of data.rows) {
+      const amount = toPositiveNumber(row.amount)
+      if (amount > 0) {
+        assets.push({ symbol: row.asset, balance: amount })
+      }
+    }
+
+    if (data.rows.length < size) break
+    current++
+  }
+
+  return assets
+}
+
+async function fetchBinanceFundingAsset(account: CexAccountInput) {
+  const params = new URLSearchParams({
+    recvWindow: '5000',
+    timestamp: Date.now().toString(),
+  })
+
+  const signature = await signHmac(account.apiSecret, params.toString(), 'hex')
+  const response = await fetch(
+    `https://api.binance.com/sapi/v1/asset/get-funding-asset?${params.toString()}&signature=${signature}`,
+    {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'X-MBX-APIKEY': account.apiKey },
+    }
+  )
+
+  const data = (await response.json()) as
+    | Array<{ asset: string; free?: string; locked?: string; freeze?: string; withdrawing?: string }>
+    | BinanceApiErrorResponse
+
+  if (!response.ok || !Array.isArray(data)) return []
+
+  return data
+    .map((item) => ({
+      symbol: item.asset,
+      balance:
+        toPositiveNumber(item.free) +
+        toPositiveNumber(item.locked) +
+        toPositiveNumber(item.freeze) +
+        toPositiveNumber(item.withdrawing),
+    }))
+    .filter((asset) => asset.balance > 0)
+}
+
+async function fetchBinanceFuturesBalance(account: CexAccountInput) {
+  const params = new URLSearchParams({
+    recvWindow: '5000',
+    timestamp: Date.now().toString(),
+  })
+
+  const signature = await signHmac(account.apiSecret, params.toString(), 'hex')
+  const response = await fetch(
+    `https://fapi.binance.com/fapi/v2/balance?${params.toString()}&signature=${signature}`,
+    {
+      cache: 'no-store',
+      headers: { 'X-MBX-APIKEY': account.apiKey },
+    }
+  )
+
+  const data = (await response.json()) as
+    | Array<{ asset: string; balance?: string; crossWalletBalance?: string }>
+    | BinanceApiErrorResponse
+
+  if (!response.ok || !Array.isArray(data)) return []
+
+  return data
+    .map((item) => ({
+      symbol: item.asset,
+      balance: toPositiveNumber(item.balance),
+    }))
+    .filter((asset) => asset.balance > 0)
+}
+
 async function fetchOkxBalances(account: CexAccountInput) {
   const requestPath = '/api/v5/account/balance'
   const timestamp = new Date().toISOString()
@@ -206,10 +348,37 @@ async function fetchOkxBalances(account: CexAccountInput) {
 
 export async function getCexSnapshot(account: CexAccountInput): Promise<PortfolioSnapshot> {
   try {
-    const rawAssets =
-      account.exchange === 'binance'
-        ? mergeBalances(await fetchBinanceUserAssets(account))
-        : await fetchOkxBalances(account)
+    let rawAssets: Array<{ symbol: string; balance: number }>
+
+    if (account.exchange === 'binance') {
+      // Query all Binance wallet types in parallel: Spot, Simple Earn, Funding, Futures
+      const [spotAssets, earnFlexible, earnLocked, fundingAssets, futuresAssets] =
+        await Promise.all([
+          fetchBinanceUserAssets(account),
+          fetchBinanceSimpleEarnFlexible(account).catch(
+            () => [] as Array<{ symbol: string; balance: number }>
+          ),
+          fetchBinanceSimpleEarnLocked(account).catch(
+            () => [] as Array<{ symbol: string; balance: number }>
+          ),
+          fetchBinanceFundingAsset(account).catch(
+            () => [] as Array<{ symbol: string; balance: number }>
+          ),
+          fetchBinanceFuturesBalance(account).catch(
+            () => [] as Array<{ symbol: string; balance: number }>
+          ),
+        ])
+
+      rawAssets = mergeBalances([
+        ...spotAssets,
+        ...earnFlexible,
+        ...earnLocked,
+        ...fundingAssets,
+        ...futuresAssets,
+      ])
+    } else {
+      rawAssets = await fetchOkxBalances(account)
+    }
 
     const pricingSymbolMap = new Map(
       rawAssets.map((asset) => [
@@ -256,7 +425,7 @@ export async function getCexSnapshot(account: CexAccountInput): Promise<Portfoli
         })
 
         return buildSnapshot(account, assets, {
-          warning: `Binance 官方汇总总额比可拆分资产高 ${formatUsdValue(reconciliationGap)}，差额已计入“未展开账户资产”。这通常来自 Earn、Futures、Margin 或暂时缺少公开报价的资产。`,
+          warning: `Binance 官方汇总总额比可拆分资产高 ${formatUsdValue(reconciliationGap)}，差额已计入"未展开账户资产"。这可能来自 Margin 或暂时缺少公开报价的资产。`,
         })
       }
     }

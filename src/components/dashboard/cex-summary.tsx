@@ -16,7 +16,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-sm font-medium">交易所</CardTitle>
         <Link href="/cex" className="text-xs text-primary hover:underline">
           查看全部
@@ -34,13 +34,13 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {displayAccounts.map((a) => {
               const snapshot = snapshots[a.id]
               return (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between py-1"
+                  className="flex items-center justify-between rounded-lg border border-border/50 p-3 transition-colors hover:bg-muted/30"
                 >
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-xs">

@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatPercent } from '@/lib/validators'
-import { TrendingUp, TrendingDown } from 'lucide-react'
+import { TrendingUp, TrendingDown, Clock } from 'lucide-react'
 
 interface TotalAssetsProps {
   totalValue: number
@@ -22,38 +22,45 @@ export function TotalAssets({
   const isPositive = change24hPercent >= 0
 
   return (
-    <Card className="col-span-full">
-      <CardContent className="pt-6">
-        <p className="text-sm text-muted-foreground mb-1">总资产</p>
-        <p className="text-4xl font-bold tracking-tight">
-          {formatCurrency(totalValue)}
-        </p>
-        <div className="flex items-center gap-2 mt-2">
-          {isPositive ? (
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          ) : (
-            <TrendingDown className="h-4 w-4 text-red-500" />
-          )}
-          <span
-            className={isPositive ? 'text-green-500' : 'text-red-500'}
-          >
-            {formatCurrency(Math.abs(change24hValue))}{' '}
-            ({formatPercent(change24hPercent)})
-          </span>
-          <span className="text-xs text-muted-foreground">24h</span>
-        </div>
-        {lastRefresh && (
-          <div className="mt-2 space-y-1">
-            <p className="text-xs text-muted-foreground">
-              最近刷新: {new Date(lastRefresh).toLocaleString('zh-CN')}
-            </p>
-            {isStale ? (
-              <p className="text-xs text-amber-500">
-                当前显示的是本地缓存资产；如需最新结果，请手动点击“刷新”。
-              </p>
-            ) : null}
+    <Card className="col-span-full overflow-hidden">
+      <CardContent className="relative pt-8 pb-6">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-transparent pointer-events-none" />
+        <div className="relative">
+          <p className="text-sm font-medium text-muted-foreground tracking-wide">总资产</p>
+          <p className="mt-2 text-5xl font-bold tracking-tighter">
+            {formatCurrency(totalValue)}
+          </p>
+          <div className="mt-4 flex items-center gap-3">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
+                isPositive
+                  ? 'bg-emerald-500/10 text-emerald-600'
+                  : 'bg-red-500/10 text-red-500'
+              }`}
+            >
+              {isPositive ? (
+                <TrendingUp className="h-3.5 w-3.5" />
+              ) : (
+                <TrendingDown className="h-3.5 w-3.5" />
+              )}
+              {formatPercent(change24hPercent)}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {isPositive ? '+' : ''}{formatCurrency(Math.abs(change24hValue))} · 24h
+            </span>
           </div>
-        )}
+          {lastRefresh && (
+            <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground/80">
+              <Clock className="h-3 w-3" />
+              <span>最近刷新 {new Date(lastRefresh).toLocaleString('zh-CN')}</span>
+              {isStale ? (
+                <span className="ml-2 text-amber-500">
+                  · 当前为本地缓存，请手动刷新获取最新数据
+                </span>
+              ) : null}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

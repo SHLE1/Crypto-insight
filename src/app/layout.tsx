@@ -19,7 +19,7 @@ export default function RootLayout({
         <Providers>
           <AppSidebar />
           <main className="flex-1 overflow-auto pb-16 md:pb-0">
-            <div className="mx-auto max-w-6xl p-4 md:p-6">
+            <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">
               {children}
             </div>
           </main>

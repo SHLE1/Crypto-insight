@@ -23,14 +23,14 @@ export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r border-border bg-card">
-      <div className="flex h-14 items-center px-4 border-b border-border">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-          <span className="text-primary">◈</span>
+    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r border-sidebar-border bg-sidebar">
+      <div className="flex h-14 items-center gap-2.5 px-5 border-b border-sidebar-border">
+        <Link href="/" className="flex items-center gap-2.5 font-bold text-base tracking-tight">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">C</span>
           <span>Crypto Insight</span>
         </Link>
       </div>
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-3 space-y-0.5">
         {navItems.map((item) => {
           const isActive =
             item.href === '/'
@@ -41,20 +41,20 @@ export function AppSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                 isActive
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className={cn('h-[18px] w-[18px]', isActive && 'text-primary')} />
               {item.label}
             </Link>
           )
         })}
       </nav>
-      <div className="border-t border-border p-3">
-        <p className="text-xs text-muted-foreground">V1 · 数据仅存本地</p>
+      <div className="border-t border-sidebar-border p-4">
+        <p className="text-[11px] text-muted-foreground/70">V1 · 数据仅存本地</p>
       </div>
     </aside>
   )
@@ -64,7 +64,7 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex border-t border-border bg-card">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex border-t border-border bg-card/95 backdrop-blur-sm">
       {navItems.map((item) => {
         const isActive =
           item.href === '/'
@@ -75,9 +75,9 @@ export function MobileNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              'flex flex-1 flex-col items-center gap-1 py-2 text-xs transition-colors',
+              'flex flex-1 flex-col items-center gap-1 py-2.5 text-xs transition-colors',
               isActive
-                ? 'text-primary'
+                ? 'text-primary font-medium'
                 : 'text-muted-foreground'
             )}
           >
