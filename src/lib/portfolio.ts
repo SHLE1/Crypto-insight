@@ -98,6 +98,19 @@ export function buildHoldingsData({
         : (cexLabelMap.get(snap.source) ?? snap.source)
 
       const buildSourceDetails = () => {
+        if (a.sources && a.sources.length > 0) {
+          return a.sources
+            .filter((source) => source.balance > 0)
+            .map((source) => ({
+              sourceId: source.sourceId,
+              sourceType: source.sourceType,
+              sourceLabel: source.sourceLabel,
+              assetId: source.assetId ?? a.assetId,
+              balance: source.balance,
+              chainKey: source.chainKey,
+            }))
+        }
+
         if (a._chainBreakdowns && a._chainBreakdowns.length > 0) {
           return a._chainBreakdowns
             .filter((c) => c.balance > 0)
