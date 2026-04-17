@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const wallets: { id: string; chainType: ChainType; address: string; evmChains?: string[] }[] = body.wallets || []
     const cursor = typeof body.cursor === 'number' ? body.cursor : 0
+    const mode = body.mode === 'full' ? 'full' : 'single'
     const maxWalletsPerRequest = 1
     const defiWallets = wallets.filter((wallet) => wallet.chainType === 'evm' || wallet.chainType === 'solana')
 
@@ -25,14 +26,26 @@ export async function POST(request: NextRequest) {
     }
 
     const startIndex = Math.max(0, Math.min(cursor, Math.max(defiWallets.length - 1, 0)))
-    const walletChunk = defiWallets.slice(startIndex, startIndex + maxWalletsPerRequest)
-    const chunkResults = await Promise.all(walletChunk.map((wallet) => getMobulaDefiSnapshots(wallet)))
+    const walletChunk =
+      mode === 'full'
+        ? [...defiWallets.slice(startIndex), ...defiWallets.slice(0, startIndex)]
+        : defiWallets.slice(startIndex, startIndex + maxWalletsPerRequest)
+
+    const chunkResults: DefiSnapshot[][] = []
+    for (const wallet of walletChunk) {
+      chunkResults.push(await getMobulaDefiSnapshots(wallet))
+    }
     const results = chunkResults.flat()
 
     const successCount = results.filter((result) => result.status === 'success').length
     const partialCount = results.filter((result) => result.status === 'partial').length
     const hasGoodResult = successCount > 0 || partialCount > 0
-    const nextCursor = startIndex + walletChunk.length < defiWallets.length ? startIndex + walletChunk.length : 0
+    const nextCursor =
+      mode === 'full'
+        ? 0
+        : startIndex + walletChunk.length < defiWallets.length
+          ? startIndex + walletChunk.length
+          : 0
 
     const response: DefiQuoteResponse & {
       cursor: number
@@ -47,7 +60,7 @@ export async function POST(request: NextRequest) {
       provider: 'mobula',
       cursor: startIndex,
       nextCursor,
-      hasMore: startIndex + walletChunk.length < defiWallets.length,
+      hasMore: mode === 'full' ? false : startIndex + walletChunk.length < defiWallets.length,
       processedWalletIds: walletChunk.map((wallet) => wallet.id),
       summary: {
         successCount,

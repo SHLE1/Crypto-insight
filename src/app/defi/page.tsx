@@ -42,7 +42,7 @@ export default function DefiPage() {
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || (!hasDefiSources && isEnabled)} className="gap-2">
             <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-            刷新 DeFi
+            全量刷新 DeFi
           </Button>
         }
       />

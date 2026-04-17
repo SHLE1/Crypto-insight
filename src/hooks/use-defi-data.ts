@@ -24,6 +24,10 @@ interface DefiApiResponse extends DefiQuoteResponse {
   }
 }
 
+interface FetchDefiOptions {
+  mode?: 'single' | 'full'
+}
+
 function buildDefiError(snapshot: DefiSnapshot, label: string): ApiErrorState | null {
   if (!snapshot.error) {
     return null
@@ -101,6 +105,7 @@ export function useDefiData() {
   const expectedSnapshotKeySet = useMemo(() => new Set(expectedSnapshotKeys), [expectedSnapshotKeys])
 
   const [hasFetchedThisSession, setHasFetchedThisSession] = useState(false)
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false)
   const cursorRef = useRef(0)
   const lastSourceKeyRef = useRef<string | null>(null)
 
@@ -120,7 +125,7 @@ export function useDefiData() {
     [completedSnapshotKeySet, expectedSnapshotKeys]
   )
 
-  const fetchDefi = useCallback(async () => {
+  const fetchDefi = useCallback(async ({ mode = 'single' }: FetchDefiOptions = {}) => {
     if (lastSourceKeyRef.current !== activeSourceKey) {
       lastSourceKeyRef.current = activeSourceKey
       cursorRef.current = 0
@@ -134,6 +139,7 @@ export function useDefiData() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        mode,
         cursor,
         wallets: enabledWallets.map((wallet) => ({
           id: wallet.id,
@@ -223,7 +229,7 @@ export function useDefiData() {
 
   const { refetch, isFetching } = useQuery({
     queryKey: ['defi', activeSourceKey],
-    queryFn: fetchDefi,
+    queryFn: () => fetchDefi({ mode: 'single' }),
     enabled: shouldAutoRefresh,
     retry: 0,
     refetchInterval: shouldAutoRefresh
@@ -345,15 +351,22 @@ export function useDefiData() {
   )
 
   const hasPositions = positionCount > 0
-  const isUsingCachedData = hydrated && !hasFetchedThisSession && !isFetching && Boolean(lastRefresh) && hasCachedSnapshots
-  const isInitialLoading = !isRestoring && defiEnabled && hasDefiSources && !hasCachedSnapshots && isFetching
+  const isBusy = isFetching || isManualRefreshing
+  const isUsingCachedData = hydrated && !hasFetchedThisSession && !isBusy && Boolean(lastRefresh) && hasCachedSnapshots
+  const isInitialLoading = !isRestoring && defiEnabled && hasDefiSources && !hasCachedSnapshots && isBusy
 
-  const refreshAll = useCallback(() => {
+  const refreshAll = useCallback(async () => {
     cursorRef.current = 0
     lastSourceKeyRef.current = activeSourceKey
     clearErrors()
-    return refetch()
-  }, [activeSourceKey, clearErrors, refetch])
+    setIsManualRefreshing(true)
+
+    try {
+      return await fetchDefi({ mode: 'full' })
+    } finally {
+      setIsManualRefreshing(false)
+    }
+  }, [activeSourceKey, clearErrors, fetchDefi])
 
   return {
     snapshots,
@@ -374,7 +387,7 @@ export function useDefiData() {
     isEnabled: defiEnabled,
     hasDefiSources,
     hasPositions,
-    isFetching,
+    isFetching: isBusy,
     isInitialLoading,
     isUsingCachedData,
     isSweepRefreshing,
