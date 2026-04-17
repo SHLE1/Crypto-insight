@@ -35,6 +35,16 @@ export interface Settings {
 // ===== 资产与报价 =====
 
 export type PriceStatus = 'live' | 'stale' | 'missing'
+export type DefiProvider = 'mobula'
+export type DefiStatus = 'success' | 'partial' | 'error'
+export type DefiPositionType =
+  | 'lending'
+  | 'liquidity'
+  | 'stake'
+  | 'restaking'
+  | 'reward'
+  | 'perp'
+  | 'unknown'
 
 /** 单个来源的资产明细 */
 export interface AssetSourceDetail {
@@ -130,6 +140,62 @@ export interface ApiErrorState {
   timestamp: string
 }
 
+export interface DefiTokenBalance {
+  address?: string
+  symbol: string
+  name: string
+  amount: number
+  price: number | null
+  value: number | null
+}
+
+export interface DefiPosition {
+  id: string
+  walletId: string
+  chainKey: string
+  protocolId: string
+  protocolName: string
+  protocolUrl?: string
+  protocolCategory?: string
+  type: DefiPositionType
+  name: string
+  value: number
+  tokens: DefiTokenBalance[]
+  rewards: DefiTokenBalance[]
+  metadata?: Record<string, unknown>
+}
+
+export interface DefiProtocolSummary {
+  walletId: string
+  chainKey: string
+  protocolId: string
+  protocolName: string
+  protocolCategory?: string
+  totalValue: number
+  positionCount: number
+}
+
+export interface DefiSnapshot {
+  source: string
+  provider: DefiProvider
+  positions: DefiPosition[]
+  protocols: DefiProtocolSummary[]
+  totalValue: number
+  totalDepositedValue: number
+  totalBorrowedValue: number
+  totalRewardsValue: number
+  updatedAt: string
+  status: DefiStatus
+  error?: string
+}
+
+export interface DefiQuoteResponse {
+  results: DefiSnapshot[]
+  status: DefiStatus
+  updatedAt: string
+  provider: DefiProvider
+}
+
 // ===== 缓存 =====
 
 export interface PortfolioHistoryPoint {
@@ -163,4 +229,20 @@ export interface PortfolioCache {
   lastRefresh: string | null
   errors: ApiErrorState[]
   history: PortfolioHistoryPoint[]
+}
+
+export interface DefiHistoryPoint {
+  timestamp: string
+  totalValue: number
+  depositedValue: number
+  borrowedValue: number
+  rewardsValue: number
+  sourceCount: number
+}
+
+export interface DefiCache {
+  snapshots: Record<string, DefiSnapshot> // keyed by wallet id
+  lastRefresh: string | null
+  errors: ApiErrorState[]
+  history: DefiHistoryPoint[]
 }

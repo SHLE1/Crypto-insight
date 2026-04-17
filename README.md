@@ -20,6 +20,8 @@ pnpm dev
 
 ```bash
 COINGECKO_DEMO_API_KEY=your_demo_key
+SOLANA_RPC_URL=https://your-solana-rpc.example
+MOBULA_API_KEY=your_mobula_key
 ```
 
 常用命令：
@@ -38,6 +40,8 @@ pnpm build
 - `EVM` 钱包支持多链原生币与 ERC-20 余额查询
 - `Solana` 钱包当前查询原生 `SOL` 与 `SPL Token`
 - `Bitcoin` 当前按地址余额查询
+- `DeFi` 统计支持 `EVM` 与 `Solana` 钱包，默认低频刷新
+- `DeFi` 统计暂不并入顶部总资产，避免与钱包余额重复计算
 - 导出文件不包含交易所密钥
 - 导出文件不包含资产快照与历史看板数据
 

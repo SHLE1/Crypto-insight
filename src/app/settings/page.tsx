@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { useCexStore } from '@/stores/cex'
+import { useDefiStore } from '@/stores/defi'
 import { usePortfolioStore } from '@/stores/portfolio'
 import { useSettingsStore } from '@/stores/settings'
 import { useWalletStore } from '@/stores/wallets'
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const accounts = useCexStore((s) => s.accounts)
   const setAccounts = useCexStore((s) => s.setAccounts)
   const clearPortfolio = usePortfolioStore((s) => s.clearAll)
+  const clearDefi = useDefiStore((s) => s.clearAll)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleExport = () => {
@@ -99,6 +101,7 @@ export default function SettingsPage() {
           : []
       )
       clearPortfolio()
+      clearDefi()
 
       if (data.settings) {
         settings.updateSettings({
@@ -126,6 +129,7 @@ export default function SettingsPage() {
     setWallets([])
     setAccounts([])
     clearPortfolio()
+    clearDefi()
     toast.success('本地数据已清空')
   }
 
@@ -176,6 +180,14 @@ export default function SettingsPage() {
               label="隐藏小额资产"
               description="隐藏资产明细里低于 0.1 USD 的项目"
               control={<Switch checked={settings.hideSmallAssets} onCheckedChange={(checked) => settings.updateSettings({ hideSmallAssets: checked })} />}
+            />
+
+            <Separator />
+
+            <SettingRow
+              label="启用 DeFi 统计"
+              description="查询 EVM 与 Solana 钱包的协议仓位，默认低频刷新，且暂不并入顶部总资产"
+              control={<Switch checked={settings.defiEnabled} onCheckedChange={(checked) => settings.updateSettings({ defiEnabled: checked })} />}
             />
 
             <Separator />
