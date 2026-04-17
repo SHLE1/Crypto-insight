@@ -6,9 +6,10 @@ import { useWalletStore } from '@/stores/wallets'
 import { useCexStore } from '@/stores/cex'
 import { usePortfolioStore } from '@/stores/portfolio'
 import { useSettingsStore } from '@/stores/settings'
+import { useDefiData } from '@/hooks/use-defi-data'
 import { buildHoldingsData, buildPortfolioAnalytics } from '@/lib/portfolio'
 import { getChainLabel } from '@/lib/validators'
-import type { ApiErrorState, PortfolioSnapshot, QuoteResponse } from '@/types'
+import type { ApiErrorState, DefiHistoryPoint, PortfolioHistoryPoint, PortfolioSnapshot, QuoteResponse } from '@/types'
 
 interface QuoteRequestSuccess {
   kind: 'wallet' | 'cex'
@@ -25,6 +26,57 @@ type QuoteRequestResult = QuoteRequestSuccess | QuoteRequestFailure
 
 function shortenAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+function toTimestamp(value: string | null | undefined) {
+  if (!value) return 0
+  const timestamp = Date.parse(value)
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function mergePortfolioAndDefiHistory(
+  portfolioHistory: PortfolioHistoryPoint[],
+  defiHistory: DefiHistoryPoint[],
+  includeDefi: boolean
+) {
+  if (!includeDefi || defiHistory.length === 0) {
+    return portfolioHistory
+  }
+
+  const portfolio = [...portfolioHistory].sort((a, b) => toTimestamp(a.timestamp) - toTimestamp(b.timestamp))
+  const defi = [...defiHistory].sort((a, b) => toTimestamp(a.timestamp) - toTimestamp(b.timestamp))
+  const timestamps = Array.from(new Set([...portfolio.map((point) => point.timestamp), ...defi.map((point) => point.timestamp)]))
+    .sort((a, b) => toTimestamp(a) - toTimestamp(b))
+
+  let portfolioIndex = -1
+  let defiIndex = -1
+  let currentPortfolio: PortfolioHistoryPoint | null = null
+  let currentDefi: DefiHistoryPoint | null = null
+
+  return timestamps.map((timestamp) => {
+    while (portfolioIndex + 1 < portfolio.length && toTimestamp(portfolio[portfolioIndex + 1]?.timestamp) <= toTimestamp(timestamp)) {
+      portfolioIndex += 1
+      currentPortfolio = portfolio[portfolioIndex] ?? null
+    }
+
+    while (defiIndex + 1 < defi.length && toTimestamp(defi[defiIndex + 1]?.timestamp) <= toTimestamp(timestamp)) {
+      defiIndex += 1
+      currentDefi = defi[defiIndex] ?? null
+    }
+
+    const portfolioTotal = currentPortfolio?.totalValue ?? 0
+    const portfolioWalletTotal = currentPortfolio?.walletTotal ?? 0
+    const portfolioCexTotal = currentPortfolio?.cexTotal ?? 0
+    const defiTotal = currentDefi?.totalValue ?? 0
+
+    return {
+      timestamp,
+      totalValue: portfolioTotal + defiTotal,
+      walletTotal: portfolioWalletTotal + defiTotal,
+      cexTotal: portfolioCexTotal,
+      sourceCount: currentPortfolio?.sourceCount ?? 0,
+    } satisfies PortfolioHistoryPoint
+  })
 }
 
 function shouldRetainPreviousSnapshot(previous: PortfolioSnapshot | undefined, next: PortfolioSnapshot) {
@@ -170,6 +222,16 @@ async function requestQuote(
 
 export function usePortfolioData() {
   const wallets = useWalletStore((s) => s.wallets)
+  const {
+    totalValue: defiTotalValue,
+    history: defiHistory,
+    errors: defiErrors,
+    lastRefresh: defiLastRefresh,
+    isEnabled: isDefiEnabled,
+    isFetching: isDefiFetching,
+    isInitialLoading: isDefiInitialLoading,
+    isUsingCachedData: isDefiUsingCachedData,
+  } = useDefiData()
   const walletsHydrated = useWalletStore((s) => s.hydrated)
   const accounts = useCexStore((s) => s.accounts)
   const accountsHydrated = useCexStore((s) => s.hydrated)
@@ -383,43 +445,101 @@ export function usePortfolioData() {
     }
   }, [activeSourceIds, hasSources, isRestoring, refetch, snapshotCount, snapshots])
 
-  const { totalValue, change24hValue, change24hPercent, assetData, walletTotal, cexTotal, holdingsData } =
-    useMemo(
-      () =>
-        buildHoldingsData({
-          snapshots,
-          hideSmallAssets,
-          walletNameMap,
-          cexLabelMap,
-          walletChainLabelMap,
-        }),
-      [cexLabelMap, hideSmallAssets, snapshots, walletChainLabelMap, walletNameMap]
-    )
+  const basePortfolio = useMemo(
+    () =>
+      buildHoldingsData({
+        snapshots,
+        hideSmallAssets,
+        walletNameMap,
+        cexLabelMap,
+        walletChainLabelMap,
+      }),
+    [cexLabelMap, hideSmallAssets, snapshots, walletChainLabelMap, walletNameMap]
+  )
+
+  const mergedHistory = useMemo(
+    () => mergePortfolioAndDefiHistory(history, defiHistory, isDefiEnabled),
+    [defiHistory, history, isDefiEnabled]
+  )
+
+  const totalValue = basePortfolio.totalValue + (isDefiEnabled ? defiTotalValue : 0)
+  const walletTotal = basePortfolio.walletTotal + (isDefiEnabled ? defiTotalValue : 0)
+  const cexTotal = basePortfolio.cexTotal
+  const assetData = useMemo(
+    () => {
+      if (!isDefiEnabled || defiTotalValue <= 0) {
+        return basePortfolio.assetData
+      }
+
+      return [{ name: 'DeFi 仓位', value: defiTotalValue }, ...basePortfolio.assetData]
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6)
+    },
+    [basePortfolio.assetData, defiTotalValue, isDefiEnabled]
+  )
+  const change24hValue = useMemo(() => {
+    const visibleHistory = mergedHistory.slice(-24)
+    if (visibleHistory.length < 2) {
+      return basePortfolio.change24hValue
+    }
+
+    const firstPoint = visibleHistory[0]
+    const lastPoint = visibleHistory[visibleHistory.length - 1]
+    return lastPoint.totalValue - firstPoint.totalValue
+  }, [basePortfolio.change24hValue, mergedHistory])
+  const change24hPercent = useMemo(() => {
+    const visibleHistory = mergedHistory.slice(-24)
+    if (visibleHistory.length < 2) {
+      return totalValue > 0 ? (change24hValue / totalValue) * 100 : 0
+    }
+
+    const firstPoint = visibleHistory[0]
+    const lastPoint = visibleHistory[visibleHistory.length - 1]
+    return firstPoint.totalValue > 0 ? ((lastPoint.totalValue - firstPoint.totalValue) / firstPoint.totalValue) * 100 : 0
+  }, [change24hValue, mergedHistory, totalValue])
+  const holdingsData = basePortfolio.holdingsData
+
   const analytics = useMemo(
     () =>
       buildPortfolioAnalytics({
         holdingsData,
         walletTotal,
         cexTotal,
-        history,
+        history: mergedHistory,
         activeSourceCount: activeSourceIds.length,
       }),
-    [activeSourceIds.length, cexTotal, history, holdingsData, walletTotal]
+    [activeSourceIds.length, cexTotal, holdingsData, mergedHistory, walletTotal]
   )
 
+  const mergedErrors = useMemo(
+    () => (isDefiEnabled ? [...errors, ...defiErrors] : errors),
+    [defiErrors, errors, isDefiEnabled]
+  )
+  const mergedLastRefresh = useMemo(() => {
+    if (!isDefiEnabled) {
+      return lastRefresh
+    }
+
+    return toTimestamp(defiLastRefresh) > toTimestamp(lastRefresh) ? defiLastRefresh : lastRefresh
+  }, [defiLastRefresh, isDefiEnabled, lastRefresh])
+
   const isEmpty = wallets.length === 0 && accounts.length === 0
-  const hasValuedAssets = holdingsData.some((asset) => asset.value > 0)
+  const hasValuedAssets = holdingsData.some((asset) => asset.value > 0) || (isDefiEnabled && defiTotalValue > 0)
+  const isFetchingCombined = isFetching || (isDefiEnabled && isDefiFetching)
   const isUsingCachedData =
-    portfolioHydrated && !hasFetchedThisSession && !isFetching && Boolean(lastRefresh) && hasCachedSnapshots
-  const isInitialLoading = !isRestoring && hasSources && !hasCachedSnapshots && isFetching
+    (portfolioHydrated && !hasFetchedThisSession && !isFetching && Boolean(lastRefresh) && hasCachedSnapshots) ||
+    (isDefiEnabled && isDefiUsingCachedData)
+  const isInitialLoading =
+    (!isRestoring && hasSources && !hasCachedSnapshots && isFetching) ||
+    (!isRestoring && isDefiEnabled && totalValue <= 0 && isDefiInitialLoading)
 
   return {
     wallets,
     accounts,
     snapshots,
-    history,
-    errors,
-    lastRefresh,
+    history: mergedHistory,
+    errors: mergedErrors,
+    lastRefresh: mergedLastRefresh,
     totalValue,
     change24hValue,
     change24hPercent,
@@ -428,6 +548,8 @@ export function usePortfolioData() {
     cexTotal,
     holdingsData,
     analytics,
+    defiTotalValue,
+    isDefiEnabled,
     isEmpty,
     hasSources,
     hasValuedAssets,
@@ -435,6 +557,6 @@ export function usePortfolioData() {
     isRestoring,
     isInitialLoading,
     refetch,
-    isFetching,
+    isFetching: isFetchingCombined,
   }
 }

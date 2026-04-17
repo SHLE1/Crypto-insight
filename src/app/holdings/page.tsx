@@ -15,6 +15,8 @@ export default function HoldingsPage() {
     holdingsData,
     totalValue,
     analytics,
+    defiTotalValue,
+    isDefiEnabled,
     isEmpty,
     hasSources,
     hasValuedAssets,
@@ -67,7 +69,11 @@ export default function HoldingsPage() {
           ) : null}
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <HoldingSummaryCard label="总估值" value={formatCurrency(totalValue)} detail={`${holdingsData.length} 项代币`} />
+            <HoldingSummaryCard
+              label="总估值"
+              value={formatCurrency(totalValue)}
+              detail={isDefiEnabled && defiTotalValue > 0 ? `${holdingsData.length} 项代币 + DeFi ${formatCurrency(defiTotalValue)}` : `${holdingsData.length} 项代币`}
+            />
             <HoldingSummaryCard
               label="价格覆盖"
               value={`${analytics.pricedAssetCount} / ${analytics.assetCount}`}
@@ -86,6 +92,14 @@ export default function HoldingsPage() {
           </div>
 
           <HoldingsOverview data={holdingsData} analytics={analytics} totalValue={totalValue} />
+
+          {isDefiEnabled && defiTotalValue > 0 ? (
+            <Card className="border-border/80 bg-muted/10">
+              <CardContent className="py-4 text-sm text-muted-foreground">
+                当前总资产已直接包含 <span className="font-medium text-foreground">{formatCurrency(defiTotalValue)}</span> 的 DeFi 净值；下方资产明细表仍主要展示钱包代币与交易所资产，未把 DeFi 仓位展开到代币列表中。
+              </CardContent>
+            </Card>
+          ) : null}
 
           {lastRefresh ? <p className="text-xs text-muted-foreground">最近刷新：{new Date(lastRefresh).toLocaleString('zh-CN')}</p> : null}
         </>

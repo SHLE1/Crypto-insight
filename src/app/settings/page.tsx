@@ -186,7 +186,7 @@ export default function SettingsPage() {
 
             <SettingRow
               label="启用 DeFi 统计"
-              description="查询 EVM 与 Solana 钱包的协议仓位，默认低频刷新，且暂不并入顶部总资产"
+              description="查询 EVM 与 Solana 钱包的协议仓位，默认低频刷新；当前会直接并入总资产"
               control={<Switch checked={settings.defiEnabled} onCheckedChange={(checked) => settings.updateSettings({ defiEnabled: checked })} />}
             />
 

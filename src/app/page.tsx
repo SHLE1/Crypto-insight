@@ -97,7 +97,7 @@ export default function DashboardPage() {
           {!isFetching && !hasValuedAssets && hasSources ? (
             <Card className="col-span-full border-dashed">
               <CardContent className="py-6 text-sm text-muted-foreground">
-                当前没有拿到可计价的资产数据。常见原因包括地址下没有原生币、交易所 API 权限不足，或第三方报价暂时不可用。
+                当前没有拿到可计价的资产数据。常见原因包括地址下没有原生币、交易所 API 权限不足、DeFi 仍在补齐，或第三方报价暂时不可用。
               </CardContent>
             </Card>
           ) : null}

@@ -225,7 +225,7 @@ export function DefiSummary({
                 : `已检查 ${walletCount} 个钱包，暂未发现可计价的 DeFi 仓位。`}
             </p>
           )}
-          <p className="text-xs">DeFi 统计不会并入顶部总资产，避免与钱包余额重复计算。</p>
+          <p className="text-xs">当前版本会把 DeFi 净值直接计入顶部总资产；这可能与钱包余额产生重复计算。</p>
         </CardContent>
       </Card>
     )
@@ -306,7 +306,7 @@ export function DefiSummary({
               )}
             </div>
             <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3 text-xs leading-6 text-muted-foreground">
-              <p>DeFi 统计暂未并入顶部总资产，避免与钱包余额重复计算。</p>
+              <p>当前版本会把 DeFi 净值直接计入顶部总资产与来源分布；这可能与钱包余额产生重复计算。</p>
               <p>最近刷新：{lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '暂无'}。</p>
               <p>为兼顾免费额度与成功率，DeFi 会按钱包逐个轮转刷新；遇到限速或 5xx 时，会继续刷下一个来源并在后续逐步补齐。</p>
               <p>点击“全量刷新”时，会立即按当前钱包列表跑完一整轮，而不只是刷新当前轮转到的单个钱包。</p>
