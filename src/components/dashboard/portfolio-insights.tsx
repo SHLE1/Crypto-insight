@@ -26,21 +26,21 @@ function InsightBlock({
 }) {
   const toneClassName =
     tone === 'positive'
-      ? 'text-emerald-600'
+      ? 'text-[var(--data-positive)]'
       : tone === 'negative'
-        ? 'text-red-500'
+        ? 'text-[var(--data-negative)]'
         : tone === 'warning'
-          ? 'text-amber-500'
+          ? 'text-[var(--data-warning)]'
           : 'text-foreground'
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+    <div className="surface-subtle rounded-[1.35rem] p-4">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
         <Icon className="h-3.5 w-3.5" />
         <span>{title}</span>
       </div>
-      <p className={`mt-3 text-lg font-semibold tracking-tight ${toneClassName}`}>{value}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+      <p className={`mt-3 text-[1.15rem] font-semibold tracking-[-0.05em] ${toneClassName}`}>{value}</p>
+      <p className="mt-1.5 text-xs leading-6 text-muted-foreground">{detail}</p>
     </div>
   )
 }
@@ -64,12 +64,13 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
     <Card className="col-span-full">
       <CardHeader className="flex flex-col gap-3 border-b border-border/50 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <CardTitle className="text-sm font-medium">分析摘要</CardTitle>
-          <p className="text-xs text-muted-foreground">把集中度、价格覆盖和强弱分化放到一屏里看清楚。</p>
+          <p className="section-label">Insights</p>
+          <CardTitle className="mt-2 text-base">分析摘要</CardTitle>
+          <p className="text-xs text-muted-foreground">把集中度、价格覆盖和强弱分化压缩到一屏里看清楚。</p>
         </div>
-        <Badge variant="secondary">{analytics.activeSourceCount} 个启用来源</Badge>
+        <Badge variant="secondary" className="rounded-full px-3">{analytics.activeSourceCount} 个启用来源</Badge>
       </CardHeader>
-      <CardContent className="grid gap-3 pt-2 md:grid-cols-2 xl:grid-cols-4">
+      <CardContent className="grid gap-3 pt-4 md:grid-cols-2 xl:grid-cols-4">
         <InsightBlock
           icon={Scale}
           title="仓位集中度"
@@ -114,22 +115,22 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
           }
           tone={worstTone}
         />
-        <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 md:col-span-2 xl:col-span-4">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="surface-subtle rounded-[1.35rem] p-4 md:col-span-2 xl:col-span-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs text-muted-foreground">资金来源结构</p>
-              <p className="mt-1 text-sm font-medium">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">资金来源结构</p>
+              <p className="mt-2 text-sm font-medium tracking-[-0.03em] text-foreground">
                 链上 {analytics.walletShare.toFixed(1)}% · 交易所 {analytics.cexShare.toFixed(1)}%
               </p>
             </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span>历史样本 {analytics.historyPoints} 条</span>
               <span>平均单项 {formatCurrency(analytics.averagePositionValue)}</span>
             </div>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-muted/80">
             <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,hsl(211,100%,63%)_0%,hsl(211,100%,63%)_var(--wallet-share),hsl(154,55%,49%)_var(--wallet-share),hsl(154,55%,49%)_100%)]"
+              className="h-full rounded-full bg-[linear-gradient(90deg,var(--chart-1)_0%,var(--chart-1)_var(--wallet-share),var(--chart-2)_var(--wallet-share),var(--chart-2)_100%)]"
               style={{ ['--wallet-share' as string]: `${analytics.walletShare}%` }}
             />
           </div>

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AlertTriangle, ChevronDown, ChevronUp, CircleAlert, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, CircleAlert, Info, ChevronDown, ChevronUp } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { ApiErrorState } from '@/types'
 
 interface AlertsPanelProps {
@@ -22,14 +22,14 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
   const hasMore = errors.length > 2
 
   return (
-    <Card className={hasCritical ? 'border-destructive/30' : 'border-amber-500/20'}>
+    <Card className={hasCritical ? 'border-destructive/30' : 'border-[color:color-mix(in_oklch,var(--data-warning)_28%,transparent)]'}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between text-sm font-medium">
           <span className="flex items-center gap-2">
             {hasCritical ? (
               <AlertTriangle className="h-4 w-4 text-destructive" />
             ) : (
-              <Info className="h-4 w-4 text-amber-500" />
+              <Info className="h-4 w-4 text-[var(--data-warning)]" />
             )}
             {hasCritical ? '异常提示' : '数据状态'}
           </span>
@@ -41,32 +41,32 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {displayErrors.map((err, i) => (
             <div
               key={i}
-              className={`rounded-lg p-3 text-sm ${
+              className={`rounded-[1.2rem] border p-3.5 text-sm ${
                 err.kind === 'error'
-                  ? 'bg-destructive/5 border border-destructive/10'
-                  : 'bg-amber-500/5 border border-amber-500/10'
+                  ? 'border-destructive/18 bg-destructive/6'
+                  : 'border-[color:color-mix(in_oklch,var(--data-warning)_28%,transparent)] bg-[color:color-mix(in_oklch,var(--data-warning)_10%,transparent)]'
               }`}
             >
               <div className="flex items-start gap-2.5">
-                <CircleAlert className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${err.kind === 'warning' ? 'text-amber-500' : 'text-destructive'}`} />
-                <div className="min-w-0 space-y-0.5">
+                <CircleAlert className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${err.kind === 'warning' ? 'text-[var(--data-warning)]' : 'text-destructive'}`} />
+                <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span className="font-medium text-foreground/90">{err.title ?? err.source}</span>
+                    <span className="font-medium tracking-[-0.03em] text-foreground/90">{err.title ?? err.source}</span>
                     {err.sourceLabel ? <span className="text-xs text-muted-foreground">{err.sourceLabel}</span> : null}
                   </div>
-                  <p className="text-foreground/80 leading-relaxed">{err.message}</p>
-                  {err.detail ? <p className="text-muted-foreground text-xs leading-relaxed">{err.detail}</p> : null}
-                  {err.impact ? <p className="text-muted-foreground text-xs leading-relaxed">{err.impact}</p> : null}
+                  <p className="leading-6 text-foreground/80">{err.message}</p>
+                  {err.detail ? <p className="text-xs leading-6 text-muted-foreground">{err.detail}</p> : null}
+                  {err.impact ? <p className="text-xs leading-6 text-muted-foreground">{err.impact}</p> : null}
                 </div>
               </div>
             </div>
           ))}
         </div>
-        {hasMore && (
+        {hasMore ? (
           <Button
             variant="ghost"
             size="sm"
@@ -74,12 +74,18 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
             onClick={() => setExpanded(!expanded)}
           >
             {expanded ? (
-              <>收起 <ChevronUp className="ml-1 h-3 w-3" /></>
+              <>
+                收起
+                <ChevronUp className="ml-1 h-3 w-3" />
+              </>
             ) : (
-              <>查看全部 {errors.length} 条 <ChevronDown className="ml-1 h-3 w-3" /></>
+              <>
+                查看全部 {errors.length} 条
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </>
             )}
           </Button>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   )

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, shortAddress } from '@/lib/validators'
-import type { WalletInput, PortfolioSnapshot } from '@/types'
+import type { PortfolioSnapshot, WalletInput } from '@/types'
 
 interface WalletSummaryProps {
   wallets: WalletInput[]
@@ -17,48 +17,41 @@ export function WalletSummary({ wallets, snapshots }: WalletSummaryProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="text-sm font-medium">钱包</CardTitle>
+        <div>
+          <p className="section-label">Wallets</p>
+          <CardTitle className="mt-2 text-base">钱包</CardTitle>
+        </div>
         <Link href="/wallets" className="text-xs text-primary hover:underline">
           查看全部
         </Link>
       </CardHeader>
       <CardContent>
         {displayWallets.length === 0 ? (
-          <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground mb-2">尚未添加钱包</p>
-            <Link
-              href="/wallets/add"
-              className="text-sm text-primary hover:underline"
-            >
+          <div className="py-8 text-center">
+            <p className="text-sm text-muted-foreground">尚未添加钱包</p>
+            <Link href="/wallets/add" className="mt-3 inline-block text-sm text-primary hover:underline">
               添加第一个钱包 →
             </Link>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {displayWallets.map((w) => {
               const snapshot = snapshots[w.id]
               return (
-                <div
-                  key={w.id}
-                  className="flex items-center justify-between rounded-lg border border-border/50 p-3 transition-colors hover:bg-muted/30"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Badge variant="secondary" className="text-xs shrink-0">
+                <div key={w.id} className="surface-subtle flex items-center justify-between gap-3 rounded-[1.2rem] p-3.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Badge variant="secondary" className="shrink-0 rounded-full text-[10px] tracking-[0.08em]">
                       {w.chainType.toUpperCase()}
                     </Badge>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
+                      <p className="truncate text-sm font-medium tracking-[-0.03em]">
                         {w.name || shortAddress(w.address)}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {shortAddress(w.address)}
-                      </p>
+                      <p className="truncate text-xs text-muted-foreground">{shortAddress(w.address)}</p>
                     </div>
                   </div>
-                  <p className="text-sm font-medium shrink-0">
-                    {snapshot
-                      ? formatCurrency(snapshot.totalValue)
-                      : '--'}
+                  <p className="shrink-0 text-sm font-medium tracking-[-0.03em]">
+                    {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
                   </p>
                 </div>
               )

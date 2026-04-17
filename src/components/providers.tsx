@@ -1,19 +1,10 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { ThemeProvider } from 'next-themes'
+import { useState } from 'react'
+import { ThemeSync } from '@/components/layout/theme-sync'
 import { Toaster } from '@/components/ui/sonner'
-import { useSettingsStore } from '@/stores/settings'
-
-function ThemeSync() {
-  const theme = useSettingsStore((state) => state.theme)
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-  }, [theme])
-
-  return null
-}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -31,9 +22,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeSync />
-      {children}
-      <Toaster />
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+        <ThemeSync />
+        {children}
+        <Toaster />
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }
