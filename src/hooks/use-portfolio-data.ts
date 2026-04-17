@@ -6,9 +6,22 @@ import { useWalletStore } from '@/stores/wallets'
 import { useCexStore } from '@/stores/cex'
 import { usePortfolioStore } from '@/stores/portfolio'
 import { useSettingsStore } from '@/stores/settings'
-import { buildHoldingsData } from '@/lib/portfolio'
+import { buildHoldingsData, buildPortfolioAnalytics } from '@/lib/portfolio'
 import { getChainLabel } from '@/lib/validators'
 import type { ApiErrorState, PortfolioSnapshot, QuoteResponse } from '@/types'
+
+interface QuoteRequestSuccess {
+  kind: 'wallet' | 'cex'
+  ok: boolean
+  data: QuoteResponse
+}
+
+interface QuoteRequestFailure {
+  kind: 'wallet' | 'cex'
+  error: unknown
+}
+
+type QuoteRequestResult = QuoteRequestSuccess | QuoteRequestFailure
 
 function shortenAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -137,13 +150,34 @@ function buildSnapshotError(snapshot: PortfolioSnapshot, label: string): ApiErro
   }
 }
 
+async function requestQuote(
+  kind: 'wallet' | 'cex',
+  url: string,
+  payload: Record<string, unknown>
+): Promise<QuoteRequestResult> {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data: QuoteResponse = await response.json()
+    return { kind, ok: response.ok, data }
+  } catch (error) {
+    return { kind, error }
+  }
+}
+
 export function usePortfolioData() {
   const wallets = useWalletStore((s) => s.wallets)
+  const walletsHydrated = useWalletStore((s) => s.hydrated)
   const accounts = useCexStore((s) => s.accounts)
+  const accountsHydrated = useCexStore((s) => s.hydrated)
   const refreshInterval = useSettingsStore((s) => s.refreshInterval)
   const hideSmallAssets = useSettingsStore((s) => s.hideSmallAssets)
+  const settingsHydrated = useSettingsStore((s) => s.hydrated)
   const {
-    hydrated,
+    hydrated: portfolioHydrated,
     snapshots,
     history,
     errors,
@@ -184,131 +218,95 @@ export function usePortfolioData() {
       ),
     [wallets]
   )
+  const isRestoring = !portfolioHydrated || !walletsHydrated || !accountsHydrated || !settingsHydrated
+  const snapshotCount = Object.keys(snapshots).length
+  const hasCachedSnapshots = snapshotCount > 0
 
   const fetchPortfolio = useCallback(async () => {
     clearErrors()
     pruneSnapshots(activeSourceIds)
     const results: QuoteResponse[] = []
     const nextSnapshots = new Map<string, PortfolioSnapshot>()
+    const requests: Promise<QuoteRequestResult>[] = []
 
     if (enabledWallets.length > 0) {
-      try {
-        const res = await fetch('/api/wallets/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            wallets: enabledWallets.map((w) => ({
-              id: w.id,
-              chainType: w.chainType,
-              address: w.address,
-              evmChains: w.evmChains,
-            })),
-          }),
+      requests.push(
+        requestQuote('wallet', '/api/wallets/quote', {
+          wallets: enabledWallets.map((wallet) => ({
+            id: wallet.id,
+            chainType: wallet.chainType,
+            address: wallet.address,
+            evmChains: wallet.evmChains,
+          })),
         })
-        const data: QuoteResponse = await res.json()
-        results.push(data)
-        data.results.forEach((r) => {
-          const previousSnapshot = snapshots[r.source]
-          const retained = shouldRetainPreviousSnapshot(previousSnapshot, r)
-          const effectiveSnapshot = retained && previousSnapshot ? previousSnapshot : r
-
-          nextSnapshots.set(r.source, effectiveSnapshot)
-          if (!retained) {
-            setSnapshot(r.source, r)
-          }
-
-          const nextError = withRetainedSnapshotDetail(
-            buildSnapshotError(r, walletNameMap.get(r.source) ?? r.source),
-            retained
-          )
-          if (nextError) {
-            addError(nextError)
-          }
-        })
-        if (!res.ok && data.results.length === 0) {
-          addError({
-            source: '钱包查询',
-            title: '接口请求失败',
-            kind: 'error',
-            message: '钱包报价接口返回异常响应。',
-            detail: `状态码：${res.status}`,
-            impact: '这一轮没有拿到任何钱包数据。',
-            timestamp: new Date().toISOString(),
-          })
-        }
-      } catch (error) {
-        addError({
-          source: '钱包查询',
-          title: '接口连接失败',
-          kind: 'error',
-          message: '钱包报价接口没有成功返回。',
-          detail: error instanceof Error ? error.message : '请求过程中出现未知错误。',
-          impact: '这一轮没有拿到任何钱包数据。',
-          timestamp: new Date().toISOString(),
-        })
-      }
+      )
     }
 
     if (enabledAccounts.length > 0) {
-      try {
-        const res = await fetch('/api/cex/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            accounts: enabledAccounts.map((a) => ({
-              id: a.id,
-              exchange: a.exchange,
-              label: a.label,
-              apiKey: a.apiKey,
-              apiSecret: a.apiSecret,
-              passphrase: a.passphrase,
-              enabled: a.enabled,
-            })),
-          }),
+      requests.push(
+        requestQuote('cex', '/api/cex/quote', {
+          accounts: enabledAccounts.map((account) => ({
+            id: account.id,
+            exchange: account.exchange,
+            label: account.label,
+            apiKey: account.apiKey,
+            apiSecret: account.apiSecret,
+            passphrase: account.passphrase,
+            enabled: account.enabled,
+          })),
         })
-        const data: QuoteResponse = await res.json()
-        results.push(data)
-        data.results.forEach((r) => {
-          const previousSnapshot = snapshots[r.source]
-          const retained = shouldRetainPreviousSnapshot(previousSnapshot, r)
-          const effectiveSnapshot = retained && previousSnapshot ? previousSnapshot : r
+      )
+    }
 
-          nextSnapshots.set(r.source, effectiveSnapshot)
-          if (!retained) {
-            setSnapshot(r.source, r)
-          }
+    const responses = await Promise.all(requests)
 
-          const nextError = withRetainedSnapshotDetail(
-            buildSnapshotError(r, cexLabelMap.get(r.source) ?? r.source),
-            retained
-          )
-          if (nextError) {
-            addError(nextError)
-          }
-        })
-        if (!res.ok && data.results.length === 0) {
-          addError({
-            source: '交易所查询',
-            title: '接口请求失败',
-            kind: 'error',
-            message: '交易所报价接口返回异常响应。',
-            detail: `状态码：${res.status}`,
-            impact: '这一轮没有拿到任何交易所数据。',
-            timestamp: new Date().toISOString(),
-          })
-        }
-      } catch (error) {
+    responses.forEach((response) => {
+      if ('error' in response) {
         addError({
-          source: '交易所查询',
+          source: response.kind === 'wallet' ? '钱包查询' : '交易所查询',
           title: '接口连接失败',
           kind: 'error',
-          message: '交易所报价接口没有成功返回。',
-          detail: error instanceof Error ? error.message : '请求过程中出现未知错误。',
-          impact: '这一轮没有拿到任何交易所数据。',
+          message: `${response.kind === 'wallet' ? '钱包' : '交易所'}报价接口没有成功返回。`,
+          detail: response.error instanceof Error ? response.error.message : '请求过程中出现未知错误。',
+          impact: `这一轮没有拿到任何${response.kind === 'wallet' ? '钱包' : '交易所'}数据。`,
+          timestamp: new Date().toISOString(),
+        })
+        return
+      }
+
+      results.push(response.data)
+
+      response.data.results.forEach((snapshot) => {
+        const previousSnapshot = snapshots[snapshot.source]
+        const retained = shouldRetainPreviousSnapshot(previousSnapshot, snapshot)
+        const effectiveSnapshot = retained && previousSnapshot ? previousSnapshot : snapshot
+
+        nextSnapshots.set(snapshot.source, effectiveSnapshot)
+        if (!retained) {
+          setSnapshot(snapshot.source, snapshot)
+        }
+
+        const label =
+          response.kind === 'wallet'
+            ? walletNameMap.get(snapshot.source) ?? snapshot.source
+            : cexLabelMap.get(snapshot.source) ?? snapshot.source
+        const nextError = withRetainedSnapshotDetail(buildSnapshotError(snapshot, label), retained)
+        if (nextError) {
+          addError(nextError)
+        }
+      })
+
+      if (!response.ok && response.data.results.length === 0) {
+        addError({
+          source: response.kind === 'wallet' ? '钱包查询' : '交易所查询',
+          title: '接口请求失败',
+          kind: 'error',
+          message: `${response.kind === 'wallet' ? '钱包' : '交易所'}报价接口返回异常响应。`,
+          impact: `这一轮没有拿到任何${response.kind === 'wallet' ? '钱包' : '交易所'}数据。`,
           timestamp: new Date().toISOString(),
         })
       }
-    }
+    })
 
     const effectiveSnapshots = activeSourceIds
       .map((id) => nextSnapshots.get(id) ?? snapshots[id])
@@ -339,18 +337,18 @@ export function usePortfolioData() {
     snapshots,
     activeSourceIds,
     addError,
+    appendHistoryPoint,
+    cexLabelMap,
     clearErrors,
     enabledAccounts,
     enabledWallets,
-    walletNameMap,
     pruneSnapshots,
     setLastRefresh,
     setSnapshot,
-    cexLabelMap,
-    appendHistoryPoint,
+    walletNameMap,
   ])
 
-  const shouldAutoRefresh = hydrated && hasSources && (hasFetchedThisSession || Object.keys(snapshots).length === 0)
+  const shouldAutoRefresh = !isRestoring && hasSources && (hasFetchedThisSession || !hasCachedSnapshots)
 
   const { refetch, isFetching } = useQuery({
     queryKey: ['portfolio', activeSourceKey],
@@ -361,26 +359,29 @@ export function usePortfolioData() {
   })
 
   useEffect(() => {
+    if (isRestoring) {
+      return
+    }
+
     pruneSnapshots(activeSourceIds)
     if (!hasSources) {
       clearErrors()
       setLastRefresh(null)
     }
-  }, [activeSourceIds, clearErrors, hasSources, pruneSnapshots, setLastRefresh])
+  }, [activeSourceIds, clearErrors, hasSources, isRestoring, pruneSnapshots, setLastRefresh])
 
   useEffect(() => {
-    if (!hydrated || !hasSources) {
+    if (isRestoring || !hasSources) {
       return
     }
 
-    const snapshotIds = Object.keys(snapshots)
-    const hasAnySnapshot = snapshotIds.length > 0
+    const hasAnySnapshot = snapshotCount > 0
     const missingActiveSnapshot = activeSourceIds.some((id) => !(id in snapshots))
 
     if (!hasAnySnapshot || missingActiveSnapshot) {
       void refetch()
     }
-  }, [activeSourceIds, hasSources, hydrated, refetch, snapshots])
+  }, [activeSourceIds, hasSources, isRestoring, refetch, snapshotCount, snapshots])
 
   const { totalValue, change24hValue, change24hPercent, assetData, walletTotal, cexTotal, holdingsData } =
     useMemo(
@@ -394,11 +395,23 @@ export function usePortfolioData() {
         }),
       [cexLabelMap, hideSmallAssets, snapshots, walletChainLabelMap, walletNameMap]
     )
+  const analytics = useMemo(
+    () =>
+      buildPortfolioAnalytics({
+        holdingsData,
+        walletTotal,
+        cexTotal,
+        history,
+        activeSourceCount: activeSourceIds.length,
+      }),
+    [activeSourceIds.length, cexTotal, history, holdingsData, walletTotal]
+  )
 
   const isEmpty = wallets.length === 0 && accounts.length === 0
   const hasValuedAssets = holdingsData.some((asset) => asset.value > 0)
   const isUsingCachedData =
-    hydrated && !hasFetchedThisSession && !isFetching && Boolean(lastRefresh) && Object.keys(snapshots).length > 0
+    portfolioHydrated && !hasFetchedThisSession && !isFetching && Boolean(lastRefresh) && hasCachedSnapshots
+  const isInitialLoading = !isRestoring && hasSources && !hasCachedSnapshots && isFetching
 
   return {
     wallets,
@@ -414,10 +427,13 @@ export function usePortfolioData() {
     walletTotal,
     cexTotal,
     holdingsData,
+    analytics,
     isEmpty,
     hasSources,
     hasValuedAssets,
     isUsingCachedData,
+    isRestoring,
+    isInitialLoading,
     refetch,
     isFetching,
   }

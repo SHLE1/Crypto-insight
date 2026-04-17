@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware'
 import type { Settings } from '@/types'
 
 interface SettingsStore extends Settings {
+  hydrated: boolean
+  setHydrated: (hydrated: boolean) => void
   updateSettings: (updates: Partial<Settings>) => void
 }
 
@@ -14,6 +16,8 @@ export const useSettingsStore = create<SettingsStore>()(
       theme: 'dark',
       defiEnabled: false,
       hideSmallAssets: false,
+      hydrated: false,
+      setHydrated: (hydrated) => set({ hydrated }),
       updateSettings: (updates) => set((state) => ({ ...state, ...updates })),
     }),
     {
@@ -29,6 +33,9 @@ export const useSettingsStore = create<SettingsStore>()(
           defiEnabled: state?.defiEnabled ?? false,
           hideSmallAssets: state?.hideSmallAssets ?? false,
         }
+      },
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true)
       },
     }
   )

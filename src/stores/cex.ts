@@ -4,6 +4,8 @@ import type { CexAccountInput } from '@/types'
 
 interface CexStore {
   accounts: CexAccountInput[]
+  hydrated: boolean
+  setHydrated: (hydrated: boolean) => void
   addAccount: (account: CexAccountInput) => void
   setAccounts: (accounts: CexAccountInput[]) => void
   removeAccount: (id: string) => void
@@ -15,6 +17,8 @@ export const useCexStore = create<CexStore>()(
   persist(
     (set) => ({
       accounts: [],
+      hydrated: false,
+      setHydrated: (hydrated) => set({ hydrated }),
       addAccount: (account) =>
         set((state) => ({ accounts: [...state.accounts, account] })),
       setAccounts: (accounts) => set({ accounts }),
@@ -64,6 +68,9 @@ export const useCexStore = create<CexStore>()(
         return {
           accounts,
         }
+      },
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true)
       },
     }
   )

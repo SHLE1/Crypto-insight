@@ -4,6 +4,8 @@ import type { WalletInput } from '@/types'
 
 interface WalletStore {
   wallets: WalletInput[]
+  hydrated: boolean
+  setHydrated: (hydrated: boolean) => void
   addWallet: (wallet: WalletInput) => void
   setWallets: (wallets: WalletInput[]) => void
   removeWallet: (id: string) => void
@@ -15,6 +17,8 @@ export const useWalletStore = create<WalletStore>()(
   persist(
     (set) => ({
       wallets: [],
+      hydrated: false,
+      setHydrated: (hydrated) => set({ hydrated }),
       addWallet: (wallet) =>
         set((state) => ({ wallets: [...state.wallets, wallet] })),
       setWallets: (wallets) => set({ wallets }),
@@ -54,6 +58,9 @@ export const useWalletStore = create<WalletStore>()(
         return {
           wallets,
         }
+      },
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true)
       },
     }
   )

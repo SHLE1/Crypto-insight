@@ -11,6 +11,7 @@ import { WalletSummary } from '@/components/dashboard/wallet-summary'
 import { CexSummary } from '@/components/dashboard/cex-summary'
 import { AlertsPanel } from '@/components/dashboard/alerts'
 import { DefiPlaceholder } from '@/components/dashboard/defi-placeholder'
+import { PortfolioInsights } from '@/components/dashboard/portfolio-insights'
 import { usePortfolioData } from '@/hooks/use-portfolio-data'
 
 export default function DashboardPage() {
@@ -27,10 +28,13 @@ export default function DashboardPage() {
     assetData,
     walletTotal,
     cexTotal,
+    analytics,
     isEmpty,
     hasSources,
     hasValuedAssets,
     isUsingCachedData,
+    isRestoring,
+    isInitialLoading,
     refetch,
     isFetching,
   } = usePortfolioData()
@@ -50,7 +54,9 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {isEmpty ? (
+      {isRestoring || isInitialLoading ? (
+        <DashboardLoadingState />
+      ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="text-xl font-medium mb-2">欢迎使用 Crypto Insight</p>
           <p className="text-muted-foreground mb-6">
@@ -82,7 +88,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
-          <AssetDistribution data={assetData} />
+          <PortfolioInsights analytics={analytics} />
+          <AssetDistribution data={assetData} totalValue={totalValue} />
           <SourceDistribution walletTotal={walletTotal} cexTotal={cexTotal} />
           <WalletSummary wallets={wallets} snapshots={snapshots} />
           <CexSummary accounts={accounts} snapshots={snapshots} />
@@ -90,6 +97,18 @@ export default function DashboardPage() {
           <DefiPlaceholder />
         </div>
       )}
+    </div>
+  )
+}
+
+function DashboardLoadingState() {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="col-span-full h-44 animate-pulse rounded-xl bg-muted/60" />
+      <div className="col-span-full h-96 animate-pulse rounded-xl bg-muted/50" />
+      <div className="col-span-full h-64 animate-pulse rounded-xl bg-muted/50" />
+      <div className="h-72 animate-pulse rounded-xl bg-muted/50" />
+      <div className="h-72 animate-pulse rounded-xl bg-muted/50" />
     </div>
   )
 }

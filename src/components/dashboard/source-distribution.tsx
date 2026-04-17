@@ -1,15 +1,8 @@
 'use client'
 
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts'
+import { formatCurrency } from '@/lib/validators'
 
 interface SourceDistributionProps {
   walletTotal: number
@@ -39,28 +32,36 @@ export function SourceDistribution({ walletTotal, cexTotal }: SourceDistribution
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="border-b border-border/50">
         <CardTitle className="text-sm font-medium">来源分布</CardTitle>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={data} layout="vertical">
-            <XAxis type="number" hide />
-            <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 12 }} />
-            <Tooltip
-              formatter={(value) =>
-                `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-              }
-            />
-            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-              <Cell fill="hsl(220, 70%, 55%)" />
-              <Cell fill="hsl(160, 60%, 45%)" />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-        <div className="flex justify-between text-xs text-muted-foreground mt-2">
-          <span>链上: {((walletTotal / total) * 100).toFixed(1)}%</span>
-          <span>CEX: {((cexTotal / total) * 100).toFixed(1)}%</span>
+      <CardContent className="space-y-4 pt-2">
+        <div className="h-3 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-[linear-gradient(90deg,hsl(211,100%,63%)_0%,hsl(211,100%,63%)_var(--wallet-share),hsl(154,55%,49%)_var(--wallet-share),hsl(154,55%,49%)_100%)]"
+            style={{ ['--wallet-share' as string]: `${(walletTotal / total) * 100}%` }}
+          />
+        </div>
+        <div className="space-y-3">
+          {data.map((item, index) => {
+            const share = total > 0 ? (item.value / total) * 100 : 0
+
+            return (
+              <div key={item.name} className="rounded-xl border border-border/60 bg-background/70 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: index === 0 ? 'hsl(211,100%,63%)' : 'hsl(154,55%,49%)' }}
+                    />
+                    <p className="text-sm font-medium">{item.name}</p>
+                  </div>
+                  <Badge variant="secondary">{share.toFixed(1)}%</Badge>
+                </div>
+                <p className="mt-2 text-sm font-medium">{formatCurrency(item.value)}</p>
+              </div>
+            )
+          })}
         </div>
       </CardContent>
     </Card>

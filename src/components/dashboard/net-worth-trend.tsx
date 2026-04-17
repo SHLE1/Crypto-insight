@@ -53,10 +53,13 @@ export function NetWorthTrend({ data }: NetWorthTrendProps) {
   const netChange = lastPoint.totalValue - firstPoint.totalValue
   const netChangePercent = firstPoint.totalValue > 0 ? (netChange / firstPoint.totalValue) * 100 : 0
   const isPositive = netChange >= 0
+  const rangeHigh = Math.max(...visibleData.map((point) => point.totalValue))
+  const rangeLow = Math.min(...visibleData.map((point) => point.totalValue))
+  const rangePercent = rangeLow > 0 ? ((rangeHigh - rangeLow) / rangeLow) * 100 : 0
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 border-b border-border/50">
         <div>
           <CardTitle className="text-sm font-medium">资产变化看板</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -73,7 +76,23 @@ export function NetWorthTrend({ data }: NetWorthTrendProps) {
           </p>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-2">
+        <div className="mb-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-border/60 bg-background/70 p-3">
+            <p className="text-[11px] text-muted-foreground">区间高点</p>
+            <p className="mt-1 text-sm font-medium">{formatCurrency(rangeHigh)}</p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-background/70 p-3">
+            <p className="text-[11px] text-muted-foreground">区间低点</p>
+            <p className="mt-1 text-sm font-medium">{formatCurrency(rangeLow)}</p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-background/70 p-3">
+            <p className="text-[11px] text-muted-foreground">振幅</p>
+            <p className={`mt-1 text-sm font-medium ${isPositive ? 'text-emerald-600' : 'text-foreground'}`}>
+              {formatPercent(rangePercent)}
+            </p>
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={260}>
           <AreaChart data={visibleData} margin={{ left: 12, right: 12, top: 8, bottom: 0 }}>
             <defs>

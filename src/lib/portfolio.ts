@@ -1,6 +1,12 @@
 import { EVM_CHAINS } from '@/lib/evm-chains'
 import { getChainLabel } from '@/lib/validators'
-import type { HoldingRow, PortfolioSnapshot, PriceStatus } from '@/types'
+import type {
+  HoldingRow,
+  PortfolioAnalytics,
+  PortfolioHistoryPoint,
+  PortfolioSnapshot,
+  PriceStatus,
+} from '@/types'
 
 function getPriceStatusRank(status: PriceStatus | undefined) {
   if (status === 'missing') return 2
@@ -177,5 +183,62 @@ export function buildHoldingsData({
     holdingsData: holdingsEntries,
     walletTotal: wTotal,
     cexTotal: cTotal,
+  }
+}
+
+export function buildPortfolioAnalytics({
+  holdingsData,
+  walletTotal,
+  cexTotal,
+  history,
+  activeSourceCount,
+}: {
+  holdingsData: HoldingRow[]
+  walletTotal: number
+  cexTotal: number
+  history: PortfolioHistoryPoint[]
+  activeSourceCount: number
+}): PortfolioAnalytics {
+  const totalValue = holdingsData.reduce((sum, holding) => sum + holding.value, 0)
+  const valueHoldings = holdingsData.filter((holding) => holding.value > 0)
+  const rankedByValue = [...valueHoldings].sort((a, b) => b.value - a.value)
+  const rankedByChange = valueHoldings
+    .filter((holding) => holding.change24h !== null)
+    .sort((a, b) => (b.change24h ?? 0) - (a.change24h ?? 0))
+  const historyValues = history.map((point) => point.totalValue)
+  const pricedAssetCount = holdingsData.filter((holding) => holding.priceStatus === 'live').length
+  const stalePriceCount = holdingsData.filter((holding) => holding.priceStatus === 'stale').length
+  const missingPriceCount = holdingsData.filter((holding) => holding.priceStatus === 'missing').length
+  const totalSourcesValue = walletTotal + cexTotal
+
+  const toInsightAsset = (holding: HoldingRow | undefined | null) =>
+    holding
+      ? {
+          symbol: holding.symbol,
+          value: holding.value,
+          share: totalValue > 0 ? (holding.value / totalValue) * 100 : 0,
+          change24h: holding.change24h,
+        }
+      : null
+
+  return {
+    assetCount: holdingsData.length,
+    pricedAssetCount,
+    stalePriceCount,
+    missingPriceCount,
+    topHolding: toInsightAsset(rankedByValue[0]),
+    topThreeShare:
+      totalValue > 0
+        ? (rankedByValue.slice(0, 3).reduce((sum, holding) => sum + holding.value, 0) / totalValue) * 100
+        : 0,
+    bestPerformer: toInsightAsset(rankedByChange[0]),
+    worstPerformer: toInsightAsset(rankedByChange[rankedByChange.length - 1]),
+    averagePositionValue: holdingsData.length > 0 ? totalValue / holdingsData.length : 0,
+    walletShare: totalSourcesValue > 0 ? (walletTotal / totalSourcesValue) * 100 : 0,
+    cexShare: totalSourcesValue > 0 ? (cexTotal / totalSourcesValue) * 100 : 0,
+    historyHigh: historyValues.length > 0 ? Math.max(...historyValues) : null,
+    historyLow: historyValues.length > 0 ? Math.min(...historyValues) : null,
+    historyPoints: history.length,
+    activeSourceCount,
   }
 }

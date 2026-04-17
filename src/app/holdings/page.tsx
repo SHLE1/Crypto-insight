@@ -7,13 +7,18 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { HoldingsOverview } from '@/components/dashboard/holdings-overview'
 import { usePortfolioData } from '@/hooks/use-portfolio-data'
+import { formatCurrency } from '@/lib/validators'
 
 export default function HoldingsPage() {
   const {
     holdingsData,
+    totalValue,
+    analytics,
     isEmpty,
     hasSources,
     hasValuedAssets,
+    isRestoring,
+    isInitialLoading,
     isFetching,
     lastRefresh,
     refetch,
@@ -36,20 +41,17 @@ export default function HoldingsPage() {
             </p>
           ) : null}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching || isEmpty}
-        >
+        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || isEmpty}>
           <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
           刷新明细
         </Button>
       </div>
 
-      {isEmpty ? (
+      {isRestoring || isInitialLoading ? (
+        <HoldingsLoadingState />
+      ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-xl font-medium mb-2">还没有可查看的资产明细</p>
+          <p className="mb-2 text-xl font-medium">还没有可查看的资产明细</p>
           <p className="mb-6 text-muted-foreground">
             先添加钱包地址或绑定交易所账户，明细页会自动展示你的持仓结构。
           </p>
@@ -72,9 +74,67 @@ export default function HoldingsPage() {
             </Card>
           ) : null}
 
-          <HoldingsOverview data={holdingsData} />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <HoldingSummaryCard
+              label="总估值"
+              value={formatCurrency(totalValue)}
+              detail={`${holdingsData.length} 项代币`}
+            />
+            <HoldingSummaryCard
+              label="价格覆盖"
+              value={`${analytics.pricedAssetCount} / ${analytics.assetCount}`}
+              detail={`缺价 ${analytics.missingPriceCount} 项 · 旧价 ${analytics.stalePriceCount} 项`}
+            />
+            <HoldingSummaryCard
+              label="最大仓位"
+              value={analytics.topHolding ? analytics.topHolding.symbol : '--'}
+              detail={
+                analytics.topHolding
+                  ? `${analytics.topHolding.share.toFixed(1)}% · ${formatCurrency(analytics.topHolding.value)}`
+                  : '暂无'
+              }
+            />
+            <HoldingSummaryCard
+              label="集中度"
+              value={`前 3 大 ${analytics.topThreeShare.toFixed(1)}%`}
+              detail={`${analytics.activeSourceCount} 个启用来源`}
+            />
+          </div>
+
+          <HoldingsOverview data={holdingsData} analytics={analytics} totalValue={totalValue} />
         </>
       )}
+    </div>
+  )
+}
+
+function HoldingSummaryCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string
+  value: string
+  detail: string
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-2 text-lg font-semibold tracking-tight">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+    </div>
+  )
+}
+
+function HoldingsLoadingState() {
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-24 animate-pulse rounded-2xl bg-muted/50" />
+        ))}
+      </div>
+      <div className="h-[620px] animate-pulse rounded-2xl bg-muted/50" />
     </div>
   )
 }

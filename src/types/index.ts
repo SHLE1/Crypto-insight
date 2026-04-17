@@ -93,6 +93,13 @@ export interface HoldingRow {
   sources?: HoldingSourceDetail[]
 }
 
+export interface PortfolioInsightAsset {
+  symbol: string
+  value: number
+  share: number
+  change24h: number | null
+}
+
 export interface QuoteResponse {
   results: PortfolioSnapshot[]
   status: 'success' | 'partial' | 'error'
@@ -131,6 +138,24 @@ export interface PortfolioHistoryPoint {
   walletTotal: number
   cexTotal: number
   sourceCount: number
+}
+
+export interface PortfolioAnalytics {
+  assetCount: number
+  pricedAssetCount: number
+  stalePriceCount: number
+  missingPriceCount: number
+  topHolding: PortfolioInsightAsset | null
+  topThreeShare: number
+  bestPerformer: PortfolioInsightAsset | null
+  worstPerformer: PortfolioInsightAsset | null
+  averagePositionValue: number
+  walletShare: number
+  cexShare: number
+  historyHigh: number | null
+  historyLow: number | null
+  historyPoints: number
+  activeSourceCount: number
 }
 
 export interface PortfolioCache {
