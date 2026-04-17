@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatDefiChainLabel } from '@/lib/defi/chains'
 import { formatCurrency } from '@/lib/validators'
 import { cn } from '@/lib/utils'
 import { Coins, DatabaseZap, RefreshCw, Settings2, ShieldAlert, Waves } from 'lucide-react'
@@ -24,6 +25,9 @@ interface DefiSummaryProps {
   totalRewardsValue: number
   positionCount: number
   walletCount: number
+  completedCount: number
+  expectedCount: number
+  pendingChains: string[]
   protocolData: Array<{
     protocolId: string
     protocolName: string
@@ -77,6 +81,9 @@ export function DefiSummary({
   totalRewardsValue,
   positionCount,
   walletCount,
+  completedCount,
+  expectedCount,
+  pendingChains,
   protocolData,
   chainData,
   errors,
@@ -179,6 +186,30 @@ export function DefiSummary({
           </div>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">补齐进度</p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  已完成 {completedCount} / {expectedCount} 条链路
+                </p>
+              </div>
+              <Badge variant={isSweepRefreshing ? 'outline' : 'secondary'}>
+                {isSweepRefreshing ? '继续补齐中' : '已补齐'}
+              </Badge>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-[width]"
+                style={{ width: expectedCount > 0 ? `${Math.min(100, (completedCount / expectedCount) * 100)}%` : '0%' }}
+              />
+            </div>
+            <p className="mt-3 text-xs leading-6 text-muted-foreground">
+              {pendingChains.length > 0
+                ? `待补齐：${pendingChains.join('、')}`
+                : '当前已完成全部已启用 DeFi 链路的查询。'}
+            </p>
+          </div>
           {primaryError ? (
             <div className="rounded-2xl border border-destructive/15 bg-destructive/5 p-4">
               <p className="flex items-center gap-2 font-medium text-foreground">
@@ -188,7 +219,11 @@ export function DefiSummary({
               {primaryError.detail ? <p className="mt-2 text-xs leading-6">{primaryError.detail}</p> : null}
             </div>
           ) : (
-            <p>已检查 {walletCount} 个钱包，暂未发现可计价的 DeFi 仓位。</p>
+            <p>
+              {isSweepRefreshing
+                ? `系统仍在补齐 DeFi 链路，当前已检查 ${walletCount} 个钱包，暂时还没拿到可计价仓位。`
+                : `已检查 ${walletCount} 个钱包，暂未发现可计价的 DeFi 仓位。`}
+            </p>
           )}
           <p className="text-xs">DeFi 统计不会并入顶部总资产，避免与钱包余额重复计算。</p>
         </CardContent>
@@ -239,7 +274,7 @@ export function DefiSummary({
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{protocol.protocolName}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {protocol.chainKey}
+                        {formatDefiChainLabel(protocol.chainKey)}
                         {protocol.category ? ` · ${protocol.category}` : ''}
                         {protocol.positionCount > 0 ? ` · ${protocol.positionCount} 个仓位` : ''}
                       </p>
@@ -261,7 +296,7 @@ export function DefiSummary({
                 chainData.slice(0, 6).map((chain) => (
                   <div key={chain.name} className="flex items-center justify-between rounded-xl border border-border/60 bg-background/80 px-3 py-2.5">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{chain.name}</Badge>
+                      <Badge variant="outline">{formatDefiChainLabel(chain.name)}</Badge>
                     </div>
                     <p className="text-sm font-medium">{formatCurrency(chain.value)}</p>
                   </div>

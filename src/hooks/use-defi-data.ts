@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getMobulaChains } from '@/lib/defi/chains'
+import { formatDefiChainLabel, getMobulaChains } from '@/lib/defi/chains'
 import { useWalletStore } from '@/stores/wallets'
 import { useSettingsStore } from '@/stores/settings'
 import { useDefiStore } from '@/stores/defi'
@@ -331,6 +331,18 @@ export function useDefiData() {
     () => new Set(activeSnapshots.map((snapshot) => snapshot.walletId)).size,
     [activeSnapshots]
   )
+  const completedCount = useMemo(
+    () => expectedSnapshotKeys.filter((snapshotKey) => completedSnapshotKeySet.has(snapshotKey)).length,
+    [completedSnapshotKeySet, expectedSnapshotKeys]
+  )
+  const pendingChains = useMemo(
+    () =>
+      expectedSnapshotKeys
+        .filter((snapshotKey) => !completedSnapshotKeySet.has(snapshotKey))
+        .map((snapshotKey) => snapshotKey.split(':')[1] ?? snapshotKey)
+        .map((chainKey) => formatDefiChainLabel(chainKey)),
+    [completedSnapshotKeySet, expectedSnapshotKeys]
+  )
 
   const hasPositions = positionCount > 0
   const isUsingCachedData = hydrated && !hasFetchedThisSession && !isFetching && Boolean(lastRefresh) && hasCachedSnapshots
@@ -356,6 +368,9 @@ export function useDefiData() {
     chainData,
     positionCount,
     walletCount,
+    completedCount,
+    expectedCount: expectedSnapshotKeys.length,
+    pendingChains,
     isEnabled: defiEnabled,
     hasDefiSources,
     hasPositions,

@@ -20,6 +20,9 @@ export default function DefiPage() {
     chainData,
     positionCount,
     walletCount,
+    completedCount,
+    expectedCount,
+    pendingChains,
     isEnabled,
     hasDefiSources,
     hasPositions,
@@ -87,6 +90,9 @@ export default function DefiPage() {
             totalRewardsValue={totalRewardsValue}
             positionCount={positionCount}
             walletCount={walletCount}
+            completedCount={completedCount}
+            expectedCount={expectedCount}
+            pendingChains={pendingChains}
             protocolData={protocolData}
             chainData={chainData}
             errors={errors}
