@@ -1,8 +1,8 @@
 'use client'
 
+import { Clock, TrendingDown, TrendingUp } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatPercent } from '@/lib/validators'
-import { TrendingUp, TrendingDown, Clock } from 'lucide-react'
 
 interface TotalAssetsProps {
   totalValue: number
@@ -22,44 +22,44 @@ export function TotalAssets({
   const isPositive = change24hPercent >= 0
 
   return (
-    <Card className="col-span-full overflow-hidden">
-      <CardContent className="relative pt-8 pb-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-transparent pointer-events-none" />
-        <div className="relative">
-          <p className="text-sm font-medium text-muted-foreground tracking-wide">总资产</p>
-          <p className="mt-2 text-5xl font-bold tracking-tighter">
-            {formatCurrency(totalValue)}
-          </p>
-          <div className="mt-4 flex items-center gap-3">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
-                isPositive
-                  ? 'bg-emerald-500/10 text-emerald-600'
-                  : 'bg-red-500/10 text-red-500'
-              }`}
-            >
-              {isPositive ? (
-                <TrendingUp className="h-3.5 w-3.5" />
-              ) : (
-                <TrendingDown className="h-3.5 w-3.5" />
-              )}
-              {formatPercent(change24hPercent)}
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {isPositive ? '+' : ''}{formatCurrency(Math.abs(change24hValue))} · 24h
-            </span>
-          </div>
-          {lastRefresh && (
-            <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground/80">
-              <Clock className="h-3 w-3" />
-              <span>最近刷新 {new Date(lastRefresh).toLocaleString('zh-CN')}</span>
-              {isStale ? (
-                <span className="ml-2 text-amber-500">
-                  · 当前为本地缓存，请手动刷新获取最新数据
-                </span>
-              ) : null}
+    <Card className="col-span-full md:col-span-2">
+      <CardContent className="px-5 py-5 md:px-6 md:py-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="muted-kicker">Net worth</p>
+            <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-foreground md:text-5xl">
+              {formatCurrency(totalValue)}
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <span
+                className={isPositive
+                  ? 'inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-sm font-medium text-emerald-600 dark:text-emerald-400'
+                  : 'inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-sm font-medium text-red-500 dark:text-red-400'}
+              >
+                {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                {formatPercent(change24hPercent)}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {isPositive ? '+' : '-'}{formatCurrency(Math.abs(change24hValue))} · 24h
+              </span>
             </div>
-          )}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[260px] lg:grid-cols-1">
+            <div className="metric-tile">
+              <p className="muted-kicker">数据状态</p>
+              <p className="mt-2 text-sm font-medium text-foreground">
+                {isStale ? '使用本地缓存' : '已同步最新结果'}
+              </p>
+            </div>
+            <div className="metric-tile">
+              <p className="muted-kicker">最近刷新</p>
+              <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                {lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '暂无'}
+              </p>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

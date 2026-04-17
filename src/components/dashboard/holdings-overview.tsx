@@ -139,7 +139,7 @@ function MetricBlock({
   toneClassName?: string
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-background/70 px-3 py-2">
+    <div className="rounded-lg border border-border/80 bg-background/70 px-3 py-2.5">
       <p className="text-[11px] text-muted-foreground">{label}</p>
       <p className={`mt-1 text-sm font-medium tabular-nums ${toneClassName ?? 'text-foreground'}`}>{value}</p>
     </div>
@@ -150,7 +150,7 @@ function SourceRow({ row }: { row: DetailRow }) {
   const priceStatusLabel = getPriceStatusLabel(row.priceStatus)
 
   return (
-    <div className="grid gap-3 rounded-xl border border-border/60 bg-background/80 p-3 md:grid-cols-[minmax(0,1.8fr)_repeat(3,minmax(0,1fr))] md:items-center">
+    <div className="grid gap-3 rounded-lg border border-border/80 bg-background/80 p-3 md:grid-cols-[minmax(0,1.8fr)_repeat(3,minmax(0,1fr))] md:items-center">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-sm font-medium">{row.title}</span>
@@ -187,7 +187,7 @@ function GroupCard({
   const share = totalValue > 0 ? (row.value / totalValue) * 100 : 0
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card/80">
+    <div className="overflow-hidden rounded-xl border border-border/80 bg-card">
       <button type="button" className="w-full p-4 text-left transition-colors hover:bg-muted/10" onClick={onToggle}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
@@ -198,11 +198,11 @@ function GroupCard({
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               )}
               <p className="truncate text-base font-semibold">{row.title}</p>
-              <Badge variant="secondary" className="rounded-full text-[10px]">
+              <Badge variant="secondary" className="text-[10px]">
                 {row.badge}
               </Badge>
               {priceStatusLabel ? (
-                <Badge variant="outline" className="rounded-full text-[10px]">
+                <Badge variant="outline" className="text-[10px]">
                   {priceStatusLabel}
                 </Badge>
               ) : null}
@@ -214,7 +214,7 @@ function GroupCard({
               <MetricBlock label="24h" value={formatPercent(row.change24h)} toneClassName={getChangeColor(row.change24h)} />
             </div>
           </div>
-          <div className="shrink-0 rounded-2xl border border-border/60 bg-background/70 px-4 py-3 text-right">
+          <div className="shrink-0 rounded-lg border border-border/80 bg-background/70 px-4 py-3 text-right">
             <p className="text-[11px] text-muted-foreground">总市值</p>
             <p className="mt-1 text-xl font-semibold tracking-tight">{formatCurrency(row.value)}</p>
             <p className="mt-1 text-xs text-muted-foreground">占组合 {share.toFixed(1)}%</p>
@@ -223,7 +223,7 @@ function GroupCard({
       </button>
 
       {expanded ? (
-        <div className="border-t border-border/50 bg-muted/15 px-4 py-4">
+        <div className="border-t border-border/80 bg-muted/15 px-4 py-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs font-medium text-foreground">来源明细</p>
             <p className="text-[11px] text-muted-foreground">{row.details.length} 项</p>
@@ -487,7 +487,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="gap-4 border-b border-border/50">
+      <CardHeader className="gap-4 border-b border-border/80">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
             <CardTitle className="text-sm font-medium">资产明细</CardTitle>
@@ -513,7 +513,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="搜索代币、钱包、交易所或链"
-              className="h-10 pl-9"
+              className="pl-9"
             />
           </div>
           <div className="flex flex-wrap gap-2">

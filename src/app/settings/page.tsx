@@ -1,19 +1,20 @@
 'use client'
 
-import { useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
+import { useRef, type ReactNode } from 'react'
+import { Cloud, Download, Lock, RotateCcw, Upload } from 'lucide-react'
+import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
-import { useSettingsStore } from '@/stores/settings'
-import { useWalletStore } from '@/stores/wallets'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { useCexStore } from '@/stores/cex'
 import { usePortfolioStore } from '@/stores/portfolio'
+import { useSettingsStore } from '@/stores/settings'
+import { useWalletStore } from '@/stores/wallets'
 import { toast } from 'sonner'
-import { Download, Upload, Cloud, Lock, RotateCcw } from 'lucide-react'
 
 export default function SettingsPage() {
   const settings = useSettingsStore()
@@ -130,176 +131,176 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">设置</h1>
+      <PageHeader
+        badge="Settings"
+        title="设置"
+        description="控制主题、刷新策略以及本地数据管理。"
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">基础设置</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>计价货币</Label>
-              <p className="text-xs text-muted-foreground">当前仅支持 USD</p>
-            </div>
-            <Input
-              value={settings.quoteCurrency}
-              disabled
-              className="w-24 text-center"
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">基础设置</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <SettingRow
+              label="计价货币"
+              description="当前仅支持 USD"
+              control={<Input value={settings.quoteCurrency} disabled className="w-24 text-center" />}
             />
-          </div>
 
-          <Separator />
+            <Separator />
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>自动刷新间隔（秒）</Label>
-              <p className="text-xs text-muted-foreground">建议 60-300 秒</p>
-            </div>
-            <Input
-              type="number"
-              min={30}
-              max={600}
-              value={settings.refreshInterval}
-              onChange={(e) =>
-                settings.updateSettings({
-                  refreshInterval: Number(e.target.value) || 60,
-                })
+            <SettingRow
+              label="自动刷新间隔（秒）"
+              description="建议 60-300 秒"
+              control={
+                <Input
+                  type="number"
+                  min={30}
+                  max={600}
+                  value={settings.refreshInterval}
+                  onChange={(e) =>
+                    settings.updateSettings({
+                      refreshInterval: Number(e.target.value) || 60,
+                    })
+                  }
+                  className="w-24 text-center"
+                />
               }
-              className="w-24 text-center"
             />
-          </div>
 
-          <Separator />
+            <Separator />
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>隐藏小额资产</Label>
-              <p className="text-xs text-muted-foreground">隐藏资产明细里低于 0.1 USD 的项目</p>
-            </div>
-            <Switch
-              checked={settings.hideSmallAssets}
-              onCheckedChange={(checked) => settings.updateSettings({ hideSmallAssets: checked })}
+            <SettingRow
+              label="隐藏小额资产"
+              description="隐藏资产明细里低于 0.1 USD 的项目"
+              control={<Switch checked={settings.hideSmallAssets} onCheckedChange={(checked) => settings.updateSettings({ hideSmallAssets: checked })} />}
             />
-          </div>
 
-          <Separator />
+            <Separator />
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>深色模式</Label>
-              <p className="text-xs text-muted-foreground">主题会保存在当前浏览器</p>
-            </div>
-            <Switch
-              checked={settings.theme === 'dark'}
-              onCheckedChange={(checked) => {
-                const newTheme = checked ? 'dark' : 'light'
-                settings.updateSettings({ theme: newTheme })
-                document.documentElement.classList.toggle('dark', checked)
-              }}
+            <SettingRow
+              label="深色模式"
+              description="主题会保存在当前浏览器"
+              control={<Switch checked={settings.theme === 'dark'} onCheckedChange={(checked) => settings.updateSettings({ theme: checked ? 'dark' : 'light' })} />}
             />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">数据管理</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>导出数据</Label>
-              <p className="text-xs text-muted-foreground">
-                导出钱包配置、账户标签与设置（不含快照与任何密钥）
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              导出 JSON
-            </Button>
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>导入数据</Label>
-              <p className="text-xs text-muted-foreground">
-                可从导出的 JSON 恢复钱包、标签与设置，导入后需要重新刷新数据
-              </p>
-            </div>
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/json"
-                className="hidden"
-                onChange={handleImport}
+        <div className="space-y-5">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">数据管理</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <SettingRow
+                label="导出数据"
+                description="导出钱包配置、账户标签与设置（不含快照与任何密钥）"
+                control={
+                  <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    导出 JSON
+                  </Button>
+                }
               />
-              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-2" />
-                导入 JSON
-              </Button>
-            </>
-          </div>
 
-          <Separator />
+              <Separator />
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>数据存储</Label>
-              <p className="text-xs text-muted-foreground">
-                所有数据均保存在浏览器本地，不会上传至服务端
+              <SettingRow
+                label="导入数据"
+                description="从导出的 JSON 恢复钱包、标签与设置，导入后需要重新刷新数据"
+                control={
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/json"
+                      className="hidden"
+                      onChange={handleImport}
+                    />
+                    <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-2">
+                      <Upload className="h-4 w-4" />
+                      导入 JSON
+                    </Button>
+                  </>
+                }
+              />
+
+              <Separator />
+
+              <SettingRow
+                label="数据存储"
+                description="所有数据均保存在浏览器本地，不会上传至服务端"
+                control={
+                  <Badge variant="secondary">
+                    <Lock className="mr-1 h-3 w-3" />
+                    仅本地
+                  </Badge>
+                }
+              />
+
+              <Separator />
+
+              <SettingRow
+                label="清空本地数据"
+                description="清空钱包、交易所配置、资产缓存与历史看板数据"
+                control={
+                  <Button variant="destructive" size="sm" onClick={handleReset} className="gap-2">
+                    <RotateCcw className="h-4 w-4" />
+                    清空
+                  </Button>
+                }
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="opacity-70">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Cloud className="h-4 w-4" />
+                云同步
+              </CardTitle>
+              <Badge variant="outline" className="text-xs">即将支持</Badge>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                云同步功能将在第二版上线，届时支持 Supabase 账号登录与跨设备数据同步。
               </p>
-            </div>
-            <Badge variant="secondary">
-              <Lock className="h-3 w-3 mr-1" />
-              仅本地
-            </Badge>
-          </div>
+            </CardContent>
+          </Card>
 
-          <Separator />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">关于</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>Crypto Insight V1.0.0</p>
+              <p>个人加密资产面板 · 数据仅存本地 · 无需注册登录</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>清空本地数据</Label>
-              <p className="text-xs text-muted-foreground">
-                清空钱包、交易所配置、资产缓存与历史看板数据
-              </p>
-            </div>
-            <Button variant="destructive" size="sm" onClick={handleReset}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              清空
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="opacity-60">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Cloud className="h-4 w-4" />
-            云同步
-          </CardTitle>
-          <Badge variant="outline" className="text-xs">即将支持</Badge>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            云同步功能将在第二版上线，届时支持 Supabase 账号登录与跨设备数据同步。
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">关于</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Crypto Insight V1.0.0</p>
-          <p>个人加密资产面板 · 数据仅存本地 · 无需注册登录</p>
-        </CardContent>
-      </Card>
+function SettingRow({
+  label,
+  description,
+  control,
+}: {
+  label: string
+  description: string
+  control: ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <Label>{label}</Label>
+        <p className="mt-1 text-xs leading-6 text-muted-foreground">{description}</p>
+      </div>
+      <div className="shrink-0">{control}</div>
     </div>
   )
 }

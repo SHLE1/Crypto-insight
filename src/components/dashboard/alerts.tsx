@@ -22,8 +22,8 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
   const hasMore = errors.length > 2
 
   return (
-    <Card className={hasCritical ? 'border-destructive/30' : 'border-amber-500/20'}>
-      <CardHeader className="pb-3">
+    <Card className={hasCritical ? 'border-destructive/30' : 'border-border/80'}>
+      <CardHeader className="border-b border-border/80 pb-3">
         <CardTitle className="text-sm font-medium flex items-center justify-between">
           <span className="flex items-center gap-2">
             {hasCritical ? (
@@ -47,12 +47,12 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
               key={i}
               className={`rounded-lg p-3 text-sm ${
                 err.kind === 'error'
-                  ? 'bg-destructive/5 border border-destructive/10'
-                  : 'bg-amber-500/5 border border-amber-500/10'
+                  ? 'border border-destructive/15 bg-destructive/5'
+                  : 'border border-border/80 bg-muted/40'
               }`}
             >
               <div className="flex items-start gap-2.5">
-                <CircleAlert className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${err.kind === 'warning' ? 'text-amber-500' : 'text-destructive'}`} />
+                <CircleAlert className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${err.kind === 'warning' ? 'text-muted-foreground' : 'text-destructive'}`} />
                 <div className="min-w-0 space-y-0.5">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span className="font-medium text-foreground/90">{err.title ?? err.source}</span>

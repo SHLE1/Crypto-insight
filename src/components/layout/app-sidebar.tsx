@@ -2,14 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Building2, LayoutDashboard, ListTree, Settings, Wallet } from 'lucide-react'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { cn } from '@/lib/utils'
-import {
-  LayoutDashboard,
-  ListTree,
-  Wallet,
-  Building2,
-  Settings,
-} from 'lucide-react'
 
 const navItems = [
   { href: '/', label: '总览', icon: LayoutDashboard },
@@ -23,38 +18,35 @@ export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r border-sidebar-border bg-sidebar">
-      <div className="flex h-14 items-center gap-2.5 px-5 border-b border-sidebar-border">
-        <Link href="/" className="flex items-center gap-2.5 font-bold text-base tracking-tight">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">C</span>
+    <aside className="dashboard-sidebar">
+      <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
+        <Link href="/" className="flex items-center gap-2.5 font-semibold text-sm tracking-tight text-sidebar-foreground">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md border border-sidebar-border bg-card text-[13px] font-semibold">
+            C
+          </span>
           <span>Crypto Insight</span>
         </Link>
+        <ThemeToggle />
       </div>
-      <nav className="flex-1 p-3 space-y-0.5">
+
+      <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => {
-          const isActive =
-            item.href === '/'
-              ? pathname === '/'
-              : pathname.startsWith(item.href)
+          const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-              )}
+              className={cn('top-nav-link', isActive && 'top-nav-link-active')}
             >
-              <item.icon className={cn('h-[18px] w-[18px]', isActive && 'text-primary')} />
-              {item.label}
+              <item.icon className="h-4 w-4" />
+              <span>{item.label}</span>
             </Link>
           )
         })}
       </nav>
-      <div className="border-t border-sidebar-border p-4">
-        <p className="text-[11px] text-muted-foreground/70">V1 · 数据仅存本地</p>
+
+      <div className="border-t border-sidebar-border px-4 py-3">
+        <p className="text-[11px] text-muted-foreground">V1 · 数据仅存本地</p>
       </div>
     </aside>
   )
@@ -64,28 +56,25 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex border-t border-border bg-card/95 backdrop-blur-sm">
-      {navItems.map((item) => {
-        const isActive =
-          item.href === '/'
-            ? pathname === '/'
-            : pathname.startsWith(item.href)
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              'flex flex-1 flex-col items-center gap-1 py-2.5 text-xs transition-colors',
-              isActive
-                ? 'text-primary font-medium'
-                : 'text-muted-foreground'
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-            {item.label}
-          </Link>
-        )
-      })}
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur md:hidden">
+      <div className="grid grid-cols-5">
+        {navItems.map((item) => {
+          const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex flex-col items-center gap-1 py-2.5 text-[11px] transition-colors',
+                isActive ? 'text-foreground' : 'text-muted-foreground'
+              )}
+            >
+              <item.icon className="h-4.5 w-4.5" />
+              {item.label}
+            </Link>
+          )
+        })}
+      </div>
     </nav>
   )
 }

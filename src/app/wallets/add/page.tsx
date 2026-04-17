@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DEFAULT_EVM_CHAINS, EVM_CHAIN_OPTIONS } from '@/lib/evm-chains'
+import { getChainLabel, validateAddress } from '@/lib/validators'
 import { useWalletStore } from '@/stores/wallets'
-import { validateAddress, getChainLabel } from '@/lib/validators'
-import { EVM_CHAIN_OPTIONS, DEFAULT_EVM_CHAINS } from '@/lib/evm-chains'
 import type { ChainType } from '@/types'
 import { toast } from 'sonner'
 
@@ -78,22 +79,26 @@ export default function AddWalletPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">添加钱包</h1>
+      <PageHeader
+        badge="New wallet"
+        title="添加钱包"
+        description="添加后会立即参与总览和资产明细统计。"
+      />
 
-      <Card className="max-w-lg">
-        <CardHeader>
+      <Card className="max-w-3xl">
+        <CardHeader className="border-b border-border/80">
           <CardTitle className="text-base">钱包信息</CardTitle>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_240px]">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label>链类型</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {CHAIN_OPTIONS.map((chain) => (
                   <Button
                     key={chain}
                     type="button"
-                    variant={chainType === chain ? 'default' : 'outline'}
+                    variant={chainType === chain ? 'secondary' : 'outline'}
                     size="sm"
                     onClick={() => {
                       setChainType(chain)
@@ -106,7 +111,7 @@ export default function AddWalletPage() {
               </div>
             </div>
 
-            {chainType === 'evm' && (
+            {chainType === 'evm' ? (
               <div className="space-y-2">
                 <Label>查询链</Label>
                 <div className="flex flex-wrap gap-2">
@@ -114,7 +119,7 @@ export default function AddWalletPage() {
                     <Button
                       key={opt.key}
                       type="button"
-                      variant={selectedEvmChains.includes(opt.key) ? 'default' : 'outline'}
+                      variant={selectedEvmChains.includes(opt.key) ? 'secondary' : 'outline'}
                       size="sm"
                       onClick={() => toggleEvmChain(opt.key)}
                     >
@@ -126,7 +131,7 @@ export default function AddWalletPage() {
                   选择要查询的链，同一地址在不同链上可能持有不同代币。
                 </p>
               </div>
-            )}
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="address">钱包地址</Label>
@@ -150,8 +155,8 @@ export default function AddWalletPage() {
                 {chainType === 'evm'
                   ? 'EVM 地址在多条链上通用，会查询每条链上的原生代币和热门 ERC-20 代币。'
                   : chainType === 'solana'
-                  ? '当前按原生 SOL + SPL Token 查询。'
-                  : '当前按 BTC 地址余额查询。'}
+                    ? '当前按原生 SOL + SPL Token 查询。'
+                    : '当前按 BTC 地址余额查询。'}
               </p>
             </div>
 
@@ -165,21 +170,24 @@ export default function AddWalletPage() {
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
             <div className="flex gap-3">
               <Button type="submit">确认添加</Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push('/wallets')}
-              >
+              <Button type="button" variant="outline" onClick={() => router.push('/wallets')}>
                 取消
               </Button>
             </div>
           </form>
+
+          <div className="subtle-panel p-4">
+            <p className="muted-kicker">说明</p>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+              <li>· 数据仅保存在当前浏览器</li>
+              <li>· EVM 地址建议只勾选实际用到的链</li>
+              <li>· 添加后会自动进入净值统计</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
     </div>

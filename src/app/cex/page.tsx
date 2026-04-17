@@ -1,18 +1,20 @@
 'use client'
 
 import { useState } from 'react'
+import { KeyRound, Plus, Trash2, X } from 'lucide-react'
+import { EmptyState } from '@/components/layout/empty-state'
+import { PageHeader } from '@/components/layout/page-header'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import { formatCurrency, getExchangeLabel } from '@/lib/validators'
 import { useCexStore } from '@/stores/cex'
 import { usePortfolioStore } from '@/stores/portfolio'
-import { formatCurrency, getExchangeLabel } from '@/lib/validators'
 import type { ExchangeType } from '@/types'
-import { KeyRound, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 const EXCHANGE_OPTIONS: ExchangeType[] = ['binance', 'okx']
@@ -116,26 +118,30 @@ export default function CexPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">交易所</h1>
-        {!showForm && (
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            绑定账户
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        badge="Exchanges"
+        title="交易所"
+        description="绑定只读 API 账户并统一纳入资产分析。"
+        actions={
+          !showForm ? (
+            <Button onClick={() => setShowForm(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              绑定账户
+            </Button>
+          ) : null
+        }
+      />
 
-      {showForm && (
-        <Card className="max-w-lg">
-          <CardHeader className="flex flex-row items-center justify-between">
+      {showForm ? (
+        <Card className="max-w-3xl">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/80">
             <CardTitle className="text-base">{editingAccountId ? '补填或更新密钥' : '绑定交易所账户'}</CardTitle>
-            <Button variant="ghost" size="icon" onClick={resetForm}>
+            <Button variant="ghost" size="icon-sm" onClick={resetForm}>
               <X className="h-4 w-4" />
             </Button>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_240px]">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label>交易所</Label>
                 <div className="flex gap-2">
@@ -143,7 +149,7 @@ export default function CexPage() {
                     <Button
                       key={ex}
                       type="button"
-                      variant={exchange === ex ? 'default' : 'outline'}
+                      variant={exchange === ex ? 'secondary' : 'outline'}
                       size="sm"
                       disabled={editingAccountId !== null}
                       onClick={() => setExchange(ex)}
@@ -156,49 +162,25 @@ export default function CexPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="label">备注名称（可选）</Label>
-                <Input
-                  id="label"
-                  placeholder="例如：主账户"
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                />
+                <Input id="label" placeholder="例如：主账户" value={label} onChange={(e) => setLabel(e.target.value)} />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="apiKey">API Key（只读权限）</Label>
-                <Input
-                  id="apiKey"
-                  placeholder="填入只读 API Key"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="font-mono"
-                />
+                <Input id="apiKey" placeholder="填入只读 API Key" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="font-mono" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="apiSecret">API Secret</Label>
-                <Input
-                  id="apiSecret"
-                  type="password"
-                  placeholder="填入 API Secret"
-                  value={apiSecret}
-                  onChange={(e) => setApiSecret(e.target.value)}
-                  className="font-mono"
-                />
+                <Input id="apiSecret" type="password" placeholder="填入 API Secret" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} className="font-mono" />
               </div>
 
-              {exchange === 'okx' && (
+              {exchange === 'okx' ? (
                 <div className="space-y-2">
                   <Label htmlFor="passphrase">Passphrase</Label>
-                  <Input
-                    id="passphrase"
-                    type="password"
-                    placeholder="OKX Passphrase"
-                    value={passphrase}
-                    onChange={(e) => setPassphrase(e.target.value)}
-                  />
+                  <Input id="passphrase" type="password" placeholder="OKX Passphrase" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
                 </div>
-              )}
+              ) : null}
 
               <p className="text-xs text-muted-foreground">
                 仅保存于当前浏览器，导出文件不会包含密钥。请确保使用只读权限的 Key。
@@ -211,79 +193,74 @@ export default function CexPage() {
                 </Button>
               </div>
             </form>
+
+            <div className="subtle-panel p-4">
+              <p className="muted-kicker">安全说明</p>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+                <li>· 仅使用只读权限</li>
+                <li>· 导出文件不含任何密钥</li>
+                <li>· 删除账户会清理本地快照</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       <Separator />
 
       {accounts.length === 0 && !showForm ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-muted-foreground mb-4">尚未绑定任何交易所账户</p>
-          <Button onClick={() => setShowForm(true)}>
-            绑定第一个账户
-          </Button>
-        </div>
+        <EmptyState
+          title="尚未绑定任何交易所账户"
+          description="绑定只读 API 后，就能把交易所余额纳入总览和资产明细。"
+          action={<Button onClick={() => setShowForm(true)}>绑定第一个账户</Button>}
+        />
       ) : (
         <div className="space-y-3">
           {accounts.map((a) => {
             const snapshot = snapshots[a.id]
             return (
               <Card key={a.id}>
-                <CardContent className="flex items-center justify-between py-4">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <Switch
-                      checked={a.enabled}
-                      onCheckedChange={() => handleToggle(a.id, a.enabled)}
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{a.label}</p>
-                        <Badge variant="secondary" className="text-xs">
+                <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <Switch checked={a.enabled} onCheckedChange={() => handleToggle(a.id, a.enabled)} />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-foreground">{a.label}</p>
+                        <Badge variant="secondary" className="text-[10px]">
                           {getExchangeLabel(a.exchange)}
                         </Badge>
-                        {!a.apiKey.trim() && (
-                          <Badge variant="outline" className="text-xs">
+                        {!a.apiKey.trim() ? (
+                          <Badge variant="outline" className="text-[10px]">
                             需重填密钥
                           </Badge>
-                        )}
-                        {snapshot?.status === 'error' && (
-                          <Badge variant="destructive" className="text-xs">
+                        ) : null}
+                        {snapshot?.status === 'error' ? (
+                          <Badge variant="destructive" className="text-[10px]">
                             异常
                           </Badge>
-                        )}
+                        ) : null}
                       </div>
-                      <p className="text-xs text-muted-foreground font-mono">
+                      <p className="mt-1 font-mono text-xs text-muted-foreground">
                         {a.apiKey.trim()
                           ? `Key: ${a.apiKey.slice(0, 6)}...${a.apiKey.slice(-4)}`
                           : '当前浏览器未保存密钥，需要重新填写后才能刷新。'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 shrink-0">
+                  <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="font-medium">
+                      <p className="text-sm font-medium text-foreground">
                         {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
                       </p>
-                      {snapshot && (
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(snapshot.updatedAt).toLocaleString('zh-CN')}
-                        </p>
-                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '等待刷新'}
+                      </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => startEditing(a.id)}
-                    >
-                      <KeyRound className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                    <Button variant="ghost" size="icon-sm" onClick={() => startEditing(a.id)}>
+                      <KeyRound className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemove(a.id, a.label)}
-                    >
-                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                    <Button variant="ghost" size="icon-sm" onClick={() => handleRemove(a.id, a.label)}>
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>

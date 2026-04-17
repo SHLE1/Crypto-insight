@@ -16,7 +16,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-border/80 pb-3">
         <CardTitle className="text-sm font-medium">交易所</CardTitle>
         <Link href="/cex" className="text-xs text-primary hover:underline">
           查看全部
@@ -24,8 +24,8 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
       </CardHeader>
       <CardContent>
         {displayAccounts.length === 0 ? (
-          <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground mb-2">尚未绑定交易所</p>
+          <div className="py-6 text-center">
+            <p className="mb-2 text-sm text-muted-foreground">尚未绑定交易所</p>
             <Link
               href="/cex"
               className="text-sm text-primary hover:underline"
@@ -40,7 +40,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
               return (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between rounded-lg border border-border/50 p-3 transition-colors hover:bg-muted/30"
+                  className="flex items-center justify-between rounded-lg border border-border/80 p-3 transition-colors hover:bg-muted/30"
                 >
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-xs">
