@@ -143,9 +143,6 @@ export function buildHoldingsData({
     })
   })
 
-  const stripLdPrefix = (sym: string) =>
-    sym.startsWith('LD') && sym.length > 2 ? sym.slice(2) : sym
-
   const changePercent = total > 0 ? (weightedChange / total) * 100 : 0
   const assetEntries = Array.from(assetMap.entries())
     .map(([name, value]) => ({ name, value }))
@@ -154,7 +151,7 @@ export function buildHoldingsData({
   const holdingsEntries = Array.from(holdingsMap.values())
     .map((holding) => ({
       assetId: holding.assetId,
-      symbol: stripLdPrefix(holding.symbol),
+      symbol: holding.symbol,
       name: holding.name,
       balance: holding.balance,
       price: holding.price,

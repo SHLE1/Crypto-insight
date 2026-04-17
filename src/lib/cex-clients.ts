@@ -71,6 +71,10 @@ function mergeBalances(items: Array<{ symbol: string; balance: number }>) {
     .filter((asset) => asset.balance > 0)
 }
 
+function getBinancePricingSymbol(symbol: string) {
+  return symbol.startsWith('LD') && symbol.length > 2 ? symbol.slice(2) : symbol
+}
+
 async function signHmac(secret: string, payload: string, encoding: 'hex' | 'base64') {
   const key = await crypto.subtle.importKey(
     'raw',
@@ -207,9 +211,16 @@ export async function getCexSnapshot(account: CexAccountInput): Promise<Portfoli
         ? mergeBalances(await fetchBinanceUserAssets(account))
         : await fetchOkxBalances(account)
 
-    const prices = await getPrices(rawAssets.map((asset) => asset.symbol))
+    const pricingSymbolMap = new Map(
+      rawAssets.map((asset) => [
+        asset.symbol,
+        account.exchange === 'binance' ? getBinancePricingSymbol(asset.symbol) : asset.symbol,
+      ])
+    )
+    const prices = await getPrices(Array.from(new Set(pricingSymbolMap.values())))
     const assets: AssetBalance[] = rawAssets.map((asset) => {
-      const priceInfo = prices[asset.symbol]
+      const pricingSymbol = pricingSymbolMap.get(asset.symbol) ?? asset.symbol
+      const priceInfo = prices[pricingSymbol]
       const price = priceInfo?.price ?? null
 
       return {
