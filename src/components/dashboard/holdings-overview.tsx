@@ -139,9 +139,9 @@ function MetricBlock({
   toneClassName?: string
 }) {
   return (
-    <div className="surface-subtle rounded-[1rem] px-3.5 py-3">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-      <p className={`mt-1.5 text-sm font-medium tabular-nums tracking-[-0.03em] ${toneClassName ?? 'text-foreground'}`}>{value}</p>
+    <div className="rounded-xl border border-border/60 bg-background/70 px-3 py-2">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className={`mt-1 text-sm font-medium tabular-nums ${toneClassName ?? 'text-foreground'}`}>{value}</p>
     </div>
   )
 }
@@ -150,7 +150,7 @@ function SourceRow({ row }: { row: DetailRow }) {
   const priceStatusLabel = getPriceStatusLabel(row.priceStatus)
 
   return (
-    <div className="grid gap-3 rounded-[1.15rem] border border-border/60 bg-background/80 p-3.5 md:grid-cols-[minmax(0,1.8fr)_repeat(3,minmax(0,1fr))] md:items-center">
+    <div className="grid gap-3 rounded-xl border border-border/60 bg-background/80 p-3 md:grid-cols-[minmax(0,1.8fr)_repeat(3,minmax(0,1fr))] md:items-center">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-sm font-medium">{row.title}</span>
@@ -187,8 +187,8 @@ function GroupCard({
   const share = totalValue > 0 ? (row.value / totalValue) * 100 : 0
 
   return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-[color:var(--surface-outline)] bg-card/85 shadow-[var(--shadow-sm)]">
-      <button type="button" className="w-full p-4 text-left transition-colors hover:bg-muted/10 sm:p-5" onClick={onToggle}>
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card/80">
+      <button type="button" className="w-full p-4 text-left transition-colors hover:bg-muted/10" onClick={onToggle}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -198,7 +198,7 @@ function GroupCard({
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               )}
               <p className="truncate text-base font-semibold">{row.title}</p>
-              <Badge variant="secondary" className="rounded-full px-2.5 text-[10px]">
+              <Badge variant="secondary" className="rounded-full text-[10px]">
                 {row.badge}
               </Badge>
               {priceStatusLabel ? (
@@ -214,7 +214,7 @@ function GroupCard({
               <MetricBlock label="24h" value={formatPercent(row.change24h)} toneClassName={getChangeColor(row.change24h)} />
             </div>
           </div>
-          <div className="surface-subtle shrink-0 rounded-[1.2rem] px-4 py-3 text-right">
+          <div className="shrink-0 rounded-2xl border border-border/60 bg-background/70 px-4 py-3 text-right">
             <p className="text-[11px] text-muted-foreground">总市值</p>
             <p className="mt-1 text-xl font-semibold tracking-tight">{formatCurrency(row.value)}</p>
             <p className="mt-1 text-xs text-muted-foreground">占组合 {share.toFixed(1)}%</p>
@@ -223,7 +223,7 @@ function GroupCard({
       </button>
 
       {expanded ? (
-        <div className="border-t border-border/50 bg-muted/15 px-4 py-4 sm:px-5">
+        <div className="border-t border-border/50 bg-muted/15 px-4 py-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs font-medium text-foreground">来源明细</p>
             <p className="text-[11px] text-muted-foreground">{row.details.length} 项</p>
@@ -490,8 +490,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
       <CardHeader className="gap-4 border-b border-border/50">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <p className="section-label">Detail explorer</p>
-            <CardTitle className="mt-2 text-base">资产明细</CardTitle>
+            <CardTitle className="text-sm font-medium">资产明细</CardTitle>
             <p className="text-xs text-muted-foreground">支持搜索、筛选，并按代币、按钱包、按链切换视角。</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -514,7 +513,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="搜索代币、钱包、交易所或链"
-              className="pl-9"
+              className="h-10 pl-9"
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -525,7 +524,6 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
                 size="sm"
                 variant={statusFilter === filter.key ? 'secondary' : 'outline'}
                 onClick={() => setStatusFilter(filter.key)}
-                className="rounded-full"
               >
                 {filter.label}
               </Button>
@@ -536,7 +534,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
       <CardContent className="pt-4">
         <Tabs defaultValue="token" className="gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList variant="line" className="grid w-full grid-cols-3 gap-1 rounded-full bg-muted/40 p-1 sm:w-fit">
+            <TabsList variant="line" className="grid w-full grid-cols-3 sm:w-fit">
               <TabsTrigger className="w-full" value="token">
                 按代币
               </TabsTrigger>
@@ -547,7 +545,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
                 按链
               </TabsTrigger>
             </TabsList>
-            <Badge variant="secondary" className="rounded-full px-3">{data.length} 项代币</Badge>
+            <Badge variant="secondary">{data.length} 项代币</Badge>
           </div>
           <TabsContent className="mt-0" value="token">
             <GroupedHoldingsView rows={filteredData.token} mode="token" totalValue={totalValue} />

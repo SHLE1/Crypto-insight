@@ -17,40 +17,47 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <div>
-          <p className="section-label">Exchanges</p>
-          <CardTitle className="mt-2 text-base">交易所</CardTitle>
-        </div>
+        <CardTitle className="text-sm font-medium">交易所</CardTitle>
         <Link href="/cex" className="text-xs text-primary hover:underline">
           查看全部
         </Link>
       </CardHeader>
       <CardContent>
         {displayAccounts.length === 0 ? (
-          <div className="py-8 text-center">
-            <p className="text-sm text-muted-foreground">尚未绑定交易所</p>
-            <Link href="/cex" className="mt-3 inline-block text-sm text-primary hover:underline">
+          <div className="text-center py-6">
+            <p className="text-sm text-muted-foreground mb-2">尚未绑定交易所</p>
+            <Link
+              href="/cex"
+              className="text-sm text-primary hover:underline"
+            >
               绑定交易所账户 →
             </Link>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {displayAccounts.map((a) => {
               const snapshot = snapshots[a.id]
               return (
-                <div key={a.id} className="surface-subtle flex items-center justify-between gap-3 rounded-[1.2rem] p-3.5">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <Badge variant="secondary" className="rounded-full text-[10px] tracking-[0.08em]">
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between rounded-lg border border-border/50 p-3 transition-colors hover:bg-muted/30"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
                       {getExchangeLabel(a.exchange)}
                     </Badge>
-                    <p className="truncate text-sm font-medium tracking-[-0.03em]">{a.label}</p>
+                    <p className="text-sm font-medium">{a.label}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {snapshot?.status === 'error' ? (
-                      <Badge variant="destructive" className="rounded-full text-[10px]">异常</Badge>
-                    ) : null}
-                    <p className="text-sm font-medium tracking-[-0.03em]">
-                      {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
+                    {snapshot?.status === 'error' && (
+                      <Badge variant="destructive" className="text-xs">
+                        异常
+                      </Badge>
+                    )}
+                    <p className="text-sm font-medium">
+                      {snapshot
+                        ? formatCurrency(snapshot.totalValue)
+                        : '--'}
                     </p>
                   </div>
                 </div>

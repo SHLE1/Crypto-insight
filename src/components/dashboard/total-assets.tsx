@@ -1,8 +1,8 @@
 'use client'
 
-import { Clock, TrendingDown, TrendingUp } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatPercent } from '@/lib/validators'
+import { TrendingUp, TrendingDown, Clock } from 'lucide-react'
 
 interface TotalAssetsProps {
   totalValue: number
@@ -22,54 +22,44 @@ export function TotalAssets({
   const isPositive = change24hPercent >= 0
 
   return (
-    <Card className="col-span-full overflow-hidden md:col-span-2 xl:col-span-1">
-      <CardContent className="relative px-6 py-7 sm:px-7 sm:py-8">
-        <div className="pointer-events-none absolute inset-0 subtle-grid opacity-45" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_oklch,var(--primary)_32%,transparent),transparent)]" />
-
-        <div className="relative flex h-full flex-col justify-between gap-8">
-          <div>
-            <p className="section-label">Net worth</p>
-            <p className="mt-4 text-[clamp(2.6rem,2.2rem+1.8vw,4.8rem)] font-semibold tracking-[-0.08em] text-foreground">
-              {formatCurrency(totalValue)}
-            </p>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <span className={isPositive ? 'metric-chip metric-chip--positive' : 'metric-chip metric-chip--negative'}>
-                {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                {formatPercent(change24hPercent)}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {isPositive ? '+' : '-'}{formatCurrency(Math.abs(change24hValue))} · 24h
-              </span>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="surface-subtle rounded-[1.2rem] px-4 py-4">
-              <p className="text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground">状态</p>
-              <p className="mt-2 text-sm font-medium tracking-[-0.03em] text-foreground">
-                {isStale ? '展示本地缓存' : '已同步最新结果'}
-              </p>
-              <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                {isStale ? '请手动刷新以重新拉取链上与交易所数据。' : '当前界面正在使用最近一次成功刷新的数据。'}
-              </p>
-            </div>
-
-            <div className="surface-subtle rounded-[1.2rem] px-4 py-4">
-              <p className="text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground">刷新时间</p>
-              {lastRefresh ? (
-                <>
-                  <p className="mt-2 flex items-center gap-2 text-sm font-medium tracking-[-0.03em] text-foreground">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {new Date(lastRefresh).toLocaleString('zh-CN')}
-                  </p>
-                  <p className="mt-1 text-xs leading-6 text-muted-foreground">以本地时区展示最近一次更新时间。</p>
-                </>
+    <Card className="col-span-full overflow-hidden">
+      <CardContent className="relative pt-8 pb-6">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-transparent pointer-events-none" />
+        <div className="relative">
+          <p className="text-sm font-medium text-muted-foreground tracking-wide">总资产</p>
+          <p className="mt-2 text-5xl font-bold tracking-tighter">
+            {formatCurrency(totalValue)}
+          </p>
+          <div className="mt-4 flex items-center gap-3">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
+                isPositive
+                  ? 'bg-emerald-500/10 text-emerald-600'
+                  : 'bg-red-500/10 text-red-500'
+              }`}
+            >
+              {isPositive ? (
+                <TrendingUp className="h-3.5 w-3.5" />
               ) : (
-                <p className="mt-2 text-sm text-muted-foreground">等待第一次成功刷新。</p>
+                <TrendingDown className="h-3.5 w-3.5" />
               )}
-            </div>
+              {formatPercent(change24hPercent)}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {isPositive ? '+' : ''}{formatCurrency(Math.abs(change24hValue))} · 24h
+            </span>
           </div>
+          {lastRefresh && (
+            <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground/80">
+              <Clock className="h-3 w-3" />
+              <span>最近刷新 {new Date(lastRefresh).toLocaleString('zh-CN')}</span>
+              {isStale ? (
+                <span className="ml-2 text-amber-500">
+                  · 当前为本地缓存，请手动刷新获取最新数据
+                </span>
+              ) : null}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
