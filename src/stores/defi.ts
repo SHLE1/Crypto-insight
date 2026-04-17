@@ -45,7 +45,7 @@ export const useDefiStore = create<DefiStore>()(
         set((state) => {
           const activeIdSet = new Set(activeIds)
           const snapshotEntries = Object.entries(state.snapshots)
-          const nextSnapshotEntries = snapshotEntries.filter(([id]) => activeIdSet.has(id))
+          const nextSnapshotEntries = snapshotEntries.filter(([, snapshot]) => activeIdSet.has(snapshot.walletId))
 
           if (nextSnapshotEntries.length === snapshotEntries.length) {
             return state

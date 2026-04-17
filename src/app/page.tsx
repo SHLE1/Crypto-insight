@@ -5,7 +5,6 @@ import { Building2, RefreshCw, Wallet } from 'lucide-react'
 import { AlertsPanel } from '@/components/dashboard/alerts'
 import { AssetDistribution } from '@/components/dashboard/asset-distribution'
 import { CexSummary } from '@/components/dashboard/cex-summary'
-import { DefiSummary } from '@/components/dashboard/defi-summary'
 import { NetWorthTrend } from '@/components/dashboard/net-worth-trend'
 import { PortfolioInsights } from '@/components/dashboard/portfolio-insights'
 import { SourceDistribution } from '@/components/dashboard/source-distribution'
@@ -15,7 +14,6 @@ import { EmptyState } from '@/components/layout/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useDefiData } from '@/hooks/use-defi-data'
 import { usePortfolioData } from '@/hooks/use-portfolio-data'
 
 export default function DashboardPage() {
@@ -42,25 +40,6 @@ export default function DashboardPage() {
     refetch,
     isFetching,
   } = usePortfolioData()
-  const {
-    errors: defiErrors,
-    lastRefresh: defiLastRefresh,
-    totalValue: defiTotalValue,
-    totalDepositedValue,
-    totalBorrowedValue,
-    totalRewardsValue,
-    protocolData,
-    chainData,
-    positionCount,
-    walletCount,
-    isEnabled: isDefiEnabled,
-    hasDefiSources,
-    hasPositions: hasDefiPositions,
-    isFetching: isDefiFetching,
-    isInitialLoading: isDefiInitialLoading,
-    isUsingCachedData: isDefiUsingCachedData,
-    refetch: refetchDefi,
-  } = useDefiData()
 
   return (
     <div className="space-y-6">
@@ -128,25 +107,6 @@ export default function DashboardPage() {
           <WalletSummary wallets={wallets} snapshots={snapshots} />
           <CexSummary accounts={accounts} snapshots={snapshots} />
           <AlertsPanel errors={errors} />
-          <DefiSummary
-            isEnabled={isDefiEnabled}
-            hasDefiSources={hasDefiSources}
-            hasPositions={hasDefiPositions}
-            isFetching={isDefiFetching}
-            isInitialLoading={isDefiInitialLoading}
-            isUsingCachedData={isDefiUsingCachedData}
-            lastRefresh={defiLastRefresh}
-            totalValue={defiTotalValue}
-            totalDepositedValue={totalDepositedValue}
-            totalBorrowedValue={totalBorrowedValue}
-            totalRewardsValue={totalRewardsValue}
-            positionCount={positionCount}
-            walletCount={walletCount}
-            protocolData={protocolData}
-            chainData={chainData}
-            errors={defiErrors}
-            refetch={() => refetchDefi()}
-          />
         </div>
       )}
     </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, LayoutDashboard, ListTree, Settings, Wallet } from 'lucide-react'
+import { Building2, Coins, LayoutDashboard, ListTree, Settings, Wallet } from 'lucide-react'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/holdings', label: '资产明细', icon: ListTree },
   { href: '/wallets', label: '钱包', icon: Wallet },
   { href: '/cex', label: '交易所', icon: Building2 },
+  { href: '/defi', label: 'DeFi', icon: Coins },
   { href: '/settings', label: '设置', icon: Settings },
 ]
 
@@ -57,7 +58,7 @@ export function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur md:hidden">
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-6">
         {navItems.map((item) => {
           const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
           return (

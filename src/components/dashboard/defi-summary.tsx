@@ -16,6 +16,7 @@ interface DefiSummaryProps {
   isFetching: boolean
   isInitialLoading: boolean
   isUsingCachedData: boolean
+  isSweepRefreshing: boolean
   lastRefresh: string | null
   totalValue: number
   totalDepositedValue: number
@@ -68,6 +69,7 @@ export function DefiSummary({
   isFetching,
   isInitialLoading,
   isUsingCachedData,
+  isSweepRefreshing,
   lastRefresh,
   totalValue,
   totalDepositedValue,
@@ -81,6 +83,13 @@ export function DefiSummary({
   refetch,
 }: DefiSummaryProps) {
   const primaryError = errors[0]
+  const hasRecoverableWarning = Boolean(
+    primaryError && (
+      primaryError.message.includes('额度或速率受限') ||
+      primaryError.message.includes('服务暂时不可用') ||
+      primaryError.message.includes('请求失败（HTTP 5')
+    )
+  )
 
   if (!isEnabled) {
     return (
@@ -160,7 +169,9 @@ export function DefiSummary({
             DeFi 仓位
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant={primaryError ? 'destructive' : 'outline'}>{primaryError ? '查询异常' : '暂无仓位'}</Badge>
+            <Badge variant={primaryError ? (hasRecoverableWarning ? 'outline' : 'destructive') : 'outline'}>
+              {primaryError ? (hasRecoverableWarning ? '轮转补齐中' : '查询异常') : '暂无仓位'}
+            </Badge>
             <Button variant="outline" size="sm" onClick={refetch} disabled={isFetching} className="gap-2">
               <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
               刷新
@@ -198,8 +209,8 @@ export function DefiSummary({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={isUsingCachedData ? 'outline' : 'secondary'}>
-            {isUsingCachedData ? '使用缓存' : '已启用'}
+          <Badge variant={isSweepRefreshing ? 'outline' : isUsingCachedData ? 'outline' : 'secondary'}>
+            {isSweepRefreshing ? '轮转刷新中' : isUsingCachedData ? '使用缓存' : '已启用'}
           </Badge>
           <Button variant="outline" size="sm" onClick={refetch} disabled={isFetching} className="gap-2">
             <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
@@ -262,15 +273,27 @@ export function DefiSummary({
             <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3 text-xs leading-6 text-muted-foreground">
               <p>DeFi 统计暂未并入顶部总资产，避免与钱包余额重复计算。</p>
               <p>最近刷新：{lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '暂无'}。</p>
-              <p>为节省免费额度，DeFi 默认低频刷新，建议需要时手动刷新。</p>
+              <p>为兼顾免费额度与成功率，DeFi 会按钱包逐个轮转刷新；遇到限速或 5xx 时，会继续刷下一个来源并在后续逐步补齐。</p>
             </div>
           </div>
         </div>
 
         {primaryError ? (
-          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">本轮 DeFi 数据存在提醒</p>
+          <div className={cn(
+            'rounded-2xl p-4 text-sm',
+            hasRecoverableWarning
+              ? 'border border-border/70 bg-muted/20 text-muted-foreground'
+              : 'border border-amber-500/20 bg-amber-500/5 text-muted-foreground'
+          )}>
+            <p className="font-medium text-foreground">
+              {hasRecoverableWarning ? '部分链路暂时受限，系统会继续轮转补齐' : '本轮 DeFi 数据存在提醒'}
+            </p>
             <p className="mt-1 leading-6">{primaryError.message}</p>
+            <p className="mt-1 text-xs leading-6">
+              {hasRecoverableWarning
+                ? '当前不会一直重复刷新同一个钱包；后续会自动跳到下一个来源，并在下一轮再回来重试。'
+                : primaryError.impact ?? '请稍后重试，或检查当前钱包是否有可识别的 DeFi 仓位。'}
+            </p>
             {primaryError.detail ? <p className="mt-1 text-xs leading-6">{primaryError.detail}</p> : null}
           </div>
         ) : null}

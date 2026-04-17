@@ -176,7 +176,9 @@ export interface DefiProtocolSummary {
 }
 
 export interface DefiSnapshot {
-  source: string
+  source: string // walletId:chainKey
+  walletId: string
+  chainKey: string
   provider: DefiProvider
   positions: DefiPosition[]
   protocols: DefiProtocolSummary[]
@@ -241,7 +243,7 @@ export interface DefiHistoryPoint {
 }
 
 export interface DefiCache {
-  snapshots: Record<string, DefiSnapshot> // keyed by wallet id
+  snapshots: Record<string, DefiSnapshot> // keyed by walletId:chainKey
   lastRefresh: string | null
   errors: ApiErrorState[]
   history: DefiHistoryPoint[]

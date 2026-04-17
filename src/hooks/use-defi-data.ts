@@ -1,29 +1,51 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { getMobulaChains } from '@/lib/defi/chains'
 import { useWalletStore } from '@/stores/wallets'
 import { useSettingsStore } from '@/stores/settings'
 import { useDefiStore } from '@/stores/defi'
 import type { ApiErrorState, DefiQuoteResponse, DefiSnapshot } from '@/types'
 
-const DEFI_REFRESH_INTERVAL_MS = 30 * 60 * 1000
+const DEFI_SWEEP_INTERVAL_MS = 20 * 1000
+const DEFI_STEADY_INTERVAL_MS = 30 * 60 * 1000
+
+interface DefiApiResponse extends DefiQuoteResponse {
+  message?: string
+  cursor?: number
+  nextCursor?: number | null
+  hasMore?: boolean
+  processedWalletIds?: string[]
+  summary?: {
+    successCount: number
+    partialCount: number
+    errorCount: number
+  }
+}
 
 function buildDefiError(snapshot: DefiSnapshot, label: string): ApiErrorState | null {
   if (!snapshot.error) {
     return null
   }
 
+  const isRecoverableThrottle =
+    snapshot.error.includes('额度或速率受限') ||
+    snapshot.error.includes('服务暂时不可用') ||
+    snapshot.error.includes('请求失败（HTTP 5')
+
   return {
     source: 'DeFi 仓位',
     title: snapshot.status === 'error' ? 'DeFi 查询失败' : 'DeFi 数据部分可用',
-    sourceLabel: label,
+    sourceLabel: `${label} · ${snapshot.chainKey}`,
     kind: snapshot.status === 'error' ? 'error' : 'warning',
     message: snapshot.error,
     impact:
       snapshot.status === 'error'
-        ? '该钱包本轮没有拿到 DeFi 仓位结果。'
-        : '该钱包本轮只拿到部分 DeFi 结果，当前会继续显示可用数据。',
+        ? isRecoverableThrottle
+          ? '该链本轮已跳过，后续轮转刷新会继续尝试，不会一直卡在同一个钱包。'
+          : '该链本轮没有拿到 DeFi 仓位结果。'
+        : '该链本轮只拿到部分 DeFi 结果，当前会继续显示可用数据。',
     timestamp: new Date().toISOString(),
   }
 }
@@ -69,20 +91,50 @@ export function useDefiData() {
     () => new Map(wallets.map((wallet) => [wallet.id, wallet.name || wallet.address.slice(0, 6)])),
     [wallets]
   )
+  const expectedSnapshotKeys = useMemo(
+    () =>
+      enabledWallets.flatMap((wallet) =>
+        getMobulaChains(wallet.chainType, wallet.evmChains).map((chainKey) => `${wallet.id}:${chainKey}`)
+      ),
+    [enabledWallets]
+  )
+  const expectedSnapshotKeySet = useMemo(() => new Set(expectedSnapshotKeys), [expectedSnapshotKeys])
+
   const [hasFetchedThisSession, setHasFetchedThisSession] = useState(false)
+  const cursorRef = useRef(0)
+  const lastSourceKeyRef = useRef<string | null>(null)
 
   const isRestoring = !hydrated || !walletsHydrated || !settingsHydrated
   const hasDefiSources = enabledWallets.length > 0
-  const hasCachedSnapshots = Object.keys(snapshots).length > 0
+  const activeSnapshots = useMemo(
+    () => Object.values(snapshots).filter((snapshot) => expectedSnapshotKeySet.has(snapshot.source)),
+    [expectedSnapshotKeySet, snapshots]
+  )
+  const hasCachedSnapshots = activeSnapshots.length > 0
+  const completedSnapshotKeySet = useMemo(
+    () => new Set(activeSnapshots.filter((snapshot) => snapshot.status !== 'error').map((snapshot) => snapshot.source)),
+    [activeSnapshots]
+  )
+  const isSweepRefreshing = useMemo(
+    () => expectedSnapshotKeys.some((snapshotKey) => !completedSnapshotKeySet.has(snapshotKey)),
+    [completedSnapshotKeySet, expectedSnapshotKeys]
+  )
 
   const fetchDefi = useCallback(async () => {
-    clearErrors()
+    if (lastSourceKeyRef.current !== activeSourceKey) {
+      lastSourceKeyRef.current = activeSourceKey
+      cursorRef.current = 0
+      clearErrors()
+    }
+
+    const cursor = cursorRef.current
     pruneSnapshots(activeWalletIds)
 
     const response = await fetch('/api/defi/quote', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        cursor,
         wallets: enabledWallets.map((wallet) => ({
           id: wallet.id,
           chainType: wallet.chainType,
@@ -92,7 +144,8 @@ export function useDefiData() {
       }),
     })
 
-    const data = (await response.json()) as DefiQuoteResponse & { message?: string }
+    const data = (await response.json()) as DefiApiResponse
+    const fallbackNextCursor = activeWalletIds.length > 0 ? (cursor + 1) % activeWalletIds.length : 0
 
     if (!response.ok) {
       addError({
@@ -100,22 +153,26 @@ export function useDefiData() {
         title: '接口请求失败',
         kind: 'error',
         message: data.message || 'DeFi 报价接口返回异常响应。',
-        impact: '这一轮没有拿到任何 DeFi 数据。',
+        impact: '这一轮会继续跳到下一个钱包，避免一直重复刷新同一个来源。',
         timestamp: new Date().toISOString(),
       })
+      cursorRef.current = fallbackNextCursor
+      setHasFetchedThisSession(true)
       return data
     }
 
+    const mergedSnapshots = new Map<string, DefiSnapshot>(activeSnapshots.map((snapshot) => [snapshot.source, snapshot]))
+
     data.results.forEach((snapshot) => {
-      const previousSnapshot = snapshots[snapshot.source]
+      const previousSnapshot = mergedSnapshots.get(snapshot.source)
       const retained = shouldUseCachedSnapshot(previousSnapshot, snapshot)
       const effectiveSnapshot = retained && previousSnapshot ? previousSnapshot : snapshot
 
-      if (!retained) {
-        setSnapshot(snapshot.source, snapshot)
-      }
+      mergedSnapshots.set(snapshot.source, effectiveSnapshot)
+      setSnapshot(snapshot.source, effectiveSnapshot)
 
-      const errorState = buildDefiError(snapshot, walletNameMap.get(snapshot.source) ?? snapshot.source)
+      const walletLabel = walletNameMap.get(snapshot.walletId) ?? snapshot.walletId
+      const errorState = buildDefiError(snapshot, walletLabel)
       if (errorState) {
         addError(
           retained
@@ -128,15 +185,9 @@ export function useDefiData() {
             : errorState
         )
       }
-
-      if (retained && effectiveSnapshot) {
-        setSnapshot(snapshot.source, effectiveSnapshot)
-      }
     })
 
-    const effectiveSnapshots = activeWalletIds
-      .map((id) => snapshots[id] ?? data.results.find((snapshot) => snapshot.source === id))
-      .filter((snapshot): snapshot is DefiSnapshot => Boolean(snapshot))
+    const effectiveSnapshots = Array.from(mergedSnapshots.values()).filter((snapshot) => expectedSnapshotKeySet.has(snapshot.source))
 
     if (effectiveSnapshots.length > 0) {
       appendHistoryPoint({
@@ -145,34 +196,41 @@ export function useDefiData() {
         depositedValue: effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalDepositedValue, 0),
         borrowedValue: effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalBorrowedValue, 0),
         rewardsValue: effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalRewardsValue, 0),
-        sourceCount: effectiveSnapshots.length,
+        sourceCount: new Set(effectiveSnapshots.map((snapshot) => snapshot.walletId)).size,
       })
     }
 
     setLastRefresh(new Date().toISOString())
     setHasFetchedThisSession(true)
+    cursorRef.current = typeof data.nextCursor === 'number' ? data.nextCursor : fallbackNextCursor
     return data
   }, [
+    activeSnapshots,
+    activeSourceKey,
     activeWalletIds,
     addError,
     appendHistoryPoint,
     clearErrors,
     enabledWallets,
+    expectedSnapshotKeySet,
     pruneSnapshots,
     setLastRefresh,
     setSnapshot,
-    snapshots,
     walletNameMap,
   ])
 
-  const shouldAutoRefresh = !isRestoring && defiEnabled && hasDefiSources && (hasFetchedThisSession || !hasCachedSnapshots)
+  const shouldAutoRefresh = !isRestoring && defiEnabled && hasDefiSources
 
   const { refetch, isFetching } = useQuery({
     queryKey: ['defi', activeSourceKey],
     queryFn: fetchDefi,
     enabled: shouldAutoRefresh,
     retry: 0,
-    refetchInterval: shouldAutoRefresh ? DEFI_REFRESH_INTERVAL_MS : false,
+    refetchInterval: shouldAutoRefresh
+      ? isSweepRefreshing || !hasCachedSnapshots
+        ? DEFI_SWEEP_INTERVAL_MS
+        : DEFI_STEADY_INTERVAL_MS
+      : false,
   })
 
   useEffect(() => {
@@ -181,6 +239,9 @@ export function useDefiData() {
     }
 
     pruneSnapshots(activeWalletIds)
+    cursorRef.current = 0
+    lastSourceKeyRef.current = null
+
     if (!defiEnabled || !hasDefiSources) {
       clearErrors()
       setLastRefresh(null)
@@ -192,35 +253,10 @@ export function useDefiData() {
       return
     }
 
-    const hasAnySnapshot = Object.keys(snapshots).length > 0
-    const missingSnapshot = activeWalletIds.some((id) => !(id in snapshots))
-
-    if (!hasAnySnapshot || missingSnapshot) {
+    if (!hasCachedSnapshots || isSweepRefreshing) {
       void refetch()
     }
-  }, [activeWalletIds, defiEnabled, hasDefiSources, isRestoring, refetch, snapshots])
-
-  const effectiveSnapshots = useMemo(
-    () => activeWalletIds.map((id) => snapshots[id]).filter((snapshot): snapshot is DefiSnapshot => Boolean(snapshot)),
-    [activeWalletIds, snapshots]
-  )
-
-  const totalValue = useMemo(
-    () => effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalValue, 0),
-    [effectiveSnapshots]
-  )
-  const totalDepositedValue = useMemo(
-    () => effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalDepositedValue, 0),
-    [effectiveSnapshots]
-  )
-  const totalBorrowedValue = useMemo(
-    () => effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalBorrowedValue, 0),
-    [effectiveSnapshots]
-  )
-  const totalRewardsValue = useMemo(
-    () => effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalRewardsValue, 0),
-    [effectiveSnapshots]
-  )
+  }, [defiEnabled, hasCachedSnapshots, hasDefiSources, isRestoring, isSweepRefreshing, refetch])
 
   const protocolMap = useMemo(() => {
     const aggregated = new Map<
@@ -235,7 +271,7 @@ export function useDefiData() {
       }
     >()
 
-    effectiveSnapshots.forEach((snapshot) => {
+    activeSnapshots.forEach((snapshot) => {
       snapshot.protocols.forEach((protocol) => {
         const key = `${protocol.chainKey}:${protocol.protocolId}`
         const existing = aggregated.get(key)
@@ -257,29 +293,55 @@ export function useDefiData() {
     })
 
     return Array.from(aggregated.values()).sort((a, b) => b.value - a.value)
-  }, [effectiveSnapshots])
+  }, [activeSnapshots])
 
   const chainData = useMemo(() => {
     const aggregated = new Map<string, number>()
 
-    effectiveSnapshots.forEach((snapshot) => {
-      snapshot.protocols.forEach((protocol) => {
-        aggregated.set(protocol.chainKey, (aggregated.get(protocol.chainKey) ?? 0) + protocol.totalValue)
-      })
+    activeSnapshots.forEach((snapshot) => {
+      aggregated.set(snapshot.chainKey, (aggregated.get(snapshot.chainKey) ?? 0) + snapshot.totalValue)
     })
 
     return Array.from(aggregated.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-  }, [effectiveSnapshots])
+  }, [activeSnapshots])
 
-  const positionCount = useMemo(
-    () => effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.positions.length, 0),
-    [effectiveSnapshots]
+  const totalValue = useMemo(
+    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.totalValue, 0),
+    [activeSnapshots]
   )
+  const totalDepositedValue = useMemo(
+    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.totalDepositedValue, 0),
+    [activeSnapshots]
+  )
+  const totalBorrowedValue = useMemo(
+    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.totalBorrowedValue, 0),
+    [activeSnapshots]
+  )
+  const totalRewardsValue = useMemo(
+    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.totalRewardsValue, 0),
+    [activeSnapshots]
+  )
+  const positionCount = useMemo(
+    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.positions.length, 0),
+    [activeSnapshots]
+  )
+  const walletCount = useMemo(
+    () => new Set(activeSnapshots.map((snapshot) => snapshot.walletId)).size,
+    [activeSnapshots]
+  )
+
   const hasPositions = positionCount > 0
   const isUsingCachedData = hydrated && !hasFetchedThisSession && !isFetching && Boolean(lastRefresh) && hasCachedSnapshots
   const isInitialLoading = !isRestoring && defiEnabled && hasDefiSources && !hasCachedSnapshots && isFetching
+
+  const refreshAll = useCallback(() => {
+    cursorRef.current = 0
+    lastSourceKeyRef.current = activeSourceKey
+    clearErrors()
+    return refetch()
+  }, [activeSourceKey, clearErrors, refetch])
 
   return {
     snapshots,
@@ -293,13 +355,14 @@ export function useDefiData() {
     protocolData: protocolMap,
     chainData,
     positionCount,
-    walletCount: effectiveSnapshots.length,
+    walletCount,
     isEnabled: defiEnabled,
     hasDefiSources,
     hasPositions,
     isFetching,
     isInitialLoading,
     isUsingCachedData,
-    refetch,
+    isSweepRefreshing,
+    refetch: refreshAll,
   }
 }
