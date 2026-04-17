@@ -59,25 +59,22 @@ export function NetWorthTrend({ data }: NetWorthTrendProps) {
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="flex flex-col gap-4 border-b border-border/80 md:flex-row md:items-start md:justify-between">
+      <CardHeader className="border-b border-border/80">
         <div>
           <p className="muted-kicker">Trend</p>
           <CardTitle className="mt-2 text-base">资产变化看板</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">最近 {visibleData.length} 次刷新记录</p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-3 md:grid-cols-1">
-          <div className="metric-tile min-w-[120px] p-3">
-            <p className="muted-kicker">高点</p>
-            <p className="mt-1 text-sm font-medium text-foreground">{formatCurrency(rangeHigh)}</p>
-          </div>
-          <div className="metric-tile min-w-[120px] p-3">
-            <p className="muted-kicker">低点</p>
-            <p className="mt-1 text-sm font-medium text-foreground">{formatCurrency(rangeLow)}</p>
-          </div>
-          <div className="metric-tile min-w-[120px] p-3">
-            <p className="muted-kicker">振幅</p>
-            <p className="mt-1 text-sm font-medium text-foreground">{formatPercent(rangePercent)}</p>
-          </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded-full border border-border/70 bg-muted/20 px-2.5 py-1">
+            高点 <span className="font-medium text-foreground/90">{formatCurrency(rangeHigh)}</span>
+          </span>
+          <span className="rounded-full border border-border/70 bg-muted/20 px-2.5 py-1">
+            低点 <span className="font-medium text-foreground/90">{formatCurrency(rangeLow)}</span>
+          </span>
+          <span className="rounded-full border border-border/70 bg-muted/20 px-2.5 py-1">
+            振幅 <span className="font-medium text-foreground/90">{formatPercent(rangePercent)}</span>
+          </span>
         </div>
       </CardHeader>
       <CardContent className="pt-4">

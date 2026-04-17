@@ -104,7 +104,10 @@ export function buildHoldingsData({
             .map((source) => ({
               sourceId: source.sourceId,
               sourceType: source.sourceType,
-              sourceLabel: source.sourceLabel,
+              sourceLabel:
+                source.sourceType === 'wallet'
+                  ? (walletNameMap.get(source.sourceId) ?? source.sourceLabel)
+                  : (cexLabelMap.get(source.sourceId) ?? source.sourceLabel),
               assetId: source.assetId ?? a.assetId,
               balance: source.balance,
               chainKey: source.chainKey,

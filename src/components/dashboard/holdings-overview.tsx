@@ -189,8 +189,8 @@ function GroupCard({
   return (
     <div className="overflow-hidden rounded-xl border border-border/80 bg-card">
       <button type="button" className="w-full p-4 text-left transition-colors hover:bg-muted/10" onClick={onToggle}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 flex-1">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px] lg:items-start">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               {expanded ? (
                 <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -214,7 +214,7 @@ function GroupCard({
               <MetricBlock label="24h" value={formatPercent(row.change24h)} toneClassName={getChangeColor(row.change24h)} />
             </div>
           </div>
-          <div className="shrink-0 rounded-lg border border-border/80 bg-background/70 px-4 py-3 text-right">
+          <div className="rounded-lg border border-border/80 bg-background/70 px-4 py-3 text-left lg:self-start lg:text-right">
             <p className="text-[11px] text-muted-foreground">总市值</p>
             <p className="mt-1 text-xl font-semibold tracking-tight">{formatCurrency(row.value)}</p>
             <p className="mt-1 text-xs text-muted-foreground">占组合 {share.toFixed(1)}%</p>
