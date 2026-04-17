@@ -22,6 +22,7 @@ pnpm dev
 COINGECKO_DEMO_API_KEY=your_demo_key
 SOLANA_RPC_URL=https://your-solana-rpc.example
 MOBULA_API_KEY=your_mobula_key
+MOBULA_USE_DEMO_API=true # 仅本地调试时显式开启
 ```
 
 常用命令：
@@ -48,6 +49,7 @@ pnpm build
 ## 数据来源说明
 
 - 主流行情优先使用 `Binance`，不足时再回退到 `CoinGecko`
+- `DeFi` 当前优先使用 `Mobula`，当主数据源未识别到仓位时，会尝试回退到 `DeBank` 公共页面做兜底
 - 页面内已加入 `CoinGecko` 署名，符合其 Attribution Guide 要求
 
 ## 备注

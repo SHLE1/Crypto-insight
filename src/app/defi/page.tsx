@@ -106,6 +106,7 @@ export default function DefiPage() {
             </div>
             <ul className="mt-3 space-y-2 leading-6">
               <li>DeFi 统计当前作为独立页面展示，不并入顶部总资产，避免与钱包余额重复计算。</li>
+              <li>默认优先使用 Mobula；当 Mobula 对某条链未识别出仓位时，会尝试用 DeBank 公共页面做兜底补全。</li>
               <li>当数据源出现速率限制或短时异常时，系统会逐个钱包轮转刷新，而不是一直重复刷同一个钱包。</li>
               <li>即使本轮未拿全，也会逐渐补齐全部钱包的 DeFi 数据。</li>
             </ul>

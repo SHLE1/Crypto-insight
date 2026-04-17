@@ -23,6 +23,15 @@ const DEFI_CHAIN_LABELS: Record<string, string> = {
   avax: 'Avalanche',
 }
 
+const DEBANK_CHAIN_MAP: Record<string, string> = {
+  ethereum: 'eth',
+  bsc: 'bsc',
+  arbitrum: 'arb',
+  polygon: 'matic',
+  base: 'base',
+  avalanche: 'avax',
+}
+
 export function getMobulaChains(chainType: 'evm' | 'solana' | 'btc', evmChains?: string[]) {
   if (chainType === 'solana') {
     return ['solana']
@@ -46,4 +55,8 @@ export function getMobulaChains(chainType: 'evm' | 'solana' | 'btc', evmChains?:
 
 export function formatDefiChainLabel(chainKey: string) {
   return DEFI_CHAIN_LABELS[chainKey] ?? chainKey
+}
+
+export function getDebankChainId(chainKey: string) {
+  return DEBANK_CHAIN_MAP[chainKey] ?? null
 }

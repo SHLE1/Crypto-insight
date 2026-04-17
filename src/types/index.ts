@@ -35,7 +35,7 @@ export interface Settings {
 // ===== 资产与报价 =====
 
 export type PriceStatus = 'live' | 'stale' | 'missing'
-export type DefiProvider = 'mobula'
+export type DefiProvider = 'mobula' | 'debank'
 export type DefiStatus = 'success' | 'partial' | 'error'
 export type DefiPositionType =
   | 'lending'

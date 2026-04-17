@@ -309,6 +309,7 @@ export function DefiSummary({
               <p>DeFi 统计暂未并入顶部总资产，避免与钱包余额重复计算。</p>
               <p>最近刷新：{lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '暂无'}。</p>
               <p>为兼顾免费额度与成功率，DeFi 会按钱包逐个轮转刷新；遇到限速或 5xx 时，会继续刷下一个来源并在后续逐步补齐。</p>
+              <p>当前优先使用 Mobula；若主数据源未识别到仓位，部分链路会回退到 DeBank 公共页面兜底。</p>
             </div>
           </div>
         </div>

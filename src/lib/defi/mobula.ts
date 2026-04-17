@@ -1,5 +1,6 @@
 import type { DefiPosition, DefiProtocolSummary, DefiSnapshot, WalletInput } from '@/types'
 import { getMobulaChains } from '@/lib/defi/chains'
+import { getDebankFallbackSnapshot } from '@/lib/defi/debank'
 
 interface MobulaToken {
   address?: string
@@ -109,12 +110,15 @@ function getMobulaEndpoint(): {
   if (key) {
     return {
       url: MOBULA_API_URL,
-      headers: { Authorization: key },
+      headers: {
+        Authorization: key,
+        'x-api-key': key,
+      },
       usingDemo: false,
     }
   }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && process.env.MOBULA_USE_DEMO_API === 'true') {
     return {
       url: MOBULA_DEMO_API_URL,
       headers: {},
@@ -122,7 +126,7 @@ function getMobulaEndpoint(): {
     }
   }
 
-  throw new Error('尚未配置 MOBULA_API_KEY')
+  throw new Error('尚未配置 MOBULA_API_KEY。当前不会向 Mobula 正式 API 发起请求；如需本地演示，可显式设置 MOBULA_USE_DEMO_API=true')
 }
 
 function buildPosition(
@@ -216,6 +220,26 @@ export async function getMobulaDefiSnapshots(wallet: Pick<WalletInput, 'id' | 'c
           })
         })
 
+        const totalValue = toNumber(data?.totalValueUSD)
+        const totalDepositedValue = toNumber(data?.totalDepositedUSD)
+        const totalBorrowedValue = toNumber(data?.totalBorrowedUSD)
+        const totalRewardsValue = toNumber(data?.totalRewardsUSD)
+
+        if (positions.length === 0 && totalValue === 0 && !warningMessage) {
+          const debankFallback = await getDebankFallbackSnapshot({
+            walletId: wallet.id,
+            address: wallet.address,
+            chainKey,
+          })
+
+          if (debankFallback) {
+            return {
+              ...debankFallback,
+              error: 'Mobula 未识别到该链 DeFi 仓位，已回退到 DeBank 公共页面兜底。',
+            } satisfies DefiSnapshot
+          }
+        }
+
         return {
           source: `${wallet.id}:${chainKey}`,
           walletId: wallet.id,
@@ -223,10 +247,10 @@ export async function getMobulaDefiSnapshots(wallet: Pick<WalletInput, 'id' | 'c
           provider: 'mobula',
           positions,
           protocols,
-          totalValue: toNumber(data?.totalValueUSD),
-          totalDepositedValue: toNumber(data?.totalDepositedUSD),
-          totalBorrowedValue: toNumber(data?.totalBorrowedUSD),
-          totalRewardsValue: toNumber(data?.totalRewardsUSD),
+          totalValue,
+          totalDepositedValue,
+          totalBorrowedValue,
+          totalRewardsValue,
           updatedAt: data?.fetchedAt ?? new Date().toISOString(),
           status: warningMessage ? 'partial' : 'success',
           error: warningMessage ?? undefined,
