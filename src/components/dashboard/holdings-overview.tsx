@@ -189,8 +189,8 @@ function GroupCard({
   return (
     <div className="overflow-hidden rounded-xl border border-border/80 bg-card">
       <button type="button" className="w-full p-4 text-left transition-colors hover:bg-muted/10" onClick={onToggle}>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px] lg:items-start">
-          <div className="min-w-0">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px] lg:grid-rows-[auto_auto]">
+          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
             <div className="flex flex-wrap items-center gap-2">
               {expanded ? (
                 <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -208,13 +208,13 @@ function GroupCard({
               ) : null}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{row.subtitle}</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-3">
-              <MetricBlock label="持仓" value={formatBalance(row.balance)} />
-              <MetricBlock label="均价" value={formatCurrency(row.price)} />
-              <MetricBlock label="24h" value={formatPercent(row.change24h)} toneClassName={getChangeColor(row.change24h)} />
-            </div>
           </div>
-          <div className="rounded-lg border border-border/80 bg-background/70 px-4 py-3 text-left lg:self-start lg:text-right">
+          <div className="grid gap-2 sm:grid-cols-3 lg:col-start-1 lg:row-start-2">
+            <MetricBlock label="持仓" value={formatBalance(row.balance)} />
+            <MetricBlock label="均价" value={formatCurrency(row.price)} />
+            <MetricBlock label="24h" value={formatPercent(row.change24h)} toneClassName={getChangeColor(row.change24h)} />
+          </div>
+          <div className="rounded-lg border border-border/80 bg-background/70 px-4 py-3 text-left lg:col-start-2 lg:row-start-2 lg:flex lg:h-full lg:flex-col lg:justify-center lg:text-right">
             <p className="text-[11px] text-muted-foreground">总市值</p>
             <p className="mt-1 text-xl font-semibold tracking-tight">{formatCurrency(row.value)}</p>
             <p className="mt-1 text-xs text-muted-foreground">占组合 {share.toFixed(1)}%</p>
