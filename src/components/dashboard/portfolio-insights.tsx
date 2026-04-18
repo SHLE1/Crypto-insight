@@ -1,7 +1,7 @@
 'use client'
 
 import type { ComponentType } from 'react'
-import { ArrowUpRight, Radar, Scale, TriangleAlert } from 'lucide-react'
+import { ArrowUpRight, Pulse, ShieldWarning, SquaresFour } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercent } from '@/lib/validators'
@@ -18,7 +18,7 @@ function InsightBlock({
   detail,
   tone = 'default',
 }: {
-  icon: ComponentType<{ className?: string }>
+  icon: ComponentType<{ size?: number; weight?: 'regular' | 'duotone' | 'fill'; className?: string }>
   title: string
   value: string
   detail: string
@@ -26,21 +26,21 @@ function InsightBlock({
 }) {
   const toneClassName =
     tone === 'positive'
-      ? 'text-emerald-600'
+      ? 'text-emerald-700 dark:text-emerald-400'
       : tone === 'negative'
-        ? 'text-red-500'
+        ? 'text-red-600 dark:text-red-400'
         : tone === 'warning'
-          ? 'text-amber-500'
+          ? 'text-amber-600 dark:text-amber-400'
           : 'text-foreground'
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" />
+    <div className="rounded-[1.25rem] border border-border/75 bg-background/78 p-4">
+      <div className="flex items-center gap-2 text-xs tracking-[0.08em] text-muted-foreground">
+        <Icon size={14} weight="regular" />
         <span>{title}</span>
       </div>
-      <p className={`mt-3 text-lg font-semibold tracking-tight ${toneClassName}`}>{value}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+      <p className={`mt-3 text-lg font-semibold tracking-[-0.03em] ${toneClassName}`}>{value}</p>
+      <p className="mt-1 text-xs leading-6 text-muted-foreground">{detail}</p>
     </div>
   )
 }
@@ -62,23 +62,24 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="flex flex-col gap-3 border-b border-border/50 md:flex-row md:items-center md:justify-between">
+      <CardHeader className="flex flex-col gap-3 border-b border-border/75 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <CardTitle className="text-sm font-medium">分析摘要</CardTitle>
-          <p className="text-xs text-muted-foreground">把集中度、价格覆盖和强弱分化放到一屏里看清楚。</p>
+          <p className="muted-kicker">组合摘要</p>
+          <CardTitle className="text-base">分析摘要</CardTitle>
+          <p className="text-xs leading-6 text-muted-foreground">把集中度、价格覆盖和强弱分化放到一屏里看清楚。</p>
         </div>
         <Badge variant="secondary">{analytics.activeSourceCount} 个启用来源</Badge>
       </CardHeader>
-      <CardContent className="grid gap-3 pt-2 md:grid-cols-2 xl:grid-cols-4">
+      <CardContent className="grid gap-3 pt-4 md:grid-cols-2 xl:grid-cols-4">
         <InsightBlock
-          icon={Scale}
+          icon={SquaresFour}
           title="仓位集中度"
           value={`前 3 大占 ${analytics.topThreeShare.toFixed(1)}%`}
           detail={`最大仓位：${topHoldingLabel}`}
           tone={analytics.topThreeShare >= 65 ? 'warning' : 'default'}
         />
         <InsightBlock
-          icon={TriangleAlert}
+          icon={ShieldWarning}
           title="价格覆盖"
           value={`${analytics.pricedAssetCount} / ${analytics.assetCount} 项可估值`}
           detail={`覆盖率 ${coveragePercent.toFixed(1)}% · 缺价 ${analytics.missingPriceCount} 项 · 旧价 ${analytics.stalePriceCount} 项`}
@@ -100,7 +101,7 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
           tone={bestTone}
         />
         <InsightBlock
-          icon={Radar}
+          icon={Pulse}
           title="波动区间"
           value={
             rangePercent !== null
@@ -114,11 +115,11 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
           }
           tone={worstTone}
         />
-        <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 md:col-span-2 xl:col-span-4">
+        <div className="rounded-[1.25rem] border border-border/75 bg-muted/18 p-4 md:col-span-2 xl:col-span-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs text-muted-foreground">资金来源结构</p>
-              <p className="mt-1 text-sm font-medium">
+              <p className="text-xs tracking-[0.08em] text-muted-foreground">资金来源结构</p>
+              <p className="mt-1 text-sm font-medium text-foreground">
                 链上 {analytics.walletShare.toFixed(1)}% · 交易所 {analytics.cexShare.toFixed(1)}%
               </p>
             </div>
@@ -127,9 +128,9 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
               <span>平均单项 {formatCurrency(analytics.averagePositionValue)}</span>
             </div>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/70">
             <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,hsl(211,100%,63%)_0%,hsl(211,100%,63%)_var(--wallet-share),hsl(154,55%,49%)_var(--wallet-share),hsl(154,55%,49%)_100%)]"
+              className="h-full rounded-full bg-[linear-gradient(90deg,var(--chart-1)_0%,var(--chart-1)_var(--wallet-share),var(--chart-2)_var(--wallet-share),var(--chart-2)_100%)]"
               style={{ ['--wallet-share' as string]: `${analytics.walletShare}%` }}
             />
           </div>

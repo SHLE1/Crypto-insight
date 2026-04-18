@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { RefreshCw } from 'lucide-react'
+import { ArrowClockwise } from '@phosphor-icons/react'
 import { HoldingsOverview } from '@/components/dashboard/holdings-overview'
 import { EmptyState } from '@/components/layout/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
@@ -30,12 +30,12 @@ export default function HoldingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="Holdings"
-        title="资产明细"
-        description="按代币、钱包和链三个维度查看完整持仓结构。"
+        badge="资产明细"
+        title="按代币、来源与链路拆开看清每一层持仓。"
+        description="在同一页里完成搜索、异常筛选与多视角切换，快速判断哪里缺价格、哪里仓位过重。"
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || isEmpty} className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            <ArrowClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
             刷新明细
           </Button>
         }
@@ -62,13 +62,13 @@ export default function HoldingsPage() {
         <>
           {!isFetching && !hasValuedAssets && hasSources ? (
             <Card className="border-dashed">
-              <CardContent className="py-6 text-sm text-muted-foreground">
+              <CardContent className="py-6 text-sm leading-7 text-muted-foreground">
                 当前没有拿到可计价的资产数据。常见原因包括地址下没有原生币、交易所 API 权限不足，或第三方报价暂时不可用。
               </CardContent>
             </Card>
           ) : null}
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="panel-grid">
             <HoldingSummaryCard
               label="总估值"
               value={formatCurrency(totalValue)}
@@ -94,8 +94,8 @@ export default function HoldingsPage() {
           <HoldingsOverview data={holdingsData} analytics={analytics} totalValue={totalValue} />
 
           {isDefiEnabled && defiTotalValue > 0 ? (
-            <Card className="border-border/80 bg-muted/10">
-              <CardContent className="py-4 text-sm text-muted-foreground">
+            <Card className="border-border/75 bg-muted/12">
+              <CardContent className="py-4 text-sm leading-7 text-muted-foreground">
                 当前总资产已直接包含 <span className="font-medium text-foreground">{formatCurrency(defiTotalValue)}</span> 的 DeFi 净值；下方资产明细表仍主要展示钱包代币与交易所资产，未把 DeFi 仓位展开到代币列表中。
               </CardContent>
             </Card>
@@ -120,8 +120,8 @@ function HoldingSummaryCard({
   return (
     <div className="metric-tile">
       <p className="muted-kicker">{label}</p>
-      <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-foreground">{value}</p>
-      <p className="mt-1.5 text-xs text-muted-foreground">{detail}</p>
+      <p className="mt-2 text-xl font-semibold tracking-[-0.04em] text-foreground">{value}</p>
+      <p className="mt-1.5 text-xs leading-6 text-muted-foreground">{detail}</p>
     </div>
   )
 }
@@ -129,13 +129,13 @@ function HoldingSummaryCard({
 function HoldingsLoadingState() {
   return (
     <div className="space-y-4">
-      <div className="h-20 animate-pulse rounded-xl bg-muted/40" />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="h-24 animate-pulse rounded-[1.5rem] bg-muted/40" />
+      <div className="panel-grid">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-24 animate-pulse rounded-xl bg-muted/50" />
+          <div key={index} className="h-28 animate-pulse rounded-[1.5rem] bg-muted/50" />
         ))}
       </div>
-      <div className="h-[620px] animate-pulse rounded-xl bg-muted/50" />
+      <div className="h-[620px] animate-pulse rounded-[1.5rem] bg-muted/50" />
     </div>
   )
 }

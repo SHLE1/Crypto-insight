@@ -17,30 +17,26 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div
+    <header
       className={cn(
-        'flex flex-col gap-4 border-b border-border/80 pb-5 md:flex-row md:items-end md:justify-between',
+        'flex flex-col gap-5 border-b border-border/75 pb-6 md:flex-row md:items-end md:justify-between',
         className
       )}
     >
-      <div className="min-w-0 space-y-2">
-        {badge ? (
-          <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            {badge}
-          </span>
-        ) : null}
-        <div className="space-y-1">
-          <h1 className="text-[1.625rem] font-semibold tracking-[-0.04em] text-foreground md:text-[1.85rem]">
+      <div className="min-w-0 space-y-3">
+        {badge ? <span className="section-eyebrow">{badge}</span> : null}
+        <div className="space-y-2">
+          <h1 className="max-w-3xl text-[1.875rem] font-semibold tracking-[-0.05em] text-foreground md:text-[2.2rem]">
             {title}
           </h1>
           {description ? (
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            <p className="max-w-[65ch] text-[0.96rem] leading-7 text-muted-foreground">
               {description}
             </p>
           ) : null}
         </div>
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-    </div>
+    </header>
   )
 }

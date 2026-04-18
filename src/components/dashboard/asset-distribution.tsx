@@ -29,7 +29,10 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">资产分布</CardTitle>
+          <div className="space-y-2">
+            <p className="muted-kicker">结构</p>
+            <CardTitle className="text-base">资产分布</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">暂无数据</p>
@@ -40,18 +43,21 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
 
   return (
     <Card>
-      <CardHeader className="border-b border-border/80">
-        <CardTitle className="text-sm font-medium">资产分布</CardTitle>
+      <CardHeader className="border-b border-border/75">
+        <div className="space-y-2">
+          <p className="muted-kicker">结构</p>
+          <CardTitle className="text-base">资产分布</CardTitle>
+        </div>
       </CardHeader>
-      <CardContent className="grid gap-4 pt-4 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-center">
-        <ResponsiveContainer width="100%" height={220}>
+      <CardContent className="grid gap-5 pt-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
+        <ResponsiveContainer width="100%" height={240}>
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={58}
-              outerRadius={86}
+              innerRadius={60}
+              outerRadius={90}
               paddingAngle={2}
               dataKey="value"
             >
@@ -62,10 +68,10 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
             <Tooltip
               formatter={(value) => formatCurrency(Number(value))}
               contentStyle={{
-                borderRadius: '12px',
+                borderRadius: '16px',
                 border: '1px solid var(--border)',
-                background: 'var(--popover)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                background: 'color-mix(in oklch, var(--popover) 96%, white 4%)',
+                boxShadow: '0 16px 40px -28px color-mix(in oklch, var(--foreground) 24%, transparent)',
               }}
             />
           </PieChart>
@@ -75,7 +81,7 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
             const share = totalValue > 0 ? (item.value / totalValue) * 100 : 0
 
             return (
-              <div key={item.name} className="rounded-xl border border-border/80 bg-background/70 p-3">
+              <div key={item.name} className="rounded-[1.15rem] border border-border/75 bg-background/75 p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -85,9 +91,9 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
                       />
                       <span className="truncate text-sm font-medium">{item.name}</span>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">占总资产 {share.toFixed(1)}%</p>
+                    <p className="mt-1 text-xs leading-6 text-muted-foreground">占总资产 {share.toFixed(1)}%</p>
                   </div>
-                  <p className="shrink-0 text-sm font-medium">{formatCurrency(item.value)}</p>
+                  <p className="shrink-0 text-sm font-medium tabular-nums">{formatCurrency(item.value)}</p>
                 </div>
               </div>
             )

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Coins, RefreshCw, Settings2, Wallet } from 'lucide-react'
+import { ArrowsClockwise, Coins, SlidersHorizontal, Wallet } from '@phosphor-icons/react'
 import { DefiSummary } from '@/components/dashboard/defi-summary'
 import { EmptyState } from '@/components/layout/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
@@ -37,11 +37,11 @@ export default function DefiPage() {
     <div className="space-y-6">
       <PageHeader
         badge="DeFi"
-        title="DeFi 仓位"
-        description="单独查看 EVM 与 Solana 钱包中的协议仓位、借贷、LP、质押与奖励。"
+        title="单独观察协议仓位、借贷与奖励变化。"
+        description="聚焦 EVM 与 Solana 钱包里的协议层持仓，判断 DeFi 净值、补齐进度与异常链路。"
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || (!hasDefiSources && isEnabled)} className="gap-2">
-            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <ArrowsClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
             全量刷新 DeFi
           </Button>
         }
@@ -54,7 +54,7 @@ export default function DefiPage() {
           action={
             <Link href="/settings">
               <Button className="gap-2">
-                <Settings2 className="h-4 w-4" />
+                <SlidersHorizontal size={16} weight="regular" />
                 去设置开启
               </Button>
             </Link>
@@ -67,7 +67,7 @@ export default function DefiPage() {
           action={
             <Link href="/wallets/add">
               <Button className="gap-2">
-                <Wallet className="h-4 w-4" />
+                <Wallet size={16} weight="regular" />
                 添加钱包
               </Button>
             </Link>
@@ -99,12 +99,12 @@ export default function DefiPage() {
             refetch={() => refetch()}
           />
 
-          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+          <div className="rounded-[1.35rem] border border-border/75 bg-muted/16 p-5 text-sm text-muted-foreground">
             <div className="flex items-center gap-2 text-foreground">
-              <Coins className="h-4 w-4" />
-              <span className="font-medium">当前接入说明</span>
+              <Coins size={16} weight="regular" />
+              <span className="font-medium tracking-[-0.02em]">当前接入说明</span>
             </div>
-            <ul className="mt-3 space-y-2 leading-6">
+            <ul className="mt-3 space-y-2 leading-7">
               <li>DeFi 统计当前作为独立页面展示，但当前版本也会直接计入总资产与总览分布。</li>
               <li>默认优先使用 Mobula；当 Mobula 对某条链未识别出仓位时，会尝试用 DeBank 公共页面做兜底补全。</li>
               <li>当数据源出现速率限制或短时异常时，系统会逐个钱包轮转刷新，而不是一直重复刷同一个钱包。</li>

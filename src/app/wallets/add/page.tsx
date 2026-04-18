@@ -80,16 +80,16 @@ export default function AddWalletPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="New wallet"
-        title="添加钱包"
-        description="添加后会立即参与总览和资产明细统计。"
+        badge="新增钱包"
+        title="接入一个新的链上来源。"
+        description="地址只会保存在当前浏览器。添加后会立即进入总览、趋势与明细计算。"
       />
 
-      <Card className="max-w-3xl">
-        <CardHeader className="border-b border-border/80">
+      <Card className="max-w-4xl">
+        <CardHeader className="border-b border-border/75">
           <CardTitle className="text-base">钱包信息</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <CardContent className="grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_280px]">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label>链类型</Label>
@@ -127,7 +127,7 @@ export default function AddWalletPage() {
                     </Button>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs leading-6 text-muted-foreground">
                   选择要查询的链，同一地址在不同链上可能持有不同代币。
                 </p>
               </div>
@@ -141,8 +141,8 @@ export default function AddWalletPage() {
                   chainType === 'evm'
                     ? '0x...'
                     : chainType === 'btc'
-                    ? '1... / 3... / bc1...'
-                    : 'Solana 地址'
+                      ? '1... / 3... / bc1...'
+                      : 'Solana 地址'
                 }
                 value={address}
                 onChange={(e) => {
@@ -151,7 +151,7 @@ export default function AddWalletPage() {
                 }}
                 className="font-mono"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs leading-6 text-muted-foreground">
                 {chainType === 'evm'
                   ? 'EVM 地址在多条链上通用，会查询每条链上的原生代币和热门 ERC-20 代币。'
                   : chainType === 'solana'
@@ -180,12 +180,12 @@ export default function AddWalletPage() {
             </div>
           </form>
 
-          <div className="subtle-panel p-4">
-            <p className="muted-kicker">说明</p>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-              <li>· 数据仅保存在当前浏览器</li>
-              <li>· EVM 地址建议只勾选实际用到的链</li>
-              <li>· 添加后会自动进入净值统计</li>
+          <div className="subtle-panel p-5">
+            <p className="muted-kicker">使用说明</p>
+            <ul className="mt-3 space-y-2 text-sm leading-7 text-muted-foreground">
+              <li>数据仅保存在当前浏览器。</li>
+              <li>EVM 地址建议只勾选实际用到的链，减少无效查询。</li>
+              <li>添加完成后，会自动进入净值统计与结构分析。</li>
             </ul>
           </div>
         </CardContent>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Check, PencilSimple, Plus, Trash, X } from '@phosphor-icons/react'
 import { EmptyState } from '@/components/layout/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
@@ -64,13 +64,13 @@ export default function WalletsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="Wallets"
-        title="钱包"
-        description="管理链上地址来源以及启用状态。"
+        badge="钱包"
+        title="管理链上地址、命名与启用状态。"
+        description="这里的每个来源都会直接影响总览、明细与净值趋势。禁用来源时，会同步清理对应本地快照。"
         actions={
           <Link href="/wallets/add">
             <Button className="gap-2">
-              <Plus className="h-4 w-4" />
+              <Plus size={16} weight="regular" />
               添加钱包
             </Button>
           </Link>
@@ -96,12 +96,12 @@ export default function WalletsPage() {
             return (
               <Card key={w.id}>
                 <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <div className="flex min-w-0 flex-1 items-start gap-3.5">
                     <Switch checked={w.enabled} onCheckedChange={() => handleToggle(w.id, w.enabled)} />
                     <div className="min-w-0 flex-1">
                       {isEditing ? (
                         <form
-                          className="space-y-2"
+                          className="space-y-2.5"
                           onSubmit={(e) => {
                             e.preventDefault()
                             handleRename(w.id, w.name ?? '')
@@ -112,7 +112,7 @@ export default function WalletsPage() {
                               autoFocus
                               value={draftName}
                               placeholder="例如：主钱包"
-                              className="h-8 max-w-sm"
+                              className="h-9 max-w-sm"
                               onChange={(e) => setDraftName(e.target.value)}
                               onKeyDown={(e) => {
                                 if (e.key === 'Escape') {
@@ -122,11 +122,11 @@ export default function WalletsPage() {
                               }}
                             />
                             <Button type="submit" size="sm" className="gap-1.5">
-                              <Check className="h-3.5 w-3.5" />
+                              <Check size={14} weight="bold" />
                               保存
                             </Button>
                             <Button type="button" size="sm" variant="ghost" className="gap-1.5" onClick={cancelRenaming}>
-                              <X className="h-3.5 w-3.5" />
+                              <X size={14} weight="bold" />
                               取消
                             </Button>
                           </div>
@@ -149,7 +149,7 @@ export default function WalletsPage() {
                             {getChainLabel(w.chainType)}
                           </Badge>
                           {w.chainType === 'evm' && w.evmChains && w.evmChains.length > 0 ? (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs leading-6 text-muted-foreground">
                               {w.evmChains.map((k) => EVM_CHAINS[k]?.name ?? k).join(', ')}
                             </span>
                           ) : null}
@@ -160,10 +160,10 @@ export default function WalletsPage() {
                   </div>
                   <div className="flex items-center gap-2 sm:gap-4">
                     <div className="min-w-0 flex-1 text-left sm:text-right">
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-sm font-medium text-foreground tabular-nums">
                         {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs leading-6 text-muted-foreground">
                         {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '等待刷新'}
                       </p>
                     </div>
@@ -174,7 +174,7 @@ export default function WalletsPage() {
                         onClick={() => startRenaming(w.id, w.name ?? '')}
                         aria-label={`编辑 ${w.name || shortAddress(w.address)} 的名称`}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <PencilSimple size={16} weight="regular" />
                       </Button>
                     ) : null}
                     <Button
@@ -183,7 +183,7 @@ export default function WalletsPage() {
                       onClick={() => handleRemove(w.id, w.name || shortAddress(w.address))}
                       aria-label={`删除 ${w.name || shortAddress(w.address)}`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash size={16} weight="regular" />
                     </Button>
                   </div>
                 </CardContent>

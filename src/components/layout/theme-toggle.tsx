@@ -1,6 +1,6 @@
 'use client'
 
-import { Moon, Sun } from 'lucide-react'
+import { Moon, SunDim } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -18,7 +18,7 @@ export function ThemeToggle() {
       aria-label={isDark ? '切换到浅色模式' : '切换到深色模式'}
       onClick={() => updateSettings({ theme: isDark ? 'light' : 'dark' })}
     >
-      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {isDark ? <SunDim size={16} weight="regular" /> : <Moon size={16} weight="regular" />}
     </Button>
   )
 }

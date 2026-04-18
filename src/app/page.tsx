@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Building2, RefreshCw, Wallet } from 'lucide-react'
+import { ArrowClockwise, Buildings, Wallet } from '@phosphor-icons/react'
 import { AlertsPanel } from '@/components/dashboard/alerts'
 import { AssetDistribution } from '@/components/dashboard/asset-distribution'
 import { CexSummary } from '@/components/dashboard/cex-summary'
@@ -44,9 +44,9 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="Overview"
-        title="总览"
-        description="查看净值、趋势、来源和价格覆盖情况。"
+        badge="总览"
+        title="把链上、交易所与 DeFi 仓位放进一块更清晰的面板里。"
+        description="查看净值、趋势、来源结构与价格覆盖情况，快速判断当前资产组合是否完整、是否需要补齐数据。"
         actions={
           <Button
             variant="outline"
@@ -55,7 +55,7 @@ export default function DashboardPage() {
             disabled={isFetching || isEmpty}
             className="gap-2"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <ArrowClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
             刷新
           </Button>
         }
@@ -71,13 +71,13 @@ export default function DashboardPage() {
             <>
               <Link href="/wallets/add">
                 <Button className="gap-2">
-                  <Wallet className="h-4 w-4" />
+                  <Wallet size={16} weight="regular" />
                   添加钱包
                 </Button>
               </Link>
               <Link href="/cex">
                 <Button variant="outline" className="gap-2">
-                  <Building2 className="h-4 w-4" />
+                  <Buildings size={16} weight="regular" />
                   绑定交易所
                 </Button>
               </Link>
@@ -96,7 +96,7 @@ export default function DashboardPage() {
           <NetWorthTrend data={history} />
           {!isFetching && !hasValuedAssets && hasSources ? (
             <Card className="col-span-full border-dashed">
-              <CardContent className="py-6 text-sm text-muted-foreground">
+              <CardContent className="py-6 text-sm leading-7 text-muted-foreground">
                 当前没有拿到可计价的资产数据。常见原因包括地址下没有原生币、交易所 API 权限不足、DeFi 仍在补齐，或第三方报价暂时不可用。
               </CardContent>
             </Card>
@@ -116,11 +116,11 @@ export default function DashboardPage() {
 function DashboardLoadingState() {
   return (
     <div className="page-grid">
-      <div className="col-span-full h-28 animate-pulse rounded-xl bg-muted/40" />
-      <div className="col-span-full h-52 animate-pulse rounded-xl bg-muted/30" />
-      <div className="col-span-full h-96 animate-pulse rounded-xl bg-muted/30" />
-      <div className="h-64 animate-pulse rounded-xl bg-muted/30" />
-      <div className="h-64 animate-pulse rounded-xl bg-muted/30" />
+      <div className="col-span-full h-32 animate-pulse rounded-[1.5rem] bg-muted/40" />
+      <div className="col-span-full h-56 animate-pulse rounded-[1.5rem] bg-muted/30" />
+      <div className="col-span-full h-[24rem] animate-pulse rounded-[1.5rem] bg-muted/30" />
+      <div className="h-64 animate-pulse rounded-[1.5rem] bg-muted/30" />
+      <div className="h-64 animate-pulse rounded-[1.5rem] bg-muted/30" />
     </div>
   )
 }

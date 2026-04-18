@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { KeyRound, Plus, Trash2, X } from 'lucide-react'
+import { Key, Plus, Trash, X } from '@phosphor-icons/react'
 import { EmptyState } from '@/components/layout/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
@@ -119,13 +119,13 @@ export default function CexPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="Exchanges"
-        title="交易所"
-        description="绑定只读 API 账户并统一纳入资产分析。"
+        badge="交易所"
+        title="把只读账户纳入同一张资产总表。"
+        description="绑定只读 API 后，交易所余额会自动进入总览与资产明细。密钥只保存在当前浏览器，导出文件不会包含它们。"
         actions={
           !showForm ? (
             <Button onClick={() => setShowForm(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
+              <Plus size={16} weight="regular" />
               绑定账户
             </Button>
           ) : null
@@ -133,14 +133,14 @@ export default function CexPage() {
       />
 
       {showForm ? (
-        <Card className="max-w-3xl">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-border/80">
+        <Card className="max-w-4xl">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/75">
             <CardTitle className="text-base">{editingAccountId ? '补填或更新密钥' : '绑定交易所账户'}</CardTitle>
             <Button variant="ghost" size="icon-sm" onClick={resetForm}>
-              <X className="h-4 w-4" />
+              <X size={16} weight="regular" />
             </Button>
           </CardHeader>
-          <CardContent className="grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_240px]">
+          <CardContent className="grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_280px]">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label>交易所</Label>
@@ -182,7 +182,7 @@ export default function CexPage() {
                 </div>
               ) : null}
 
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs leading-6 text-muted-foreground">
                 仅保存于当前浏览器，导出文件不会包含密钥。请确保使用只读权限的 Key。
               </p>
 
@@ -194,12 +194,12 @@ export default function CexPage() {
               </div>
             </form>
 
-            <div className="subtle-panel p-4">
+            <div className="subtle-panel p-5">
               <p className="muted-kicker">安全说明</p>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-                <li>· 仅使用只读权限</li>
-                <li>· 导出文件不含任何密钥</li>
-                <li>· 删除账户会清理本地快照</li>
+              <ul className="mt-3 space-y-2 text-sm leading-7 text-muted-foreground">
+                <li>仅使用只读权限。</li>
+                <li>导出文件不包含任何密钥。</li>
+                <li>删除账户时会同步清理本地快照。</li>
               </ul>
             </div>
           </CardContent>
@@ -221,7 +221,7 @@ export default function CexPage() {
             return (
               <Card key={a.id}>
                 <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <div className="flex min-w-0 flex-1 items-start gap-3.5">
                     <Switch checked={a.enabled} onCheckedChange={() => handleToggle(a.id, a.enabled)} />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -240,7 +240,7 @@ export default function CexPage() {
                           </Badge>
                         ) : null}
                       </div>
-                      <p className="mt-1 font-mono text-xs text-muted-foreground">
+                      <p className="mt-1 font-mono text-xs leading-6 text-muted-foreground">
                         {a.apiKey.trim()
                           ? `Key: ${a.apiKey.slice(0, 6)}...${a.apiKey.slice(-4)}`
                           : '当前浏览器未保存密钥，需要重新填写后才能刷新。'}
@@ -249,18 +249,18 @@ export default function CexPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-sm font-medium text-foreground tabular-nums">
                         {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs leading-6 text-muted-foreground">
                         {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '等待刷新'}
                       </p>
                     </div>
                     <Button variant="ghost" size="icon-sm" onClick={() => startEditing(a.id)}>
-                      <KeyRound className="h-4 w-4" />
+                      <Key size={16} weight="regular" />
                     </Button>
                     <Button variant="ghost" size="icon-sm" onClick={() => handleRemove(a.id, a.label)}>
-                      <Trash2 className="h-4 w-4" />
+                      <Trash size={16} weight="regular" />
                     </Button>
                   </div>
                 </CardContent>
