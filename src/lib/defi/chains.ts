@@ -1,12 +1,31 @@
 import { DEFAULT_EVM_CHAINS } from '@/lib/evm-chains'
 
-const MOBULA_CHAIN_MAP: Record<string, string> = {
+const DEFI_EVM_CHAIN_MAP: Record<string, string> = {
   eth: 'ethereum',
   bsc: 'bsc',
   arb: 'arbitrum',
   polygon: 'polygon',
   base: 'base',
   avax: 'avalanche',
+}
+
+const ZAPPER_CHAIN_ID_MAP: Record<string, number> = {
+  ethereum: 1,
+  bsc: 56,
+  arbitrum: 42161,
+  polygon: 137,
+  base: 8453,
+  avalanche: 43114,
+  solana: 1151111081,
+}
+
+const MORALIS_CHAIN_MAP: Record<string, string> = {
+  ethereum: 'eth',
+  bsc: 'bsc',
+  arbitrum: 'arbitrum',
+  polygon: 'polygon',
+  base: 'base',
+  avalanche: 'avalanche',
 }
 
 const DEFI_CHAIN_LABELS: Record<string, string> = {
@@ -32,7 +51,7 @@ const DEBANK_CHAIN_MAP: Record<string, string> = {
   avalanche: 'avax',
 }
 
-export function getMobulaChains(chainType: 'evm' | 'solana' | 'btc', evmChains?: string[]) {
+export function getDefiChains(chainType: 'evm' | 'solana' | 'btc', evmChains?: string[]) {
   if (chainType === 'solana') {
     return ['solana']
   }
@@ -42,15 +61,32 @@ export function getMobulaChains(chainType: 'evm' | 'solana' | 'btc', evmChains?:
   }
 
   const selectedChains = evmChains?.length ? evmChains : DEFAULT_EVM_CHAINS
-  const supported = Array.from(
+  return Array.from(
     new Set(
       selectedChains
-        .map((chainKey) => MOBULA_CHAIN_MAP[chainKey])
+        .map((chainKey) => DEFI_EVM_CHAIN_MAP[chainKey])
         .filter((chainId): chainId is string => Boolean(chainId))
     )
   )
+}
 
-  return supported
+export function getZapperChainIds(chainKeys: string[]) {
+  return Array.from(
+    new Set(
+      chainKeys
+        .map((chainKey) => ZAPPER_CHAIN_ID_MAP[chainKey])
+        .filter((chainId): chainId is number => Number.isFinite(chainId))
+    )
+  )
+}
+
+export function getDefiChainKeyFromZapperChainId(chainId: number) {
+  const entry = Object.entries(ZAPPER_CHAIN_ID_MAP).find(([, mappedChainId]) => mappedChainId === chainId)
+  return entry?.[0] ?? null
+}
+
+export function getMoralisChainId(chainKey: string) {
+  return MORALIS_CHAIN_MAP[chainKey] ?? null
 }
 
 export function formatDefiChainLabel(chainKey: string) {

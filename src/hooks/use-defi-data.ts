@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { formatDefiChainLabel, getMobulaChains } from '@/lib/defi/chains'
+import { formatDefiChainLabel, getDefiChains } from '@/lib/defi/chains'
 import { useWalletStore } from '@/stores/wallets'
 import { useSettingsStore } from '@/stores/settings'
 import { useDefiStore } from '@/stores/defi'
@@ -98,7 +98,7 @@ export function useDefiData() {
   const expectedSnapshotKeys = useMemo(
     () =>
       enabledWallets.flatMap((wallet) =>
-        getMobulaChains(wallet.chainType, wallet.evmChains).map((chainKey) => `${wallet.id}:${chainKey}`)
+        getDefiChains(wallet.chainType, wallet.evmChains).map((chainKey) => `${wallet.id}:${chainKey}`)
       ),
     [enabledWallets]
   )

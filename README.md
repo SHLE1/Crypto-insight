@@ -21,8 +21,8 @@ pnpm dev
 ```bash
 COINGECKO_DEMO_API_KEY=your_demo_key
 SOLANA_RPC_URL=https://your-solana-rpc.example
-MOBULA_API_KEY=your_mobula_key
-MOBULA_USE_DEMO_API=true # 仅本地调试时显式开启
+ZAPPER_API_KEY=your_zapper_key
+MORALIS_API_KEY=your_moralis_key # 可选，作为 EVM DeFi 回退源
 ```
 
 常用命令：
@@ -49,7 +49,7 @@ pnpm build
 ## 数据来源说明
 
 - 主流行情优先使用 `Binance`，不足时再回退到 `CoinGecko`
-- `DeFi` 当前优先使用 `Mobula`，当主数据源未识别到仓位时，会尝试回退到 `DeBank` 公共页面做兜底
+- `DeFi` 当前优先使用 `Zapper`，当主数据源未识别到仓位或查询失败时，EVM 链路会继续回退到 `Moralis`，必要时再尝试 `DeBank` 公共页面做兜底
 - 页面内已加入 `CoinGecko` 署名，符合其 Attribution Guide 要求
 
 ## 备注

@@ -317,7 +317,7 @@ export function DefiSummary({
               <p>最近刷新：{lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '暂无'}。</p>
               <p>为兼顾免费额度与成功率，DeFi 会按钱包逐个轮转刷新；遇到限速或 5xx 时，会继续刷下一个来源并在后续逐步补齐。</p>
               <p>点击“全量刷新”时，会立即按当前钱包列表跑完一整轮，而不只是刷新当前轮转到的单个钱包。</p>
-              <p>当前优先使用 Mobula；若主数据源未识别到仓位，部分链路会回退到 DeBank 公共页面兜底。</p>
+              <p>当前优先使用 Zapper；若主数据源未识别到仓位或查询失败，EVM 链路会继续回退到 Moralis，必要时再用 DeBank 公共页面兜底。</p>
             </div>
           </div>
         </div>

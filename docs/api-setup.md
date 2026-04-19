@@ -120,8 +120,9 @@
 
 ### 当前实现
 
-- 默认优先使用 `Mobula`
-- 当 `Mobula` 对某条链未识别到仓位时，会尝试使用 `DeBank` 公共页面做兜底补全
+- 默认优先使用 `Zapper`
+- 当 `Zapper` 对某条链未识别到仓位或查询失败时，`EVM` 链路会继续尝试 `Moralis`
+- 当 `Zapper` 与 `Moralis` 都未返回可用结果时，会尝试使用 `DeBank` 公共页面做兜底补全
 - 仅查询 `EVM` 与 `Solana` 钱包
 - `Bitcoin` 暂不支持 `DeFi` 仓位查询
 - `DeFi` 模块默认低频刷新，避免过快消耗免费额度
@@ -132,21 +133,17 @@
 在项目运行环境中配置：
 
 ```bash
-MOBULA_API_KEY=your_mobula_key
+ZAPPER_API_KEY=your_zapper_key
+MORALIS_API_KEY=your_moralis_key # 可选，作为 EVM DeFi 回退源
 ```
 
 ### 注意
 
-- 这个 key 只在服务端 Route Handler 中使用，不会暴露到浏览器
+- 这些 key 都只在服务端 Route Handler 中使用，不会暴露到浏览器
 - 导出 JSON 不会包含任何 DeFi 数据源密钥
-- 未配置 key 时，不会影响钱包和交易所主功能，只会让 DeFi 模块显示不可用
-- 当前实现默认**不会**在未配置 `MOBULA_API_KEY` 时自动调用 demo API，避免你误以为已经在请求正式接口但额度没有变化
-- 对于 `Mobula` 未覆盖的地址/协议，当前还会尝试抓取 `DeBank` 公共页面作为非官方兜底来源，因此展示结果可能是“近实时公共页面快照”而不是结构化链上仓位明细
-- 如果你确实想在本地临时试用 demo API，需要显式设置：
-
-```bash
-MOBULA_USE_DEMO_API=true
-```
+- 未配置 `ZAPPER_API_KEY` 时，不会影响钱包和交易所主功能，只会让 DeFi 模块显示不可用
+- `MORALIS_API_KEY` 只用于 `EVM` DeFi 回退；未配置它时，系统会直接跳过 Moralis 回退，必要时尝试 `DeBank` 公共页面
+- 对于 `Zapper` 与 `Moralis` 都未覆盖的地址/协议，当前还会尝试抓取 `DeBank` 公共页面作为非官方兜底来源，因此展示结果可能是“近实时公共页面快照”而不是结构化链上仓位明细
 
 ## 程序里的保存方式
 

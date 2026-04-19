@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getMobulaDefiSnapshots } from '@/lib/defi/mobula'
+import { getDefiSnapshots } from '@/lib/defi/providers'
 import type { ChainType, DefiQuoteResponse, DefiSnapshot } from '@/types'
 
 export const runtime = 'nodejs'
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
         results: [],
         status: 'success',
         updatedAt: new Date().toISOString(),
-        provider: 'mobula',
+        provider: 'zapper',
         cursor,
         nextCursor: null,
         hasMore: false,
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     const chunkResults: DefiSnapshot[][] = []
     for (const wallet of walletChunk) {
-      chunkResults.push(await getMobulaDefiSnapshots(wallet))
+      chunkResults.push(await getDefiSnapshots(wallet))
     }
     const results = chunkResults.flat()
 
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       results: results as DefiSnapshot[],
       status: hasGoodResult ? (results.some((result) => result.status !== 'success') ? 'partial' : 'success') : 'error',
       updatedAt: new Date().toISOString(),
-      provider: 'mobula',
+      provider: 'zapper',
       cursor: startIndex,
       nextCursor,
       hasMore: mode === 'full' ? false : startIndex + walletChunk.length < defiWallets.length,
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         results: [],
         status: 'error',
         updatedAt: new Date().toISOString(),
-        provider: 'mobula',
+        provider: 'zapper',
         message: error instanceof Error ? error.message : 'DeFi 报价请求失败',
         cursor: 0,
         nextCursor: null,
