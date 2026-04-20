@@ -148,26 +148,35 @@ function MetricBlock({
 
 function SourceRow({ row }: { row: DetailRow }) {
   const priceStatusLabel = getPriceStatusLabel(row.priceStatus)
+  const changeColor = getChangeColor(row.change24h)
 
   return (
-    <div className="grid gap-3 rounded-[1rem] border border-border/60 bg-muted/20 p-3.5 md:grid-cols-[minmax(0,1.8fr)_repeat(3,minmax(0,1fr))] md:items-center">
+    <div className="grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] items-center gap-x-4 border-b border-border/40 py-3 last:border-0">
       <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <span className="truncate text-sm font-medium">{row.title}</span>
           {priceStatusLabel ? (
-            <Badge variant="outline" className="text-[10px]">
-              {priceStatusLabel}
-            </Badge>
+            <Badge variant="outline" className="text-[10px]">{priceStatusLabel}</Badge>
           ) : null}
           {row.meta ? (
-            <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{row.meta}</span>
+            <span className="rounded bg-muted/70 px-1.5 py-px text-[10px] text-muted-foreground">{row.meta}</span>
           ) : null}
         </div>
-        <p className="mt-1 truncate text-xs leading-6 text-muted-foreground">{row.subtitle}</p>
+        <p className="truncate text-[11px] text-muted-foreground">{row.subtitle}</p>
       </div>
-      <MetricBlock label="持仓" value={formatBalance(row.balance)} />
-      <MetricBlock label="单价" value={formatCurrency(row.price)} />
-      <MetricBlock label="市值 / 24h" value={`${formatCurrency(row.value)} · ${formatPercent(row.change24h)}`} toneClassName={getChangeColor(row.change24h)} />
+      <div>
+        <p className="text-[10px] text-muted-foreground">持仓</p>
+        <p className="tabular-nums text-xs font-medium">{formatBalance(row.balance)}</p>
+      </div>
+      <div>
+        <p className="text-[10px] text-muted-foreground">单价</p>
+        <p className="tabular-nums text-xs font-medium">{formatCurrency(row.price)}</p>
+      </div>
+      <div>
+        <p className="text-[10px] text-muted-foreground">市值</p>
+        <p className={`tabular-nums text-xs font-semibold ${changeColor}`}>{formatCurrency(row.value)}</p>
+        <p className={`text-[10px] ${changeColor}`}>{formatPercent(row.change24h)}</p>
+      </div>
     </div>
   )
 }
@@ -186,17 +195,15 @@ function GroupCard({
   const priceStatusLabel = getPriceStatusLabel(row.priceStatus)
   const share = totalValue > 0 ? (row.value / totalValue) * 100 : 0
 
+  const CaretIcon = expanded ? CaretDown : CaretRight
+
   return (
-    <div className="overflow-hidden rounded-md border border-border/60 bg-card">
-      <button type="button" className="w-full p-4 text-left hover:bg-muted/30" onClick={onToggle}>
+    <div className={`overflow-hidden rounded-lg border bg-card transition-colors ${expanded ? 'border-primary/40 shadow-sm' : 'border-border/60'}`}>
+      <button type="button" className={`w-full p-4 text-left transition-colors ${expanded ? 'bg-muted/20' : 'hover:bg-muted/30'}`} onClick={onToggle}>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_190px] lg:grid-rows-[auto_auto]">
           <div className="min-w-0 lg:col-start-1 lg:row-start-1">
             <div className="flex flex-wrap items-center gap-2">
-              {expanded ? (
-                <CaretDown size={14} weight="bold" className="shrink-0 text-muted-foreground" />
-              ) : (
-                <CaretRight size={14} weight="bold" className="shrink-0 text-muted-foreground" />
-              )}
+              <CaretIcon size={14} weight="bold" className="shrink-0 text-muted-foreground" />
               <p className="truncate text-base font-semibold tracking-[-0.03em]">{row.title}</p>
               <Badge variant="secondary" className="text-[10px]">
                 {row.badge}
@@ -214,21 +221,22 @@ function GroupCard({
             <MetricBlock label="均价" value={formatCurrency(row.price)} />
             <MetricBlock label="24h" value={formatPercent(row.change24h)} toneClassName={getChangeColor(row.change24h)} />
           </div>
-          <div className="rounded-[1rem] border border-border/60 bg-muted/20 px-4 py-3 text-left lg:col-start-2 lg:row-start-2 lg:flex lg:h-full lg:flex-col lg:justify-center lg:text-right">
-            <p className="text-[11px] tracking-[0.08em] text-muted-foreground">总市值</p>
-            <p className="mt-1 text-xl font-semibold tracking-[-0.04em] tabular-nums">{formatCurrency(row.value)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">占组合 {share.toFixed(1)}%</p>
+          <div className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 text-left lg:col-start-2 lg:row-start-2 lg:flex lg:h-full lg:flex-col lg:justify-center lg:text-right">
+            <p className="text-[10px] tracking-[0.1em] text-muted-foreground uppercase">总市值</p>
+            <p className="mt-1.5 text-2xl font-bold tracking-[-0.04em] tabular-nums text-foreground">{formatCurrency(row.value)}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">占组合 {share.toFixed(1)}%</p>
           </div>
         </div>
       </button>
 
       {expanded ? (
-        <div className="border-t border-border/60 bg-muted/30 px-4 py-4">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-medium tracking-[0.08em] text-foreground">明细</p>
-            <p className="text-[11px] text-muted-foreground">{row.details.length} 条</p>
+        <div className="border-t border-border/60 bg-muted/40 px-5 pb-4 pt-2">
+          <div className="mb-1 flex items-center gap-2.5 py-2.5">
+            <div className="h-4 w-0.5 shrink-0 rounded-full bg-primary/80" />
+            <p className="text-xs font-semibold text-foreground">{row.title}</p>
+            <p className="text-[11px] text-muted-foreground">· {row.details.length} 个来源</p>
           </div>
-          <div className="space-y-2.5">
+          <div>
             {row.details.map((detail) => (
               <SourceRow key={detail.key} row={detail} />
             ))}
@@ -489,9 +497,8 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
     <Card className="col-span-full">
       <CardHeader className="gap-4 border-b border-border/60">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <p className="muted-kicker">明细工作台</p>
-            <CardTitle className="text-base">资产明细</CardTitle>
+          <div className="space-y-1.5">
+            <CardTitle className="text-base font-semibold tracking-[-0.02em]">明细工作台</CardTitle>
             <p className="text-xs leading-6 text-muted-foreground">支持搜索、筛选，并在代币、钱包和链三个视角之间切换。</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
