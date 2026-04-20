@@ -30,7 +30,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
       <CardContent>
         {displayAccounts.length === 0 ? (
           <div className="py-7 text-center">
-            <p className="mb-2 text-sm text-muted-foreground">还没有交易所账户</p>
+            <p className="mb-2 text-sm text-muted-foreground">暂无交易所账户</p>
             <Link href="/cex" className="inline-flex items-center gap-1 text-sm text-primary hover:gap-1.5">
               添加交易所账户
               <CaretRight size={12} weight="bold" />

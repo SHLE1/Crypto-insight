@@ -122,7 +122,7 @@ function DashboardHero({
   const isPositive = change24hPercent >= 0
   const coveragePercent = assetCount > 0 ? (pricedAssetCount / assetCount) * 100 : 0
   const statusText = isUsingCachedData ? '显示缓存' : issueCount > 0 ? '需要留意' : '已同步'
-  const lastRefreshText = lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '还没有刷新记录'
+  const lastRefreshText = lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '尚未刷新'
 
   return (
     <section className={`${shellClassName} px-5 py-5 md:px-6 md:py-6`}>
@@ -132,7 +132,7 @@ function DashboardHero({
             <p className={sectionLabelClassName}>总览</p>
             <div className="space-y-1.5">
               <h1 className="max-w-[28ch] text-xl font-semibold tracking-[-0.04em] text-foreground">
-                总资产和变化，都在这一屏先看清。
+                资产总览
               </h1>
 
             </div>
@@ -168,16 +168,16 @@ function DashboardHero({
                 {formatPercent(change24hPercent)}
               </span>
               <p className="text-sm text-muted-foreground">
-                {isPositive ? '+' : '-'}{formatCurrency(Math.abs(change24hValue))} · 最近一段可见变化
+                {isPositive ? '+' : '-'}{formatCurrency(Math.abs(change24hValue))} · 近期变化
               </p>
             </div>
           </div>
 
           <div className="space-y-3 rounded-md border border-border/60 bg-muted/30 p-4">
             <div className="space-y-1.5">
-              <p className={sectionLabelClassName}>快速判断</p>
+              <p className={sectionLabelClassName}>数据概况</p>
               <p className="text-sm leading-7 text-muted-foreground">
-                先确认总额、变化和覆盖率；如果不对，再进入资产明细定位问题。
+                总值与近期涨跌一览，价格覆盖异常可前往明细页定位。
               </p>
             </div>
             <div className="space-y-1 text-xs leading-6 text-muted-foreground">
@@ -213,7 +213,7 @@ function DashboardHero({
           <SummaryItem
             label="最近刷新"
             value={lastRefreshText}
-            detail={isUsingCachedData ? '当前显示的是最近一次可用快照' : issueCount > 0 ? `${issueCount} 条提醒需要留意` : '当前主要来源已经完成同步'}
+            detail={isUsingCachedData ? '当前显示的是最近一次可用快照' : issueCount > 0 ? `${issueCount} 条提醒需要留意` : '本轮刷新已完成各来源同步'}
             tone={issueCount > 0 ? 'warning' : 'default'}
           />
         </dl>
@@ -243,7 +243,7 @@ function DashboardComposition({
         <div className="space-y-2">
           <p className={sectionLabelClassName}>结构</p>
           <h2 className="text-lg font-medium tracking-[-0.04em] text-foreground">资产占比</h2>
-          <p className="text-sm leading-7 text-muted-foreground">现在还没有可显示的资产结构。</p>
+          <p className="text-sm leading-7 text-muted-foreground">暂无可显示的资产结构。</p>
         </div>
       </section>
     )
@@ -263,7 +263,7 @@ function DashboardComposition({
           <div>
             <h2 className="text-lg font-medium tracking-[-0.04em] text-foreground">资产占比</h2>
             <p className="mt-1 text-sm leading-7 text-muted-foreground">
-              先看哪一类资产最重，再决定要不要往下钻。
+              各资产类别占比，便于评估持仓集中度。
             </p>
           </div>
         </div>
@@ -331,7 +331,7 @@ function DashboardComposition({
           <SummaryItem
             label="来源结构"
             value={`链上 ${walletShare.toFixed(1)}% · 交易所 ${cexShare.toFixed(1)}%`}
-            detail="帮助你判断资产主要停留在哪里"
+            detail="链上与中心化交易所的资产分布比例"
           />
           <SummaryItem
             label="来源数量"
@@ -375,7 +375,7 @@ function DashboardTrend({ history }: { history: PortfolioHistoryPoint[] }) {
             <p className={sectionLabelClassName}>趋势</p>
             <div>
               <h2 className="text-lg font-medium tracking-[-0.04em] text-foreground">总资产趋势</h2>
-              <p className="mt-1 text-sm leading-7 text-muted-foreground">用最近几次刷新记录判断波动，再决定是否继续查明细。</p>
+              <p className="mt-1 text-sm leading-7 text-muted-foreground">基于本地刷新记录，反映资产净值的近期走势。</p>
             </div>
           </div>
 
@@ -437,7 +437,7 @@ function DashboardTrend({ history }: { history: PortfolioHistoryPoint[] }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 border-t border-border/50 pt-4 text-xs text-muted-foreground">
-          <span>最近 {visibleHistory.length} 次刷新记录</span>
+          <span>近 {visibleHistory.length} 次刷新记录</span>
           <span>高点 {formatCurrency(rangeHigh)}</span>
           <span>低点 {formatCurrency(rangeLow)}</span>
           <span>振幅 {formatPercent(rangePercent)}</span>

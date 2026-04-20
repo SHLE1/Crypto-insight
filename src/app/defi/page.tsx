@@ -37,8 +37,8 @@ export default function DefiPage() {
     <div className="space-y-6">
       <PageHeader
         badge="DeFi"
-        title="单独查看 DeFi 仓位和补齐进度。"
-        description="聚焦 EVM 和 Solana 钱包里的协议仓位，快速判断当前 DeFi 净值、刷新进度和异常情况。"
+        title="DeFi 仓位"
+        description="汇总 EVM 和 Solana 钱包的协议仓位，跟踪净值构成与当前刷新状态。"
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || (!hasDefiSources && isEnabled)} className="gap-2">
             <ArrowsClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
@@ -50,7 +50,7 @@ export default function DefiPage() {
       {!isEnabled ? (
         <EmptyState
           title="DeFi 统计已关闭"
-          description="开启后会查询 EVM 和 Solana 钱包里的协议仓位，并按较低频率自动刷新。"
+          description="开启后将查询 EVM 和 Solana 钱包的协议仓位，以较低频率自动刷新。"
           action={
             <Link href="/settings">
               <Button className="gap-2">
@@ -62,8 +62,8 @@ export default function DefiPage() {
         />
       ) : !hasDefiSources ? (
         <EmptyState
-          title="还没有可查询 DeFi 的钱包"
-          description="先添加 EVM 或 Solana 钱包地址，这里才会开始统计协议仓位和奖励。"
+          title="暂无可查询 DeFi 的钱包"
+          description="添加 EVM 或 Solana 钱包地址后，协议仓位与奖励数据将在此自动展示。"
           action={
             <Link href="/wallets/add">
               <Button className="gap-2">
@@ -102,13 +102,13 @@ export default function DefiPage() {
           <div className="rounded-md border border-border/60 bg-muted/30 p-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2 text-foreground">
               <Coins size={16} weight="regular" />
-              <span className="font-medium tracking-[-0.02em]">当前说明</span>
+              <span className="font-medium tracking-[-0.02em]">数据说明</span>
             </div>
             <ul className="mt-3 space-y-2 leading-7">
-              <li>当前版本里，DeFi 净值会同时显示在这个页面，也会直接计入总资产和总览分布。</li>
-              <li>默认优先使用 Zapper；如果主数据源没识别到仓位或查询失败，EVM 链路会继续尝试 Moralis，必要时再用 DeBank 公共页面补齐。</li>
-              <li>如果遇到限速或短时异常，系统会按钱包轮流刷新，而不是反复卡在同一个钱包上。</li>
-              <li>即使这一轮没拿全，系统也会在后续逐步补齐全部钱包的 DeFi 数据。</li>
+              <li>DeFi 净值同步计入总资产，并在总览分布中单独展示。</li>
+              <li>优先使用 Zapper；若识别失败，EVM 链路将依次尝试 Moralis 与 DeBank 公共页面补全数据。</li>
+              <li>遇到限速或短暂异常时，系统将按钱包轮转刷新，避免阻塞在单一钱包上。</li>
+              <li>若本轮未能覆盖全部钱包，系统将在后续轮次逐步补全。</li>
             </ul>
           </div>
         </>

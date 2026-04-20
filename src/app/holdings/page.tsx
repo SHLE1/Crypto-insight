@@ -31,8 +31,8 @@ export default function HoldingsPage() {
     <div className="space-y-6">
       <PageHeader
         badge="资产明细"
-        title="把持仓按代币、来源和链分别看清。"
-        description="在一页里完成搜索、筛选和视角切换，快速找出缺价格的资产、集中仓位和异常数据。"
+        title="持仓明细"
+        description="支持按代币、钱包和链三个维度查看，可筛选异常项与价格缺失记录。"
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || isEmpty} className="gap-2">
             <ArrowClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
@@ -45,8 +45,8 @@ export default function HoldingsPage() {
         <HoldingsLoadingState />
       ) : isEmpty ? (
         <EmptyState
-          title="还没有资产明细"
-          description="先添加钱包地址或交易所账户，明细页就会自动显示你的持仓结构。"
+          title="暂无持仓明细"
+          description="先添加钱包地址或交易所账户，持仓明细将在此自动展示。"
           action={
             <>
               <Link href="/wallets/add">
@@ -63,7 +63,7 @@ export default function HoldingsPage() {
           {!isFetching && !hasValuedAssets && hasSources ? (
             <Card className="border-dashed">
               <CardContent className="py-6 text-sm leading-7 text-muted-foreground">
-                现在还拿不到可计价的资产。常见原因包括：地址里没有资产、交易所 API 权限不足，或第三方报价暂时不可用。
+                暂无可估值的资产。可能原因：地址余额为零、交易所 API 权限不足，或第三方报价暂时不可用。
               </CardContent>
             </Card>
           ) : null}
@@ -96,7 +96,7 @@ export default function HoldingsPage() {
           {isDefiEnabled && defiTotalValue > 0 ? (
             <Card className="border-border/60 bg-muted/30">
               <CardContent className="py-4 text-sm leading-7 text-muted-foreground">
-                当前总资产已经包含 <span className="font-medium text-foreground">{formatCurrency(defiTotalValue)}</span> 的 DeFi 净值；下方明细表暂时还是以钱包代币和交易所资产为主，还不会把 DeFi 仓位拆成代币列表。
+                当前总资产已包含 <span className="font-medium text-foreground">{formatCurrency(defiTotalValue)}</span> 的 DeFi 净值。明细表仅展示钱包代币与交易所资产，DeFi 仓位详情请前往 DeFi 页查看。
               </CardContent>
             </Card>
           ) : null}

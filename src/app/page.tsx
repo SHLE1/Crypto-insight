@@ -41,8 +41,8 @@ export default function DashboardPage() {
         <DashboardOverviewLoadingState />
       ) : isEmpty ? (
         <EmptyState
-          title="还没有资产来源"
-          description="添加钱包地址或交易所账户后，这里会自动显示总资产、分布和趋势。"
+          title="尚未添加资产来源"
+          description="添加钱包或交易所账户后，总资产、持仓分布和净值趋势将在此自动展示。"
           action={
             <>
               <Link href="/wallets/add">
@@ -65,7 +65,7 @@ export default function DashboardPage() {
           {!isFetching && !hasValuedAssets && hasSources ? (
             <Card className="border-dashed">
               <CardContent className="py-6 text-sm leading-7 text-muted-foreground">
-                现在还拿不到可计价的资产。常见原因包括：地址里没有资产、交易所 API 权限不足、DeFi 数据还在补齐，或第三方报价暂时不可用。
+                暂无可估值的资产。可能原因：地址余额为零、交易所 API 权限不足、DeFi 数据尚在加载，或第三方报价暂时不可用。
               </CardContent>
             </Card>
           ) : null}

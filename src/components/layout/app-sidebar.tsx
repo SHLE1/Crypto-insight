@@ -65,7 +65,7 @@ export function AppSidebar() {
         <div className="rounded-md border border-sidebar-border/60 bg-muted/40 p-3">
           <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground">数据策略</p>
           <p className="mt-2 text-sm leading-6 text-sidebar-foreground/90">
-            所有钱包、交易所和设置都保存在当前设备，不会自动上传。
+            数据仅存储在当前设备，不会自动上传或同步。
           </p>
         </div>
         <p className="text-[11px] tracking-[0.08em] text-muted-foreground">LOCAL FIRST</p>

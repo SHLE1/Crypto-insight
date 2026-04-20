@@ -52,10 +52,10 @@ export function TotalAssets({
             <div className="metric-tile">
               <p className="muted-kicker">数据状态</p>
               <p className="mt-2 text-sm font-medium text-foreground">
-                {isStale ? '正在显示本地缓存' : '已同步最新结果'}
+                {isStale ? '当前显示为本地缓存' : '数据已同步'}
               </p>
               <p className="mt-2 text-xs leading-6 text-muted-foreground">
-                {isStale ? '当前页面显示的是最近一次可用快照。' : '这一轮刷新已经完成主要来源的同步。'}
+                {isStale ? '正在展示最近一次可用的本地快照。' : '本轮刷新已完成所有来源同步。'}
               </p>
             </div>
             <div className="metric-tile">
@@ -64,7 +64,7 @@ export function TotalAssets({
                 <ClockClockwise size={14} weight="regular" className="text-muted-foreground" />
                 {lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '暂无'}
               </p>
-              <p className="mt-2 text-xs leading-6 text-muted-foreground">添加或修改来源后，建议手动刷新一次。</p>
+              <p className="mt-2 text-xs leading-6 text-muted-foreground">添加或修改来源后建议手动刷新一次。</p>
             </div>
           </div>
         </div>

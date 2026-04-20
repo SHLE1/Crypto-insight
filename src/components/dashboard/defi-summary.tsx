@@ -141,7 +141,7 @@ export function DefiSummary({
           <Badge variant="outline">待添加来源</Badge>
         </CardHeader>
         <CardContent className="space-y-3 text-sm leading-7 text-muted-foreground">
-          <p>现在还没有可查询 DeFi 的钱包。请先添加 EVM 或 Solana 钱包地址。</p>
+          <p>暂无可查询 DeFi 的钱包，请先添加 EVM 或 Solana 钱包地址。</p>
           <div className="flex flex-wrap gap-2">
             <Link href="/wallets/add">
               <Button variant="outline" size="sm">添加钱包</Button>
@@ -184,7 +184,7 @@ export function DefiSummary({
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant={primaryError ? (hasRecoverableWarning ? 'outline' : 'destructive') : 'outline'}>
-              {primaryError ? (hasRecoverableWarning ? '正在补齐' : '查询失败') : '还没有仓位'}
+              {primaryError ? (hasRecoverableWarning ? '正在补齐' : '查询失败') : '暂无仓位'}
             </Badge>
             <Button variant="outline" size="sm" onClick={refetch} disabled={isFetching} className="gap-2">
               <ArrowsClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
@@ -229,7 +229,7 @@ export function DefiSummary({
             <p>
               {isSweepRefreshing
                 ? `系统还在补齐 DeFi 数据。当前已检查 ${walletCount} 个钱包，但暂时还没拿到可计价仓位。`
-                : `已检查 ${walletCount} 个钱包，暂时还没有发现可计价的 DeFi 仓位。`}
+                : `已扫描 ${walletCount} 个钱包，暂未发现可计价的 DeFi 仓位。`}
             </p>
           )}
           <p className="text-xs">当前版本会把 DeFi 净值直接计入顶部总资产，因此可能和钱包余额有重复计算。</p>

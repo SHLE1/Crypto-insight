@@ -96,7 +96,7 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
           detail={
             analytics.worstPerformer
               ? `最弱：${analytics.worstPerformer.symbol} ${formatPercent(analytics.worstPerformer.change24h)}`
-              : '还没有足够的涨跌样本。'
+              : '暂无足够的涨跌数据。'
           }
           tone={bestTone}
         />

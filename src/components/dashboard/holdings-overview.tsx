@@ -440,17 +440,17 @@ function GroupedHoldingsView({
   const activeKey = expandedKey !== null && rows.some((row) => row.key === expandedKey) ? expandedKey : null
 
   if (rows.length === 0) {
-    return <p className="text-sm leading-7 text-muted-foreground">按当前筛选条件，还没有可显示的资产。</p>
+    return <p className="text-sm leading-7 text-muted-foreground">当前筛选条件下没有匹配的资产。</p>
   }
 
   return (
     <div className="space-y-3">
       <p className="text-xs leading-6 text-muted-foreground">
         {mode === 'token'
-          ? '按代币查看时，同一个代币会合并不同来源的持仓。'
+          ? '按代币查看，同一代币将汇总来自不同来源的持仓。'
           : mode === 'wallet'
-            ? '按钱包查看时，每张卡代表一个钱包或交易所账户。'
-            : '按链查看时，同一条链上的资产会合并显示。'}
+            ? '按钱包查看，每项代表一个钱包或交易所账户。'
+            : '按链查看，同一链上的资产将合并展示。'}
       </p>
       {rows.map((row) => (
         <GroupCard
@@ -499,7 +499,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1.5">
             <CardTitle className="text-base font-semibold tracking-[-0.02em]">明细工作台</CardTitle>
-            <p className="text-xs leading-6 text-muted-foreground">支持搜索、筛选，并在代币、钱包和链三个视角之间切换。</p>
+            <p className="text-xs leading-6 text-muted-foreground">支持搜索与筛选，可在代币、钱包、链三个视角间切换。</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             <MetricBlock label="平均单项" value={formatCurrency(analytics.averagePositionValue)} />

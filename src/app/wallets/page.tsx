@@ -65,8 +65,8 @@ export default function WalletsPage() {
     <div className="space-y-6">
       <PageHeader
         badge="钱包"
-        title="管理钱包地址、备注名和启用状态。"
-        description="这里的每个钱包都会影响总览、资产明细和净值趋势。禁用后，会一起清理这个钱包的本地快照。"
+        title="我的钱包"
+        description="所有钱包地址均参与资产统计和净值趋势计算。禁用时将同步清除对应的本地缓存。"
         actions={
           <Link href="/wallets/add">
             <Button className="gap-2">
@@ -79,8 +79,8 @@ export default function WalletsPage() {
 
       {wallets.length === 0 ? (
         <EmptyState
-          title="还没有钱包地址"
-          description="添加钱包后，它会自动参与总览、资产明细和净值趋势计算。"
+          title="暂无钱包地址"
+          description="添加后将自动参与总资产统计、持仓明细和净值趋势计算。"
           action={
             <Link href="/wallets/add">
               <Button>添加第一个钱包</Button>
@@ -164,7 +164,7 @@ export default function WalletsPage() {
                         {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
                       </p>
                       <p className="text-xs leading-6 text-muted-foreground">
-                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '还没刷新'}
+                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '尚未刷新'}
                       </p>
                     </div>
                     {!isEditing ? (

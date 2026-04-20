@@ -120,8 +120,8 @@ export default function CexPage() {
     <div className="space-y-6">
       <PageHeader
         badge="交易所"
-        title="把交易所资产接入同一张总表。"
-        description="绑定只读 API 后，交易所余额会自动出现在总览和资产明细里。密钥只保存在当前浏览器，导出文件不会包含它们。"
+        title="交易所账户"
+        description="接入只读 API 后，账户余额将自动汇入资产总览与持仓明细。密钥仅保存在本地浏览器，导出文件不包含任何密钥。"
         actions={
           !showForm ? (
             <Button onClick={() => setShowForm(true)} className="gap-2">
@@ -199,7 +199,7 @@ export default function CexPage() {
               <ul className="mt-3 space-y-2 text-sm leading-7 text-muted-foreground">
                 <li>只使用只读权限的 API Key。</li>
                 <li>导出文件不会包含任何密钥。</li>
-                <li>删除账户时，会一起清理这个账户的本地快照。</li>
+                <li>删除账户时将同步清除对应的本地缓存。</li>
               </ul>
             </div>
           </CardContent>
@@ -210,8 +210,8 @@ export default function CexPage() {
 
       {accounts.length === 0 && !showForm ? (
         <EmptyState
-          title="还没有交易所账户"
-          description="添加只读 API 后，这里的资产会自动进入总览和资产明细。"
+          title="暂无交易所账户"
+          description="接入只读 API 后，账户资产将自动汇入总览和持仓明细。"
           action={<Button onClick={() => setShowForm(true)}>添加第一个账户</Button>}
         />
       ) : (
@@ -243,7 +243,7 @@ export default function CexPage() {
                       <p className="mt-1 font-mono text-xs leading-6 text-muted-foreground">
                         {a.apiKey.trim()
                           ? `Key: ${a.apiKey.slice(0, 6)}...${a.apiKey.slice(-4)}`
-                          : '这个浏览器里还没有保存密钥。重新填写后才能刷新这个账户。'}
+                          : '当前浏览器中未保存密钥，重新填写后方可刷新此账户。'}
                       </p>
                     </div>
                   </div>
@@ -253,7 +253,7 @@ export default function CexPage() {
                         {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
                       </p>
                       <p className="text-xs leading-6 text-muted-foreground">
-                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '还没刷新'}
+                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '尚未刷新'}
                       </p>
                     </div>
                     <Button variant="ghost" size="icon-sm" onClick={() => startEditing(a.id)}>

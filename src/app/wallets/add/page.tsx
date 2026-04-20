@@ -81,8 +81,8 @@ export default function AddWalletPage() {
     <div className="space-y-6">
       <PageHeader
         badge="新增钱包"
-        title="添加一个新的钱包地址。"
-        description="地址只保存在当前浏览器。添加后会出现在总览、资产明细和趋势里。"
+        title="添加钱包地址"
+        description="钱包地址仅保存在本地浏览器，添加后将立即参与资产统计。"
       />
 
       <Card className="max-w-4xl">

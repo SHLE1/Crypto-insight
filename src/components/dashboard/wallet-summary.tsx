@@ -30,7 +30,7 @@ export function WalletSummary({ wallets, snapshots }: WalletSummaryProps) {
       <CardContent>
         {displayWallets.length === 0 ? (
           <div className="py-7 text-center">
-            <p className="mb-2 text-sm text-muted-foreground">还没有钱包</p>
+            <p className="mb-2 text-sm text-muted-foreground">暂无钱包</p>
             <Link href="/wallets/add" className="inline-flex items-center gap-1 text-sm text-primary hover:gap-1.5">
               添加钱包
               <CaretRight size={12} weight="bold" />

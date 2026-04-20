@@ -6,10 +6,10 @@ export default function NotFound() {
       <section className="w-full max-w-2xl rounded-md border border-border bg-card px-6 py-14 text-center">
         <span className="section-eyebrow">404</span>
         <h1 className="mx-auto mt-4 max-w-[14ch] text-4xl font-semibold tracking-[-0.06em] text-foreground md:text-5xl">
-          这个页面不存在，或者地址已经变了。
+          找不到这个页面
         </h1>
         <p className="mx-auto mt-4 max-w-[56ch] text-[0.96rem] leading-7 text-muted-foreground">
-          你可以回到总览继续查看资产，也可以直接去钱包页继续操作。
+          请确认地址是否正确，或返回首页重新导航。
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link

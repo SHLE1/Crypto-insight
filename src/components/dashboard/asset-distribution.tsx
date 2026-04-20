@@ -35,7 +35,7 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">还没有可显示的数据</p>
+          <p className="text-sm text-muted-foreground">暂无数据</p>
         </CardContent>
       </Card>
     )

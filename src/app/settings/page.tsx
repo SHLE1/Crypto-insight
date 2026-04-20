@@ -142,8 +142,8 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <PageHeader
         badge="设置"
-        title="管理主题、刷新频率和本地数据。"
-        description="这是一个本地优先的配置面板。导入和导出只恢复结构与标签，密钥需要你重新手动填写。"
+        title="偏好设置"
+        description="数据仅保存在当前设备，不会同步至云端。导入导出可恢复结构与标签，但密钥须手动重新填写。"
       />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
