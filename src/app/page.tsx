@@ -1,17 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowClockwise, Buildings, Wallet } from '@phosphor-icons/react'
-import { AlertsPanel } from '@/components/dashboard/alerts'
-import { AssetDistribution } from '@/components/dashboard/asset-distribution'
-import { CexSummary } from '@/components/dashboard/cex-summary'
-import { NetWorthTrend } from '@/components/dashboard/net-worth-trend'
-import { PortfolioInsights } from '@/components/dashboard/portfolio-insights'
-import { SourceDistribution } from '@/components/dashboard/source-distribution'
-import { TotalAssets } from '@/components/dashboard/total-assets'
-import { WalletSummary } from '@/components/dashboard/wallet-summary'
+import { Buildings, Wallet } from '@phosphor-icons/react'
+import {
+  DashboardOverview,
+  DashboardOverviewLoadingState,
+} from '@/components/dashboard/dashboard-overview'
 import { EmptyState } from '@/components/layout/empty-state'
-import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { usePortfolioData } from '@/hooks/use-portfolio-data'
@@ -20,7 +15,6 @@ export default function DashboardPage() {
   const {
     wallets,
     accounts,
-    snapshots,
     history,
     errors,
     lastRefresh,
@@ -43,30 +37,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        badge="总览"
-        title="把链上、交易所与 DeFi 仓位放进一块更清晰的面板里。"
-        description="查看净值、趋势、来源结构与价格覆盖情况，快速判断当前资产组合是否完整、是否需要补齐数据。"
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching || isEmpty}
-            className="gap-2"
-          >
-            <ArrowClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
-            刷新
-          </Button>
-        }
-      />
-
       {isRestoring || isInitialLoading ? (
-        <DashboardLoadingState />
+        <DashboardOverviewLoadingState />
       ) : isEmpty ? (
         <EmptyState
-          title="还没有可追踪的资产来源"
-          description="添加钱包地址或绑定交易所账户后，这里会自动生成净值、结构分布与趋势数据。"
+          title="还没有资产来源"
+          description="添加钱包地址或交易所账户后，这里会自动显示总资产、分布和趋势。"
           action={
             <>
               <Link href="/wallets/add">
@@ -78,49 +54,42 @@ export default function DashboardPage() {
               <Link href="/cex">
                 <Button variant="outline" className="gap-2">
                   <Buildings size={16} weight="regular" />
-                  绑定交易所
+                  添加交易所账户
                 </Button>
               </Link>
             </>
           }
         />
       ) : (
-        <div className="page-grid">
-          <TotalAssets
-            totalValue={totalValue}
-            change24hValue={change24hValue}
-            change24hPercent={change24hPercent}
-            lastRefresh={lastRefresh}
-            isStale={isUsingCachedData}
-          />
-          <NetWorthTrend data={history} />
+        <>
           {!isFetching && !hasValuedAssets && hasSources ? (
-            <Card className="col-span-full border-dashed">
+            <Card className="border-dashed">
               <CardContent className="py-6 text-sm leading-7 text-muted-foreground">
-                当前没有拿到可计价的资产数据。常见原因包括地址下没有原生币、交易所 API 权限不足、DeFi 仍在补齐，或第三方报价暂时不可用。
+                现在还拿不到可计价的资产。常见原因包括：地址里没有资产、交易所 API 权限不足、DeFi 数据还在补齐，或第三方报价暂时不可用。
               </CardContent>
             </Card>
           ) : null}
-          <PortfolioInsights analytics={analytics} />
-          <AssetDistribution data={assetData} totalValue={totalValue} />
-          <SourceDistribution walletTotal={walletTotal} cexTotal={cexTotal} />
-          <WalletSummary wallets={wallets} snapshots={snapshots} />
-          <CexSummary accounts={accounts} snapshots={snapshots} />
-          <AlertsPanel errors={errors} />
-        </div>
+
+          <DashboardOverview
+            history={history}
+            errors={errors}
+            lastRefresh={lastRefresh}
+            totalValue={totalValue}
+            change24hValue={change24hValue}
+            change24hPercent={change24hPercent}
+            assetData={assetData}
+            walletTotal={walletTotal}
+            cexTotal={cexTotal}
+            analytics={analytics}
+            isUsingCachedData={isUsingCachedData}
+            isFetching={isFetching}
+            walletCount={wallets.filter((wallet) => wallet.enabled).length}
+            accountCount={accounts.filter((account) => account.enabled).length}
+            onRefresh={() => refetch()}
+          />
+        </>
       )}
     </div>
   )
 }
 
-function DashboardLoadingState() {
-  return (
-    <div className="page-grid">
-      <div className="col-span-full h-32 animate-pulse rounded-[1.5rem] bg-muted/40" />
-      <div className="col-span-full h-56 animate-pulse rounded-[1.5rem] bg-muted/30" />
-      <div className="col-span-full h-[24rem] animate-pulse rounded-[1.5rem] bg-muted/30" />
-      <div className="h-64 animate-pulse rounded-[1.5rem] bg-muted/30" />
-      <div className="h-64 animate-pulse rounded-[1.5rem] bg-muted/30" />
-    </div>
-  )
-}

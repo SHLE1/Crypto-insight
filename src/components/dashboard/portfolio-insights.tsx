@@ -34,7 +34,7 @@ function InsightBlock({
           : 'text-foreground'
 
   return (
-    <div className="rounded-[1.25rem] border border-border/75 bg-background/78 p-4">
+    <div className="rounded-md border border-border/60 bg-muted/20 p-4">
       <div className="flex items-center gap-2 text-xs tracking-[0.08em] text-muted-foreground">
         <Icon size={14} weight="regular" />
         <span>{title}</span>
@@ -62,13 +62,13 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="flex flex-col gap-3 border-b border-border/75 md:flex-row md:items-center md:justify-between">
+      <CardHeader className="flex flex-col gap-3 border-b border-border/60 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <p className="muted-kicker">组合摘要</p>
-          <CardTitle className="text-base">分析摘要</CardTitle>
-          <p className="text-xs leading-6 text-muted-foreground">把集中度、价格覆盖和强弱分化放到一屏里看清楚。</p>
+          <CardTitle className="text-base">组合摘要</CardTitle>
+          <p className="text-xs leading-6 text-muted-foreground">把集中度、价格覆盖和涨跌分化放在一屏里快速看清。</p>
         </div>
-        <Badge variant="secondary">{analytics.activeSourceCount} 个启用来源</Badge>
+        <Badge variant="secondary">{analytics.activeSourceCount} 个已启用来源</Badge>
       </CardHeader>
       <CardContent className="grid gap-3 pt-4 md:grid-cols-2 xl:grid-cols-4">
         <InsightBlock
@@ -81,8 +81,8 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
         <InsightBlock
           icon={ShieldWarning}
           title="价格覆盖"
-          value={`${analytics.pricedAssetCount} / ${analytics.assetCount} 项可估值`}
-          detail={`覆盖率 ${coveragePercent.toFixed(1)}% · 缺价 ${analytics.missingPriceCount} 项 · 旧价 ${analytics.stalePriceCount} 项`}
+          value={`${analytics.pricedAssetCount} / ${analytics.assetCount} 个可估值`}
+          detail={`覆盖率 ${coveragePercent.toFixed(1)}% · 缺价 ${analytics.missingPriceCount} 个 · 旧价 ${analytics.stalePriceCount} 个`}
           tone={analytics.missingPriceCount > 0 ? 'warning' : 'default'}
         />
         <InsightBlock
@@ -111,24 +111,24 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
           detail={
             analytics.historyHigh !== null && analytics.historyLow !== null
               ? `区间高点 ${formatCurrency(analytics.historyHigh)} · 低点 ${formatCurrency(analytics.historyLow)}`
-              : `平均单项仓位 ${formatCurrency(analytics.averagePositionValue)}`
+              : `平均单项资产 ${formatCurrency(analytics.averagePositionValue)}`
           }
           tone={worstTone}
         />
-        <div className="rounded-[1.25rem] border border-border/75 bg-muted/18 p-4 md:col-span-2 xl:col-span-4">
+        <div className="rounded-md border border-border/60 bg-muted/30 p-4 md:col-span-2 xl:col-span-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs tracking-[0.08em] text-muted-foreground">资金来源结构</p>
+              <p className="text-xs tracking-[0.08em] text-muted-foreground">资产来源</p>
               <p className="mt-1 text-sm font-medium text-foreground">
                 链上 {analytics.walletShare.toFixed(1)}% · 交易所 {analytics.cexShare.toFixed(1)}%
               </p>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>历史样本 {analytics.historyPoints} 条</span>
-              <span>平均单项 {formatCurrency(analytics.averagePositionValue)}</span>
+              <span>历史记录 {analytics.historyPoints} 条</span>
+              <span>平均单项资产 {formatCurrency(analytics.averagePositionValue)}</span>
             </div>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/70">
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted/20">
             <div
               className="h-full rounded-full bg-[linear-gradient(90deg,var(--chart-1)_0%,var(--chart-1)_var(--wallet-share),var(--chart-2)_var(--wallet-share),var(--chart-2)_100%)]"
               style={{ ['--wallet-share' as string]: `${analytics.walletShare}%` }}

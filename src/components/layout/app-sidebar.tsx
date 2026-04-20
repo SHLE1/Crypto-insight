@@ -27,24 +27,24 @@ export function AppSidebar() {
 
   return (
     <aside className="dashboard-sidebar">
-      <div className="flex h-[88px] items-center justify-between border-b border-sidebar-border/80 px-5">
+      <div className="flex h-[60px] items-center justify-between border-b border-sidebar-border/60 px-4">
         <Link href="/" className="flex items-center gap-3 text-sidebar-foreground">
-          <span className="flex size-10 items-center justify-center rounded-2xl border border-sidebar-border/80 bg-background/85 text-sm font-semibold tracking-[-0.04em] shadow-[0_1px_0_color-mix(in_oklch,white_72%,transparent)_inset]">
+          <span className="flex size-8 items-center justify-center rounded-md border border-sidebar-border/70 bg-card text-xs font-semibold tracking-[-0.03em]">
             CI
           </span>
           <span className="space-y-0.5">
             <span className="block text-sm font-semibold tracking-[-0.03em]">Crypto Insight</span>
-            <span className="block text-[11px] tracking-[0.12em] text-muted-foreground">LOCAL-FIRST PORTFOLIO</span>
+            <span className="block text-[11px] tracking-[0.14em] text-muted-foreground">PORTFOLIO TRACKING</span>
           </span>
         </Link>
         <ThemeToggle />
       </div>
 
-      <div className="flex-1 px-4 py-5">
-        <div className="mb-3 px-1">
+      <div className="flex-1 px-3 py-4">
+        <div className="mb-2 px-1">
           <p className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground">导航</p>
         </div>
-        <nav className="space-y-1.5">
+        <nav className="space-y-0.5">
           {navItems.map((item) => {
             const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
             return (
@@ -61,14 +61,14 @@ export function AppSidebar() {
         </nav>
       </div>
 
-      <div className="space-y-3 border-t border-sidebar-border/80 px-5 py-4">
-        <div className="rounded-2xl border border-sidebar-border/80 bg-background/80 p-3">
+      <div className="space-y-3 border-t border-sidebar-border/60 p-4">
+        <div className="rounded-md border border-sidebar-border/60 bg-muted/40 p-3">
           <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground">数据策略</p>
           <p className="mt-2 text-sm leading-6 text-sidebar-foreground/90">
-            钱包、交易所与设置仅保存在当前设备，不会自动上传。
+            所有钱包、交易所和设置都保存在当前设备，不会自动上传。
           </p>
         </div>
-        <p className="text-[11px] text-muted-foreground">V1 · 本地优先</p>
+        <p className="text-[11px] tracking-[0.08em] text-muted-foreground">LOCAL FIRST</p>
       </div>
     </aside>
   )
@@ -78,7 +78,7 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-40 rounded-[1.4rem] border border-border/80 bg-card/92 p-2 shadow-[0_18px_40px_-28px_color-mix(in_oklch,var(--foreground)_24%,transparent)] backdrop-blur md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-card md:hidden">
       <div className="grid grid-cols-6 gap-1">
         {navItems.map((item) => {
           const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
@@ -87,9 +87,9 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-medium tracking-[0.04em] transition-all',
+                'flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[10px] font-medium transition-colors',
                 isActive
-                  ? 'bg-accent text-foreground shadow-[0_1px_0_color-mix(in_oklch,white_70%,transparent)_inset]'
+                  ? 'bg-accent/60 text-foreground'
                   : 'text-muted-foreground'
               )}
             >

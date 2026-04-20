@@ -23,11 +23,11 @@ export function SourceDistribution({ walletTotal, cexTotal }: SourceDistribution
         <CardHeader>
           <div className="space-y-2">
             <p className="muted-kicker">来源</p>
-            <CardTitle className="text-base">来源分布</CardTitle>
+            <CardTitle className="text-base">资产来源</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">暂无数据</p>
+          <p className="text-sm text-muted-foreground">还没有可显示的数据</p>
         </CardContent>
       </Card>
     )
@@ -35,10 +35,10 @@ export function SourceDistribution({ walletTotal, cexTotal }: SourceDistribution
 
   return (
     <Card>
-      <CardHeader className="border-b border-border/75">
+      <CardHeader className="border-b border-border/60">
         <div className="space-y-2">
           <p className="muted-kicker">来源</p>
-          <CardTitle className="text-base">来源分布</CardTitle>
+          <CardTitle className="text-base">资产来源</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-5">
@@ -53,7 +53,7 @@ export function SourceDistribution({ walletTotal, cexTotal }: SourceDistribution
             const share = total > 0 ? (item.value / total) * 100 : 0
 
             return (
-              <div key={item.name} className="rounded-[1.15rem] border border-border/75 bg-background/75 p-3.5">
+              <div key={item.name} className="rounded-md border border-border/60 bg-muted/20 p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span

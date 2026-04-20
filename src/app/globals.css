@@ -143,38 +143,38 @@
 }
 
 :root {
-  --background: oklch(0.985 0.003 95);
-  --foreground: oklch(0.255 0.015 95);
-  --card: oklch(0.995 0.002 95);
-  --card-foreground: oklch(0.255 0.015 95);
-  --popover: oklch(0.995 0.002 95);
-  --popover-foreground: oklch(0.255 0.015 95);
-  --primary: oklch(0.365 0.044 230);
-  --primary-foreground: oklch(0.985 0.002 95);
-  --secondary: oklch(0.965 0.004 95);
-  --secondary-foreground: oklch(0.34 0.014 95);
-  --muted: oklch(0.972 0.003 95);
-  --muted-foreground: oklch(0.55 0.012 95);
-  --accent: oklch(0.955 0.008 230);
-  --accent-foreground: oklch(0.33 0.022 230);
+  --background: oklch(0.982 0.004 240);
+  --foreground: oklch(0.27 0.018 248);
+  --card: oklch(0.995 0.002 240);
+  --card-foreground: oklch(0.27 0.018 248);
+  --popover: oklch(0.995 0.002 240);
+  --popover-foreground: oklch(0.27 0.018 248);
+  --primary: oklch(0.41 0.04 240);
+  --primary-foreground: oklch(0.985 0.002 240);
+  --secondary: oklch(0.955 0.005 240);
+  --secondary-foreground: oklch(0.36 0.018 248);
+  --muted: oklch(0.964 0.004 240);
+  --muted-foreground: oklch(0.54 0.016 248);
+  --accent: oklch(0.945 0.008 240);
+  --accent-foreground: oklch(0.35 0.022 240);
   --destructive: oklch(0.61 0.19 25);
-  --border: oklch(0.905 0.006 95);
-  --input: oklch(0.905 0.006 95);
-  --ring: oklch(0.73 0.03 230);
-  --chart-1: oklch(0.57 0.095 230);
-  --chart-2: oklch(0.63 0.065 180);
-  --chart-3: oklch(0.72 0.085 110);
-  --chart-4: oklch(0.68 0.07 42);
-  --chart-5: oklch(0.64 0.05 18);
-  --radius: 1rem;
-  --sidebar: oklch(0.982 0.003 95);
-  --sidebar-foreground: oklch(0.3 0.014 95);
-  --sidebar-primary: oklch(0.365 0.044 230);
-  --sidebar-primary-foreground: oklch(0.985 0.002 95);
-  --sidebar-accent: oklch(0.958 0.005 95);
-  --sidebar-accent-foreground: oklch(0.31 0.014 95);
-  --sidebar-border: oklch(0.91 0.006 95);
-  --sidebar-ring: oklch(0.73 0.03 230);
+  --border: oklch(0.905 0.007 245);
+  --input: oklch(0.905 0.007 245);
+  --ring: oklch(0.74 0.026 240);
+  --chart-1: oklch(0.56 0.09 242);
+  --chart-2: oklch(0.61 0.048 188);
+  --chart-3: oklch(0.69 0.06 145);
+  --chart-4: oklch(0.69 0.058 70);
+  --chart-5: oklch(0.63 0.044 25);
+  --radius: 0.375rem;
+  --sidebar: oklch(0.955 0.004 240);
+  --sidebar-foreground: oklch(0.3 0.016 248);
+  --sidebar-primary: oklch(0.41 0.04 240);
+  --sidebar-primary-foreground: oklch(0.985 0.002 240);
+  --sidebar-accent: oklch(0.935 0.006 240);
+  --sidebar-accent-foreground: oklch(0.31 0.014 248);
+  --sidebar-border: oklch(0.89 0.007 245);
+  --sidebar-ring: oklch(0.74 0.026 240);
 }
 
 .dark {
@@ -230,24 +230,8 @@
     @apply bg-background text-foreground;
     min-height: 100dvh;
     text-rendering: optimizeLegibility;
-    background:
-      radial-gradient(circle at top left, color-mix(in oklch, var(--primary) 7%, transparent), transparent 34%),
-      radial-gradient(circle at right 10% top 15%, color-mix(in oklch, var(--chart-2) 8%, transparent), transparent 28%),
-      linear-gradient(180deg, color-mix(in oklch, var(--background) 96%, white 4%) 0%, var(--background) 100%);
-  }
-
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.045;
-    background-image:
-      linear-gradient(to right, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 3%, transparent) 1px, transparent 1px);
-    background-size: 24px 24px;
-    mask-image: radial-gradient(circle at center, black 35%, transparent 95%);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   a,
@@ -275,7 +259,7 @@
   }
 
   .dashboard-shell {
-    @apply relative min-h-dvh bg-background text-foreground md:grid md:grid-cols-[18rem_minmax(0,1fr)];
+    @apply relative min-h-dvh bg-background text-foreground md:grid md:grid-cols-[17.25rem_minmax(0,1fr)];
   }
 
   .dashboard-main {
@@ -283,20 +267,20 @@
   }
 
   .dashboard-container {
-    @apply mx-auto flex min-h-[100dvh] w-full max-w-[1440px] flex-col gap-8 px-4 py-5 sm:px-6 md:px-8 md:py-8 xl:px-10;
+    @apply mx-auto flex min-h-[100dvh] w-full max-w-[1440px] flex-col gap-6 px-4 py-5 sm:px-6 md:px-8 md:py-7 xl:px-10;
     animation: fade-up 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .dashboard-sidebar {
-    @apply relative z-10 hidden min-h-dvh flex-col border-r border-sidebar-border/80 bg-sidebar/90 md:flex;
+    @apply relative z-10 hidden min-h-dvh flex-col border-r border-sidebar-border/85 bg-sidebar md:flex;
   }
 
   .top-nav-link {
-    @apply flex items-center gap-3 rounded-xl border border-transparent px-3.5 py-3 text-sm font-medium text-muted-foreground hover:border-border/70 hover:bg-background/70 hover:text-foreground;
+    @apply flex min-h-10 items-center gap-2.5 rounded-md border border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground active:scale-[0.97];
   }
 
   .top-nav-link-active {
-    @apply border-border/80 bg-background text-foreground shadow-[0_1px_0_color-mix(in_oklch,var(--foreground)_6%,transparent),0_14px_28px_-24px_color-mix(in_oklch,var(--foreground)_22%,transparent)];
+    @apply border-border/60 bg-accent text-foreground;
   }
 
   .page-grid {
@@ -304,25 +288,19 @@
   }
 
   .subtle-panel {
-    @apply rounded-[1.4rem] border border-border/80 bg-card/88;
-    box-shadow:
-      0 1px 0 color-mix(in oklch, white 70%, transparent) inset,
-      0 18px 40px -34px color-mix(in oklch, var(--foreground) 28%, transparent);
+    @apply rounded-md border border-border/70 bg-card;
   }
 
   .metric-tile {
-    @apply rounded-[1.35rem] border border-border/80 bg-card/92 p-4 md:p-4.5;
-    box-shadow:
-      0 1px 0 color-mix(in oklch, white 72%, transparent) inset,
-      0 14px 28px -24px color-mix(in oklch, var(--foreground) 22%, transparent);
+    @apply rounded-md border border-border/70 bg-card p-4 md:p-[1.125rem];
   }
 
   .muted-kicker {
-    @apply text-[0.69rem] font-medium tracking-[0.18em] text-muted-foreground;
+    @apply text-[0.69rem] font-medium tracking-[0.16em] text-muted-foreground;
   }
 
   .section-eyebrow {
-    @apply inline-flex items-center rounded-md border border-border/70 bg-background/80 px-2.5 py-1 text-[0.68rem] font-medium tracking-[0.16em] text-muted-foreground;
+    @apply inline-flex items-center rounded-sm border border-border/50 px-2 py-0.5 text-[0.68rem] font-medium tracking-[0.1em] text-muted-foreground;
   }
 
   .panel-grid {

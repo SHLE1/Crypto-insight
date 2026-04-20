@@ -4,16 +4,16 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap outline-none select-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 active:not-aria-[haspopup]:translate-y-px active:not-aria-[haspopup]:scale-[0.985] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap outline-none select-none transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 active:not-aria-[haspopup]:scale-[0.96] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "border-primary bg-primary text-primary-foreground shadow-[0_1px_0_color-mix(in_oklch,white_38%,transparent)_inset,0_18px_30px_-24px_color-mix(in_oklch,var(--primary)_58%,transparent)] hover:-translate-y-0.5 hover:brightness-[1.02]",
+          "border-primary bg-primary text-primary-foreground hover:bg-[color-mix(in_oklch,var(--primary)_94%,black_6%)] active:not-aria-[haspopup]:scale-[0.96]",
         outline:
-          "border-border bg-background/92 text-foreground shadow-[0_1px_0_color-mix(in_oklch,white_60%,transparent)_inset] hover:-translate-y-0.5 hover:border-foreground/12 hover:bg-muted/80 aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-card dark:hover:bg-muted/60",
+          "border-border/75 bg-card text-foreground hover:bg-muted/60 aria-expanded:bg-muted aria-expanded:text-foreground",
         secondary:
-          "border-border/80 bg-secondary text-secondary-foreground shadow-[0_1px_0_color-mix(in_oklch,white_60%,transparent)_inset] hover:-translate-y-0.5 hover:bg-accent aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "border-border/70 bg-secondary text-secondary-foreground hover:bg-accent aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "border-transparent text-muted-foreground hover:bg-muted/75 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/60",
         destructive:

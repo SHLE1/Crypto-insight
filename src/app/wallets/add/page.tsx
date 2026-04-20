@@ -38,17 +38,17 @@ export default function AddWalletPage() {
 
     const trimmed = address.trim()
     if (!trimmed) {
-      setError('请输入钱包地址')
+      setError('请输入钱包地址后再保存。')
       return
     }
 
     if (!validateAddress(trimmed, chainType)) {
-      setError(`无效的 ${getChainLabel(chainType)} 地址`)
+      setError(`${getChainLabel(chainType)} 地址格式不正确，请检查后重试。`)
       return
     }
 
     if (chainType === 'evm' && selectedEvmChains.length === 0) {
-      setError('请至少选择一条 EVM 链')
+      setError('请至少选择一条要查询的 EVM 链。')
       return
     }
 
@@ -60,7 +60,7 @@ export default function AddWalletPage() {
     )
 
     if (alreadyExists) {
-      setError('这个地址已经添加过了')
+      setError('这个地址已经在列表里了，不需要重复添加。')
       return
     }
 
@@ -73,7 +73,7 @@ export default function AddWalletPage() {
       evmChains: chainType === 'evm' ? selectedEvmChains : undefined,
     })
 
-    toast.success('钱包已添加')
+    toast.success('钱包已添加，现在可以开始查看资产了。')
     router.push('/wallets')
   }
 
@@ -81,8 +81,8 @@ export default function AddWalletPage() {
     <div className="space-y-6">
       <PageHeader
         badge="新增钱包"
-        title="接入一个新的链上来源。"
-        description="地址只会保存在当前浏览器。添加后会立即进入总览、趋势与明细计算。"
+        title="添加一个新的钱包地址。"
+        description="地址只保存在当前浏览器。添加后会出现在总览、资产明细和趋势里。"
       />
 
       <Card className="max-w-4xl">
@@ -128,7 +128,7 @@ export default function AddWalletPage() {
                   ))}
                 </div>
                 <p className="text-xs leading-6 text-muted-foreground">
-                  选择要查询的链，同一地址在不同链上可能持有不同代币。
+                  选择你想查询的链。同一个地址在不同链上可能有不同资产。
                 </p>
               </div>
             ) : null}
@@ -153,10 +153,10 @@ export default function AddWalletPage() {
               />
               <p className="text-xs leading-6 text-muted-foreground">
                 {chainType === 'evm'
-                  ? 'EVM 地址在多条链上通用，会查询每条链上的原生代币和热门 ERC-20 代币。'
+                  ? '同一个 EVM 地址可以在多条链上使用。我们会按你勾选的链查询原生代币和常见 ERC-20。'
                   : chainType === 'solana'
-                    ? '当前按原生 SOL + SPL Token 查询。'
-                    : '当前按 BTC 地址余额查询。'}
+                    ? '当前会查询 SOL 和常见 SPL Token。'
+                    : '当前会查询这个 BTC 地址的余额。'}
               </p>
             </div>
 
@@ -173,19 +173,19 @@ export default function AddWalletPage() {
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
             <div className="flex gap-3">
-              <Button type="submit">确认添加</Button>
+              <Button type="submit">添加钱包</Button>
               <Button type="button" variant="outline" onClick={() => router.push('/wallets')}>
-                取消
+                返回钱包列表
               </Button>
             </div>
           </form>
 
           <div className="subtle-panel p-5">
-            <p className="muted-kicker">使用说明</p>
+            <p className="muted-kicker">添加前先看</p>
             <ul className="mt-3 space-y-2 text-sm leading-7 text-muted-foreground">
-              <li>数据仅保存在当前浏览器。</li>
-              <li>EVM 地址建议只勾选实际用到的链，减少无效查询。</li>
-              <li>添加完成后，会自动进入净值统计与结构分析。</li>
+              <li>钱包地址只保存在当前浏览器。</li>
+              <li>EVM 地址建议只勾选你实际会用到的链，避免无效查询。</li>
+              <li>添加后，这个地址会直接参与总览、明细和趋势计算。</li>
             </ul>
           </div>
         </CardContent>

@@ -41,7 +41,7 @@ export default function WalletsPage() {
     }
 
     updateWallet(id, { name: nextName })
-    toast.success(nextName ? `已更新钱包名称: ${nextName}` : '已清除钱包名称，将回退显示地址简称')
+    toast.success(nextName ? `钱包名称已更新为 ${nextName}` : '备注名称已清空，之后会显示地址简称。')
     cancelRenaming()
   }
 
@@ -51,7 +51,7 @@ export default function WalletsPage() {
     if (editingWalletId === id) {
       cancelRenaming()
     }
-    toast.success(`已删除钱包: ${name}`)
+    toast.success(`已删除 ${name}，对应本地快照也已清理。`)
   }
 
   const handleToggle = (id: string, enabled: boolean) => {
@@ -65,8 +65,8 @@ export default function WalletsPage() {
     <div className="space-y-6">
       <PageHeader
         badge="钱包"
-        title="管理链上地址、命名与启用状态。"
-        description="这里的每个来源都会直接影响总览、明细与净值趋势。禁用来源时，会同步清理对应本地快照。"
+        title="管理钱包地址、备注名和启用状态。"
+        description="这里的每个钱包都会影响总览、资产明细和净值趋势。禁用后，会一起清理这个钱包的本地快照。"
         actions={
           <Link href="/wallets/add">
             <Button className="gap-2">
@@ -79,8 +79,8 @@ export default function WalletsPage() {
 
       {wallets.length === 0 ? (
         <EmptyState
-          title="尚未添加任何钱包地址"
-          description="添加后会自动参与总览、资产明细和净值趋势分析。"
+          title="还没有钱包地址"
+          description="添加钱包后，它会自动参与总览、资产明细和净值趋势计算。"
           action={
             <Link href="/wallets/add">
               <Button>添加第一个钱包</Button>
@@ -137,7 +137,7 @@ export default function WalletsPage() {
                             {w.chainType === 'evm' && w.evmChains && w.evmChains.length > 0 ? (
                               <span>{w.evmChains.map((k) => EVM_CHAINS[k]?.name ?? k).join(', ')}</span>
                             ) : null}
-                            <span>留空后将回退显示地址简称</span>
+                            <span>留空后，会改为显示地址简称</span>
                           </div>
                         </form>
                       ) : (
@@ -164,7 +164,7 @@ export default function WalletsPage() {
                         {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
                       </p>
                       <p className="text-xs leading-6 text-muted-foreground">
-                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '等待刷新'}
+                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '还没刷新'}
                       </p>
                     </div>
                     {!isEditing ? (

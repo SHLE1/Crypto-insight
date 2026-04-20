@@ -10,12 +10,11 @@ interface EmptyStateProps {
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <Card className="overflow-hidden">
-      <CardContent className="relative flex min-h-[320px] flex-col items-center justify-center px-6 py-14 text-center">
-        <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-        <div className="max-w-xl space-y-4">
-          <span className="section-eyebrow">准备开始</span>
-          <div className="space-y-3">
-            <h2 className="text-[1.65rem] font-semibold tracking-[-0.045em] text-foreground md:text-[1.9rem]">
+      <CardContent className="flex min-h-[280px] flex-col items-center justify-center px-6 py-12 text-center">
+        <div className="max-w-xl space-y-3.5">
+          <span className="section-eyebrow">下一步</span>
+          <div className="space-y-2.5">
+            <h2 className="text-[1.52rem] font-semibold tracking-[-0.05em] text-foreground md:text-[1.75rem]">
               {title}
             </h2>
             <p className="mx-auto max-w-[60ch] text-[0.96rem] leading-7 text-muted-foreground">
@@ -23,7 +22,11 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
             </p>
           </div>
         </div>
-        {action ? <div className="mt-7 flex flex-wrap items-center justify-center gap-3">{action}</div> : null}
+        {action ? (
+          <div className="mt-6 flex w-full max-w-sm flex-col items-stretch justify-center gap-3 sm:w-auto sm:max-w-none sm:flex-row sm:items-center [&>*]:flex [&>*]:w-full [&>*]:justify-center sm:[&>*]:w-auto">
+            {action}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

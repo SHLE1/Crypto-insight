@@ -37,8 +37,8 @@ export default function DefiPage() {
     <div className="space-y-6">
       <PageHeader
         badge="DeFi"
-        title="单独观察协议仓位、借贷与奖励变化。"
-        description="聚焦 EVM 与 Solana 钱包里的协议层持仓，判断 DeFi 净值、补齐进度与异常链路。"
+        title="单独查看 DeFi 仓位和补齐进度。"
+        description="聚焦 EVM 和 Solana 钱包里的协议仓位，快速判断当前 DeFi 净值、刷新进度和异常情况。"
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || (!hasDefiSources && isEnabled)} className="gap-2">
             <ArrowsClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
@@ -50,20 +50,20 @@ export default function DefiPage() {
       {!isEnabled ? (
         <EmptyState
           title="DeFi 统计已关闭"
-          description="开启后会单独查询 EVM 与 Solana 钱包中的协议仓位，并以较低频率自动刷新。"
+          description="开启后会查询 EVM 和 Solana 钱包里的协议仓位，并按较低频率自动刷新。"
           action={
             <Link href="/settings">
               <Button className="gap-2">
                 <SlidersHorizontal size={16} weight="regular" />
-                去设置开启
+                去设置页开启
               </Button>
             </Link>
           }
         />
       ) : !hasDefiSources ? (
         <EmptyState
-          title="还没有可查询 DeFi 的钱包来源"
-          description="先添加 EVM 或 Solana 钱包地址，DeFi 页面会自动统计协议仓位与奖励。"
+          title="还没有可查询 DeFi 的钱包"
+          description="先添加 EVM 或 Solana 钱包地址，这里才会开始统计协议仓位和奖励。"
           action={
             <Link href="/wallets/add">
               <Button className="gap-2">
@@ -99,16 +99,16 @@ export default function DefiPage() {
             refetch={() => refetch()}
           />
 
-          <div className="rounded-[1.35rem] border border-border/75 bg-muted/16 p-5 text-sm text-muted-foreground">
+          <div className="rounded-md border border-border/60 bg-muted/30 p-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2 text-foreground">
               <Coins size={16} weight="regular" />
-              <span className="font-medium tracking-[-0.02em]">当前接入说明</span>
+              <span className="font-medium tracking-[-0.02em]">当前说明</span>
             </div>
             <ul className="mt-3 space-y-2 leading-7">
-              <li>DeFi 统计当前作为独立页面展示，但当前版本也会直接计入总资产与总览分布。</li>
-              <li>默认优先使用 Zapper；当主数据源未识别出仓位或查询失败时，EVM 链路会继续尝试 Moralis，必要时再用 DeBank 公共页面做兜底补全。</li>
-              <li>当数据源出现速率限制或短时异常时，系统会逐个钱包轮转刷新，而不是一直重复刷同一个钱包。</li>
-              <li>即使本轮未拿全，也会逐渐补齐全部钱包的 DeFi 数据。</li>
+              <li>当前版本里，DeFi 净值会同时显示在这个页面，也会直接计入总资产和总览分布。</li>
+              <li>默认优先使用 Zapper；如果主数据源没识别到仓位或查询失败，EVM 链路会继续尝试 Moralis，必要时再用 DeBank 公共页面补齐。</li>
+              <li>如果遇到限速或短时异常，系统会按钱包轮流刷新，而不是反复卡在同一个钱包上。</li>
+              <li>即使这一轮没拿全，系统也会在后续逐步补齐全部钱包的 DeFi 数据。</li>
             </ul>
           </div>
         </>

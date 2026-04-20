@@ -17,7 +17,7 @@ export function WalletSummary({ wallets, snapshots }: WalletSummaryProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between border-b border-border/75 pb-4">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-4">
         <div className="space-y-2">
           <p className="muted-kicker">来源</p>
           <CardTitle className="text-base">钱包</CardTitle>
@@ -30,9 +30,9 @@ export function WalletSummary({ wallets, snapshots }: WalletSummaryProps) {
       <CardContent>
         {displayWallets.length === 0 ? (
           <div className="py-7 text-center">
-            <p className="mb-2 text-sm text-muted-foreground">尚未添加钱包</p>
+            <p className="mb-2 text-sm text-muted-foreground">还没有钱包</p>
             <Link href="/wallets/add" className="inline-flex items-center gap-1 text-sm text-primary hover:gap-1.5">
-              添加第一个钱包
+              添加钱包
               <CaretRight size={12} weight="bold" />
             </Link>
           </div>
@@ -43,7 +43,7 @@ export function WalletSummary({ wallets, snapshots }: WalletSummaryProps) {
               return (
                 <div
                   key={w.id}
-                  className="flex items-center justify-between rounded-[1rem] border border-border/75 bg-background/70 p-3.5 hover:bg-muted/18"
+                  className="flex items-center justify-between rounded-[1rem] border border-border/60 bg-muted/20 p-3.5 hover:bg-muted/30"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     <Badge variant="secondary" className="shrink-0 text-[10px]">

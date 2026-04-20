@@ -31,8 +31,8 @@ export default function HoldingsPage() {
     <div className="space-y-6">
       <PageHeader
         badge="资产明细"
-        title="按代币、来源与链路拆开看清每一层持仓。"
-        description="在同一页里完成搜索、异常筛选与多视角切换，快速判断哪里缺价格、哪里仓位过重。"
+        title="把持仓按代币、来源和链分别看清。"
+        description="在一页里完成搜索、筛选和视角切换，快速找出缺价格的资产、集中仓位和异常数据。"
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || isEmpty} className="gap-2">
             <ArrowClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
@@ -45,8 +45,8 @@ export default function HoldingsPage() {
         <HoldingsLoadingState />
       ) : isEmpty ? (
         <EmptyState
-          title="还没有可查看的资产明细"
-          description="先添加钱包地址或绑定交易所账户，明细页会自动展示你的持仓结构。"
+          title="还没有资产明细"
+          description="先添加钱包地址或交易所账户，明细页就会自动显示你的持仓结构。"
           action={
             <>
               <Link href="/wallets/add">
@@ -63,7 +63,7 @@ export default function HoldingsPage() {
           {!isFetching && !hasValuedAssets && hasSources ? (
             <Card className="border-dashed">
               <CardContent className="py-6 text-sm leading-7 text-muted-foreground">
-                当前没有拿到可计价的资产数据。常见原因包括地址下没有原生币、交易所 API 权限不足，或第三方报价暂时不可用。
+                现在还拿不到可计价的资产。常见原因包括：地址里没有资产、交易所 API 权限不足，或第三方报价暂时不可用。
               </CardContent>
             </Card>
           ) : null}
@@ -72,7 +72,7 @@ export default function HoldingsPage() {
             <HoldingSummaryCard
               label="总估值"
               value={formatCurrency(totalValue)}
-              detail={isDefiEnabled && defiTotalValue > 0 ? `${holdingsData.length} 项代币 + DeFi ${formatCurrency(defiTotalValue)}` : `${holdingsData.length} 项代币`}
+              detail={isDefiEnabled && defiTotalValue > 0 ? `${holdingsData.length} 个代币条目 + DeFi ${formatCurrency(defiTotalValue)}` : `${holdingsData.length} 个代币条目`}
             />
             <HoldingSummaryCard
               label="价格覆盖"
@@ -94,9 +94,9 @@ export default function HoldingsPage() {
           <HoldingsOverview data={holdingsData} analytics={analytics} totalValue={totalValue} />
 
           {isDefiEnabled && defiTotalValue > 0 ? (
-            <Card className="border-border/75 bg-muted/12">
+            <Card className="border-border/60 bg-muted/30">
               <CardContent className="py-4 text-sm leading-7 text-muted-foreground">
-                当前总资产已直接包含 <span className="font-medium text-foreground">{formatCurrency(defiTotalValue)}</span> 的 DeFi 净值；下方资产明细表仍主要展示钱包代币与交易所资产，未把 DeFi 仓位展开到代币列表中。
+                当前总资产已经包含 <span className="font-medium text-foreground">{formatCurrency(defiTotalValue)}</span> 的 DeFi 净值；下方明细表暂时还是以钱包代币和交易所资产为主，还不会把 DeFi 仓位拆成代币列表。
               </CardContent>
             </Card>
           ) : null}
@@ -129,13 +129,13 @@ function HoldingSummaryCard({
 function HoldingsLoadingState() {
   return (
     <div className="space-y-4">
-      <div className="h-24 animate-pulse rounded-[1.5rem] bg-muted/40" />
+      <div className="h-24 animate-pulse rounded-md bg-muted/40" />
       <div className="panel-grid">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-28 animate-pulse rounded-[1.5rem] bg-muted/50" />
+          <div key={index} className="h-28 animate-pulse rounded-md bg-muted/50" />
         ))}
       </div>
-      <div className="h-[620px] animate-pulse rounded-[1.5rem] bg-muted/50" />
+      <div className="h-[620px] animate-pulse rounded-md bg-muted/50" />
     </div>
   )
 }

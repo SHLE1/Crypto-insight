@@ -56,12 +56,12 @@ export default function CexPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!apiKey.trim() || !apiSecret.trim()) {
-      toast.error('请填写 API Key 和 Secret')
+      toast.error('请先填写 API Key 和 API Secret。')
       return
     }
 
     if (exchange === 'okx' && !passphrase.trim()) {
-      toast.error('OKX 账户需要填写 Passphrase')
+      toast.error('OKX 账户还需要填写 Passphrase。')
       return
     }
 
@@ -73,7 +73,7 @@ export default function CexPage() {
     )
 
     if (alreadyExists) {
-      toast.error('这个交易所账户已经绑定过了')
+      toast.error('这个交易所账户已经绑定过了，不需要重复添加。')
       return
     }
 
@@ -86,7 +86,7 @@ export default function CexPage() {
         passphrase: exchange === 'okx' ? passphrase.trim() : undefined,
       })
       removeSnapshot(editingAccountId)
-      toast.success('交易所密钥已更新')
+      toast.success('密钥已更新，下次刷新会重新拉取这个账户的数据。')
     } else {
       addAccount({
         id: crypto.randomUUID(),
@@ -97,7 +97,7 @@ export default function CexPage() {
         passphrase: exchange === 'okx' ? passphrase.trim() : undefined,
         enabled: true,
       })
-      toast.success('交易所账户已添加')
+      toast.success('交易所账户已添加，现在可以回到总览查看资产。')
     }
 
     resetForm()
@@ -106,7 +106,7 @@ export default function CexPage() {
   const handleRemove = (id: string, label: string) => {
     removeAccount(id)
     removeSnapshot(id)
-    toast.success(`已删除账户: ${label}`)
+    toast.success(`已删除 ${label}，对应本地快照也已清理。`)
   }
 
   const handleToggle = (id: string, enabled: boolean) => {
@@ -120,13 +120,13 @@ export default function CexPage() {
     <div className="space-y-6">
       <PageHeader
         badge="交易所"
-        title="把只读账户纳入同一张资产总表。"
-        description="绑定只读 API 后，交易所余额会自动进入总览与资产明细。密钥只保存在当前浏览器，导出文件不会包含它们。"
+        title="把交易所资产接入同一张总表。"
+        description="绑定只读 API 后，交易所余额会自动出现在总览和资产明细里。密钥只保存在当前浏览器，导出文件不会包含它们。"
         actions={
           !showForm ? (
             <Button onClick={() => setShowForm(true)} className="gap-2">
               <Plus size={16} weight="regular" />
-              绑定账户
+              添加账户
             </Button>
           ) : null
         }
@@ -135,7 +135,7 @@ export default function CexPage() {
       {showForm ? (
         <Card className="max-w-4xl">
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/75">
-            <CardTitle className="text-base">{editingAccountId ? '补填或更新密钥' : '绑定交易所账户'}</CardTitle>
+            <CardTitle className="text-base">{editingAccountId ? '重新填写或更新密钥' : '添加交易所账户'}</CardTitle>
             <Button variant="ghost" size="icon-sm" onClick={resetForm}>
               <X size={16} weight="regular" />
             </Button>
@@ -162,32 +162,32 @@ export default function CexPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="label">备注名称（可选）</Label>
-                <Input id="label" placeholder="例如：主账户" value={label} onChange={(e) => setLabel(e.target.value)} />
+                <Input id="label" placeholder="例如：主账户 / 量化账户" value={label} onChange={(e) => setLabel(e.target.value)} />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="apiKey">API Key（只读权限）</Label>
-                <Input id="apiKey" placeholder="填入只读 API Key" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="font-mono" />
+                <Input id="apiKey" placeholder="输入只读 API Key" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="font-mono" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="apiSecret">API Secret</Label>
-                <Input id="apiSecret" type="password" placeholder="填入 API Secret" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} className="font-mono" />
+                <Input id="apiSecret" type="password" placeholder="输入 API Secret" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} className="font-mono" />
               </div>
 
               {exchange === 'okx' ? (
                 <div className="space-y-2">
                   <Label htmlFor="passphrase">Passphrase</Label>
-                  <Input id="passphrase" type="password" placeholder="OKX Passphrase" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
+                  <Input id="passphrase" type="password" placeholder="输入 OKX Passphrase" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
                 </div>
               ) : null}
 
               <p className="text-xs leading-6 text-muted-foreground">
-                仅保存于当前浏览器，导出文件不会包含密钥。请确保使用只读权限的 Key。
+                密钥只保存在当前浏览器，导出文件不会包含它们。请确认这组 Key 只有只读权限。
               </p>
 
               <div className="flex gap-3">
-                <Button type="submit">确认绑定</Button>
+                <Button type="submit">保存账户</Button>
                 <Button type="button" variant="outline" onClick={resetForm}>
                   取消
                 </Button>
@@ -195,11 +195,11 @@ export default function CexPage() {
             </form>
 
             <div className="subtle-panel p-5">
-              <p className="muted-kicker">安全说明</p>
+              <p className="muted-kicker">绑定前先看</p>
               <ul className="mt-3 space-y-2 text-sm leading-7 text-muted-foreground">
-                <li>仅使用只读权限。</li>
-                <li>导出文件不包含任何密钥。</li>
-                <li>删除账户时会同步清理本地快照。</li>
+                <li>只使用只读权限的 API Key。</li>
+                <li>导出文件不会包含任何密钥。</li>
+                <li>删除账户时，会一起清理这个账户的本地快照。</li>
               </ul>
             </div>
           </CardContent>
@@ -210,9 +210,9 @@ export default function CexPage() {
 
       {accounts.length === 0 && !showForm ? (
         <EmptyState
-          title="尚未绑定任何交易所账户"
-          description="绑定只读 API 后，就能把交易所余额纳入总览和资产明细。"
-          action={<Button onClick={() => setShowForm(true)}>绑定第一个账户</Button>}
+          title="还没有交易所账户"
+          description="添加只读 API 后，这里的资产会自动进入总览和资产明细。"
+          action={<Button onClick={() => setShowForm(true)}>添加第一个账户</Button>}
         />
       ) : (
         <div className="space-y-3">
@@ -231,7 +231,7 @@ export default function CexPage() {
                         </Badge>
                         {!a.apiKey.trim() ? (
                           <Badge variant="outline" className="text-[10px]">
-                            需重填密钥
+                            需要重新填写密钥
                           </Badge>
                         ) : null}
                         {snapshot?.status === 'error' ? (
@@ -243,7 +243,7 @@ export default function CexPage() {
                       <p className="mt-1 font-mono text-xs leading-6 text-muted-foreground">
                         {a.apiKey.trim()
                           ? `Key: ${a.apiKey.slice(0, 6)}...${a.apiKey.slice(-4)}`
-                          : '当前浏览器未保存密钥，需要重新填写后才能刷新。'}
+                          : '这个浏览器里还没有保存密钥。重新填写后才能刷新这个账户。'}
                       </p>
                     </div>
                   </div>
@@ -253,7 +253,7 @@ export default function CexPage() {
                         {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
                       </p>
                       <p className="text-xs leading-6 text-muted-foreground">
-                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '等待刷新'}
+                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '还没刷新'}
                       </p>
                     </div>
                     <Button variant="ghost" size="icon-sm" onClick={() => startEditing(a.id)}>

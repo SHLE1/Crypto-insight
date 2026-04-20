@@ -22,8 +22,8 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
   const hasMore = errors.length > 2
 
   return (
-    <Card className={hasCritical ? 'border-destructive/25' : 'border-border/75'}>
-      <CardHeader className="border-b border-border/75 pb-4">
+    <Card className={hasCritical ? 'border-destructive/25' : 'border-border/60'}>
+      <CardHeader className="border-b border-border/60 pb-4">
         <CardTitle className="flex items-center justify-between gap-3 text-sm font-medium">
           <span className="flex items-center gap-2">
             {hasCritical ? (
@@ -31,7 +31,7 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
             ) : (
               <Info size={16} weight="regular" className="text-amber-600 dark:text-amber-400" />
             )}
-            {hasCritical ? '异常提示' : '数据状态'}
+            {hasCritical ? '需要处理的问题' : '数据状态'}
           </span>
           <span className="text-xs font-normal text-muted-foreground">
             {criticals.length > 0 && `${criticals.length} 个错误`}
@@ -47,7 +47,7 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
               key={i}
               className={err.kind === 'error'
                 ? 'rounded-[1rem] border border-destructive/12 bg-destructive/6 p-3.5 text-sm'
-                : 'rounded-[1rem] border border-border/75 bg-muted/28 p-3.5 text-sm'}
+                : 'rounded-[1rem] border border-border/60 bg-muted/28 p-3.5 text-sm'}
             >
               <div className="flex items-start gap-2.5">
                 <WarningCircle
@@ -82,7 +82,7 @@ export function AlertsPanel({ errors }: AlertsPanelProps) {
               </>
             ) : (
               <>
-                查看全部 {errors.length} 条
+                查看全部 {errors.length} 条提醒
                 <CaretDown size={12} weight="bold" className="ml-1" />
               </>
             )}

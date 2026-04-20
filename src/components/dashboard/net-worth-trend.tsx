@@ -41,12 +41,12 @@ export function NetWorthTrend({ data }: NetWorthTrendProps) {
         <CardHeader>
           <div className="space-y-2">
             <p className="muted-kicker">趋势</p>
-            <CardTitle className="text-base">资产变化看板</CardTitle>
+            <CardTitle className="text-base">总资产趋势</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <p className="max-w-[56ch] text-sm leading-7 text-muted-foreground">
-            完成几次刷新后，这里会显示总资产变化趋势，方便判断净值波动与同步节奏。
+            刷新几次后，这里会显示总资产趋势，方便你判断净值变化和同步节奏。
           </p>
         </CardContent>
       </Card>
@@ -64,21 +64,21 @@ export function NetWorthTrend({ data }: NetWorthTrendProps) {
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="border-b border-border/75">
+      <CardHeader className="border-b border-border/60">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="muted-kicker">趋势</p>
-            <CardTitle className="mt-2 text-base">资产变化看板</CardTitle>
+            <CardTitle className="mt-2 text-base">总资产趋势</CardTitle>
             <p className="mt-1 text-xs leading-6 text-muted-foreground">最近 {visibleData.length} 次刷新记录</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="rounded-md border border-border/75 bg-muted/35 px-3 py-1.5">
+            <span className="rounded-md border border-border/60 bg-muted/35 px-3 py-1.5">
               高点 <span className="font-medium text-foreground/90">{formatCurrency(rangeHigh)}</span>
             </span>
-            <span className="rounded-md border border-border/75 bg-muted/35 px-3 py-1.5">
+            <span className="rounded-md border border-border/60 bg-muted/35 px-3 py-1.5">
               低点 <span className="font-medium text-foreground/90">{formatCurrency(rangeLow)}</span>
             </span>
-            <span className="rounded-md border border-border/75 bg-muted/35 px-3 py-1.5">
+            <span className="rounded-md border border-border/60 bg-muted/35 px-3 py-1.5">
               振幅 <span className="font-medium text-foreground/90">{formatPercent(rangePercent)}</span>
             </span>
           </div>

@@ -31,11 +31,11 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
         <CardHeader>
           <div className="space-y-2">
             <p className="muted-kicker">结构</p>
-            <CardTitle className="text-base">资产分布</CardTitle>
+            <CardTitle className="text-base">资产占比</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">暂无数据</p>
+          <p className="text-sm text-muted-foreground">还没有可显示的数据</p>
         </CardContent>
       </Card>
     )
@@ -43,10 +43,10 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
 
   return (
     <Card>
-      <CardHeader className="border-b border-border/75">
+      <CardHeader className="border-b border-border/60">
         <div className="space-y-2">
           <p className="muted-kicker">结构</p>
-          <CardTitle className="text-base">资产分布</CardTitle>
+          <CardTitle className="text-base">资产占比</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="grid gap-5 pt-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
@@ -81,7 +81,7 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
             const share = totalValue > 0 ? (item.value / totalValue) * 100 : 0
 
             return (
-              <div key={item.name} className="rounded-[1.15rem] border border-border/75 bg-background/75 p-3.5">
+              <div key={item.name} className="rounded-md border border-border/60 bg-muted/20 p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -91,7 +91,7 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
                       />
                       <span className="truncate text-sm font-medium">{item.name}</span>
                     </div>
-                    <p className="mt-1 text-xs leading-6 text-muted-foreground">占总资产 {share.toFixed(1)}%</p>
+                    <p className="mt-1 text-xs leading-6 text-muted-foreground">占总资产的 {share.toFixed(1)}%</p>
                   </div>
                   <p className="shrink-0 text-sm font-medium tabular-nums">{formatCurrency(item.value)}</p>
                 </div>

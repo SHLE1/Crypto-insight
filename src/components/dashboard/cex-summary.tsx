@@ -17,7 +17,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between border-b border-border/75 pb-4">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-4">
         <div className="space-y-2">
           <p className="muted-kicker">来源</p>
           <CardTitle className="text-base">交易所</CardTitle>
@@ -30,9 +30,9 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
       <CardContent>
         {displayAccounts.length === 0 ? (
           <div className="py-7 text-center">
-            <p className="mb-2 text-sm text-muted-foreground">尚未绑定交易所</p>
+            <p className="mb-2 text-sm text-muted-foreground">还没有交易所账户</p>
             <Link href="/cex" className="inline-flex items-center gap-1 text-sm text-primary hover:gap-1.5">
-              绑定交易所账户
+              添加交易所账户
               <CaretRight size={12} weight="bold" />
             </Link>
           </div>
@@ -43,7 +43,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
               return (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between rounded-[1rem] border border-border/75 bg-background/70 p-3.5 hover:bg-muted/18"
+                  className="flex items-center justify-between rounded-[1rem] border border-border/60 bg-muted/20 p-3.5 hover:bg-muted/30"
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">

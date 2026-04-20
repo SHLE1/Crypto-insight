@@ -139,7 +139,7 @@ function MetricBlock({
   toneClassName?: string
 }) {
   return (
-    <div className="rounded-[0.95rem] border border-border/75 bg-background/72 px-3 py-3">
+    <div className="rounded-[0.95rem] border border-border/60 bg-background/72 px-3 py-3">
       <p className="text-[11px] tracking-[0.08em] text-muted-foreground">{label}</p>
       <p className={`mt-1 text-sm font-medium tabular-nums ${toneClassName ?? 'text-foreground'}`}>{value}</p>
     </div>
@@ -150,7 +150,7 @@ function SourceRow({ row }: { row: DetailRow }) {
   const priceStatusLabel = getPriceStatusLabel(row.priceStatus)
 
   return (
-    <div className="grid gap-3 rounded-[1rem] border border-border/75 bg-background/78 p-3.5 md:grid-cols-[minmax(0,1.8fr)_repeat(3,minmax(0,1fr))] md:items-center">
+    <div className="grid gap-3 rounded-[1rem] border border-border/60 bg-muted/20 p-3.5 md:grid-cols-[minmax(0,1.8fr)_repeat(3,minmax(0,1fr))] md:items-center">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-sm font-medium">{row.title}</span>
@@ -187,8 +187,8 @@ function GroupCard({
   const share = totalValue > 0 ? (row.value / totalValue) * 100 : 0
 
   return (
-    <div className="overflow-hidden rounded-[1.25rem] border border-border/75 bg-card/92">
-      <button type="button" className="w-full p-4 text-left hover:bg-muted/10" onClick={onToggle}>
+    <div className="overflow-hidden rounded-md border border-border/60 bg-card">
+      <button type="button" className="w-full p-4 text-left hover:bg-muted/30" onClick={onToggle}>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_190px] lg:grid-rows-[auto_auto]">
           <div className="min-w-0 lg:col-start-1 lg:row-start-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -214,7 +214,7 @@ function GroupCard({
             <MetricBlock label="均价" value={formatCurrency(row.price)} />
             <MetricBlock label="24h" value={formatPercent(row.change24h)} toneClassName={getChangeColor(row.change24h)} />
           </div>
-          <div className="rounded-[1rem] border border-border/75 bg-background/70 px-4 py-3 text-left lg:col-start-2 lg:row-start-2 lg:flex lg:h-full lg:flex-col lg:justify-center lg:text-right">
+          <div className="rounded-[1rem] border border-border/60 bg-muted/20 px-4 py-3 text-left lg:col-start-2 lg:row-start-2 lg:flex lg:h-full lg:flex-col lg:justify-center lg:text-right">
             <p className="text-[11px] tracking-[0.08em] text-muted-foreground">总市值</p>
             <p className="mt-1 text-xl font-semibold tracking-[-0.04em] tabular-nums">{formatCurrency(row.value)}</p>
             <p className="mt-1 text-xs text-muted-foreground">占组合 {share.toFixed(1)}%</p>
@@ -223,10 +223,10 @@ function GroupCard({
       </button>
 
       {expanded ? (
-        <div className="border-t border-border/75 bg-muted/12 px-4 py-4">
+        <div className="border-t border-border/60 bg-muted/30 px-4 py-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-medium tracking-[0.08em] text-foreground">来源明细</p>
-            <p className="text-[11px] text-muted-foreground">{row.details.length} 项</p>
+            <p className="text-xs font-medium tracking-[0.08em] text-foreground">明细</p>
+            <p className="text-[11px] text-muted-foreground">{row.details.length} 条</p>
           </div>
           <div className="space-y-2.5">
             {row.details.map((detail) => (
@@ -271,11 +271,11 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
       value: holding.value,
       change24h: holding.change24h,
       priceStatus: holding.priceStatus,
-      badge: `${holding.sourceCount} 来源`,
+      badge: `${holding.sourceCount} 个来源`,
       details: (holding.sources ?? []).map((source, index) => ({
         key: `${holding.assetId}-${source.sourceId}-${source.chainLabel ?? 'unknown'}-${index}`,
         title: source.sourceLabel,
-        subtitle: source.sourceType === 'cex' ? '交易所账户' : '钱包',
+        subtitle: source.sourceType === 'cex' ? '交易所账户' : '钱包地址',
         balance: source.balance,
         price: holding.price,
         value: holding.price !== null ? source.balance * holding.price : 0,
@@ -312,13 +312,13 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
         walletMap.set(key, {
           key,
           title: position.sourceLabel,
-          subtitle: position.sourceType === 'cex' ? '交易所账户' : '钱包',
+          subtitle: position.sourceType === 'cex' ? '交易所账户' : '钱包地址',
           balance: position.balance,
           price: getGroupPrice(position.value, position.balance),
           value: position.value,
           change24h: position.change24h,
           priceStatus: position.priceStatus,
-          badge: `${position.sourceType === 'cex' ? '交易所' : '钱包'}`,
+          badge: `${position.sourceType === 'cex' ? '交易所账户' : '钱包地址'}`,
           details: [detail],
         })
       }
@@ -333,7 +333,7 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
           (status, detail) => mergePriceStatus(status, detail.priceStatus),
           'live'
         ),
-        badge: `${group.details.length} 资产`,
+        badge: `${group.details.length} 个资产`,
         details: group.details.sort((a, b) => b.value - a.value),
       }))
       .sort((a, b) => b.value - a.value)
@@ -432,17 +432,17 @@ function GroupedHoldingsView({
   const activeKey = expandedKey !== null && rows.some((row) => row.key === expandedKey) ? expandedKey : null
 
   if (rows.length === 0) {
-    return <p className="text-sm leading-7 text-muted-foreground">当前筛选条件下没有可展示的资产。</p>
+    return <p className="text-sm leading-7 text-muted-foreground">按当前筛选条件，还没有可显示的资产。</p>
   }
 
   return (
     <div className="space-y-3">
       <p className="text-xs leading-6 text-muted-foreground">
         {mode === 'token'
-          ? '按代币查看时，同一代币会合并不同来源的持仓。'
+          ? '按代币查看时，同一个代币会合并不同来源的持仓。'
           : mode === 'wallet'
             ? '按钱包查看时，每张卡代表一个钱包或交易所账户。'
-            : '按链查看时，会把同一条链上的资产合并展示。'}
+            : '按链查看时，同一条链上的资产会合并显示。'}
       </p>
       {rows.map((row) => (
         <GroupCard
@@ -487,12 +487,12 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="gap-4 border-b border-border/75">
+      <CardHeader className="gap-4 border-b border-border/60">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
             <p className="muted-kicker">明细工作台</p>
             <CardTitle className="text-base">资产明细</CardTitle>
-            <p className="text-xs leading-6 text-muted-foreground">支持搜索、筛选，并按代币、按钱包、按链切换视角。</p>
+            <p className="text-xs leading-6 text-muted-foreground">支持搜索、筛选，并在代币、钱包和链三个视角之间切换。</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             <MetricBlock label="平均单项" value={formatCurrency(analytics.averagePositionValue)} />
@@ -502,7 +502,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
             />
             <MetricBlock
               label="价格异常"
-              value={`${analytics.missingPriceCount + analytics.stalePriceCount} 项`}
+              value={`${analytics.missingPriceCount + analytics.stalePriceCount} 个`}
               toneClassName={analytics.missingPriceCount + analytics.stalePriceCount > 0 ? 'text-amber-600 dark:text-amber-400' : undefined}
             />
           </div>
@@ -513,7 +513,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索代币、钱包、交易所或链"
+              placeholder="搜索代币、钱包、交易所账户或链"
               className="pl-9"
             />
           </div>
@@ -546,7 +546,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
                 按链
               </TabsTrigger>
             </TabsList>
-            <Badge variant="secondary">{data.length} 项代币</Badge>
+            <Badge variant="secondary">{data.length} 个代币条目</Badge>
           </div>
           <TabsContent className="mt-0" value="token">
             <GroupedHoldingsView rows={filteredData.token} mode="token" totalValue={totalValue} />

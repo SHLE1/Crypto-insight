@@ -19,18 +19,18 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        'flex flex-col gap-5 border-b border-border/75 pb-6 md:flex-row md:items-end md:justify-between',
+        'flex flex-col gap-4 pb-2 md:flex-row md:items-end md:justify-between',
         className
       )}
     >
-      <div className="min-w-0 space-y-3">
+      <div className="min-w-0 space-y-2.5">
         {badge ? <span className="section-eyebrow">{badge}</span> : null}
-        <div className="space-y-2">
-          <h1 className="max-w-3xl text-[1.875rem] font-semibold tracking-[-0.05em] text-foreground md:text-[2.2rem]">
+        <div className="space-y-1.5">
+          <h1 className="max-w-3xl text-2xl font-semibold tracking-[-0.04em] text-foreground">
             {title}
           </h1>
           {description ? (
-            <p className="max-w-[65ch] text-[0.96rem] leading-7 text-muted-foreground">
+            <p className="max-w-[64ch] text-[0.95rem] leading-7 text-muted-foreground">
               {description}
             </p>
           ) : null}
