@@ -3,16 +3,17 @@
 import { useRef, useState, type ReactNode } from 'react'
 import {
   Cloud,
-  DownloadSimple,
+  Download,
   Lock,
-  Trash,
-  UploadSimple,
-  Warning,
-} from '@phosphor-icons/react'
+  Trash2,
+  Upload,
+  AlertTriangle,
+  MonitorCog
+} from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -33,7 +34,6 @@ export default function SettingsPage() {
   const clearPortfolio = usePortfolioStore((s) => s.clearAll)
   const clearDefi = useDefiStore((s) => s.clearAll)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [confirmResetOpen, setConfirmResetOpen] = useState(false)
 
   const handleExport = () => {
     const data = {
@@ -121,223 +121,144 @@ export default function SettingsPage() {
         })
       }
 
-      toast.success('导入完成。请重新刷新一次，拉取最新资产数据。')
+      toast.success('导入完成。清空历史数据，请稍后重新刷新获取最新资产。')
     } catch {
-      toast.error('导入失败。请选择从 Crypto Insight 导出的 JSON 文件。')
+      toast.error('导入失败，请检查文件格式。')
     } finally {
-      event.target.value = ''
+      event.target.value = '' // reset
     }
   }
 
   const handleReset = () => {
-    setWallets([])
-    setAccounts([])
-    clearPortfolio()
-    clearDefi()
-    setConfirmResetOpen(false)
-    toast.success('当前浏览器里的本地数据已清空。')
+    if (confirm('确认清空所有本地数据、钱包地址、交易所密钥和历史趋势？清空后无法恢复。')) {
+      setWallets([])
+      setAccounts([])
+      clearPortfolio()
+      clearDefi()
+      toast.success('数据已清空。')
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        badge="设置"
-        title="偏好设置"
-        description="数据仅保存在当前设备，不会同步至云端。导入导出可恢复结构与标签，但密钥须手动重新填写。"
-      />
+    <div className="flex flex-1 flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-2xl font-bold tracking-tight">偏好设置</h2>
+        <p className="text-sm text-muted-foreground">
+          所有数据仅安全地保存在您的当前设备，不会向云端发送任何私钥信息。
+        </p>
+      </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">基础设置</CardTitle>
+            <div className="flex items-center gap-2">
+              <MonitorCog className="w-5 h-5 text-muted-foreground" />
+              <CardTitle>基础配置</CardTitle>
+            </div>
+            <CardDescription>配置看板的显示与刷新逻辑。</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <SettingRow
-              label="计价货币"
-              description="当前只支持 USD。"
-              control={<Input value={settings.quoteCurrency} disabled className="w-24 text-center" />}
-            />
-
+          <CardContent className="flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <div className="gap-0.5">
+                <Label>计价货币</Label>
+                <div className="text-sm text-muted-foreground">所有的资产换算基础单位</div>
+              </div>
+              <Input
+                value={settings.quoteCurrency}
+                disabled
+                className="w-24 text-center disabled:opacity-75"
+              />
+            </div>
             <Separator />
-
-            <SettingRow
-              label="自动刷新间隔（秒）"
-              description="建议设置在 60 到 300 秒之间。"
-              control={
-                <Input
-                  type="number"
-                  min={30}
-                  max={600}
-                  value={settings.refreshInterval}
-                  onChange={(e) =>
-                    settings.updateSettings({
-                      refreshInterval: Number(e.target.value) || 60,
-                    })
-                  }
-                  className="w-24 text-center"
-                />
-              }
-            />
-
+            <div className="flex items-center justify-between">
+              <div className="gap-0.5">
+                <Label>后台刷新间隔</Label>
+                <div className="text-sm text-muted-foreground">静默同步数据（秒）</div>
+              </div>
+              <Input
+                type="number"
+                min={30}
+                max={3600}
+                value={settings.refreshInterval}
+                className="w-24 text-center"
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 300
+                  settings.updateSettings({ refreshInterval: val })
+                }}
+              />
+            </div>
             <Separator />
-
-            <SettingRow
-              label="隐藏小额资产"
-              description="在资产明细里隐藏低于 0.1 USD 的项目。"
-              control={<Switch checked={settings.hideSmallAssets} onCheckedChange={(checked) => settings.updateSettings({ hideSmallAssets: checked })} />}
-            />
-
+            <div className="flex items-center justify-between">
+               <div className="gap-0.5">
+                <Label>DeFi 查询开关</Label>
+                <div className="text-sm text-muted-foreground">开启后可同步预言机仓位</div>
+              </div>
+              <Switch
+                checked={settings.defiEnabled}
+                onCheckedChange={(c) => settings.updateSettings({ defiEnabled: c })}
+              />
+            </div>
             <Separator />
-
-            <SettingRow
-              label="启用 DeFi 统计"
-              description="查询 EVM 和 Solana 钱包里的协议仓位。当前结果会直接计入总资产。"
-              control={<Switch checked={settings.defiEnabled} onCheckedChange={(checked) => settings.updateSettings({ defiEnabled: checked })} />}
-            />
-
-            <Separator />
-
-            <SettingRow
-              label="深色模式"
-              description="主题偏好会保存在当前浏览器。"
-              control={<Switch checked={settings.theme === 'dark'} onCheckedChange={(checked) => settings.updateSettings({ theme: checked ? 'dark' : 'light' })} />}
-            />
+            <div className="flex items-center justify-between">
+               <div className="gap-0.5">
+                <Label>隐藏微小资产</Label>
+                <div className="text-sm text-muted-foreground">过滤价值极低的尘埃代币</div>
+              </div>
+              <Switch
+                checked={settings.hideSmallAssets}
+                onCheckedChange={(c) => settings.updateSettings({ hideSmallAssets: c })}
+              />
+            </div>
           </CardContent>
         </Card>
 
-        <div className="space-y-5">
+        <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">数据管理</CardTitle>
+              <div className="flex items-center gap-2">
+                <Cloud className="w-5 h-5 text-muted-foreground" />
+                <CardTitle>数据备份与恢复</CardTitle>
+              </div>
+              <CardDescription>导出不包含私钥的安全 JSON 用于多端迁移。</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <SettingRow
-                label="导出数据"
-                description="导出钱包、账户标签和设置，不包含快照和任何密钥。"
-                control={
-                  <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
-                    <DownloadSimple size={16} weight="regular" />
-                    导出配置
-                  </Button>
-                }
-              />
-
-              <Separator />
-
-              <SettingRow
-                label="导入数据"
-                description="从导出的文件恢复钱包、标签和设置。导入后请重新刷新数据。"
-                control={
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="application/json"
-                      className="hidden"
-                      onChange={handleImport}
-                    />
-                    <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-2">
-                      <UploadSimple size={16} weight="regular" />
-                      导入配置
-                    </Button>
-                  </>
-                }
-              />
-
-              <Separator />
-
-              <SettingRow
-                label="数据存储"
-                description="所有数据都保存在浏览器本地，不会自动上传。"
-                control={
-                  <Badge variant="secondary">
-                    <Lock size={14} weight="regular" className="mr-1" />
-                    仅本地
-                  </Badge>
-                }
-              />
-
-              <Separator />
-
-              <SettingRow
-                label="清空本地数据"
-                description="清空钱包、交易所配置、资产缓存和历史记录。"
-                control={
-                  <Button variant="destructive" size="sm" onClick={() => setConfirmResetOpen(true)} className="gap-2">
-                    <Trash size={16} weight="regular" />
-                    清空数据
-                  </Button>
-                }
-              />
-
-              {confirmResetOpen ? (
-                <div className="rounded-md border border-destructive/15 bg-destructive/6 p-4">
-                  <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <Warning size={16} weight="fill" className="text-destructive" />
-                    要清空当前浏览器里的全部本地数据吗？
-                  </p>
-                  <p className="mt-2 text-xs leading-6 text-muted-foreground">
-                    这个操作会删除钱包、交易所配置、资产快照和历史记录，而且不能撤销。
-                  </p>
-                  <div className="mt-3 flex gap-2">
-                    <Button variant="destructive" size="sm" onClick={handleReset}>
-                      确认清空数据
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setConfirmResetOpen(false)}>
-                      取消
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="secondary" className="flex-1 gap-2" onClick={handleExport}>
+                  <Download className="size-4" />
+                  导出安全配置
+                </Button>
+                <Button variant="outline" className="flex-1 gap-2" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="size-4" />
+                  导入配置
+                </Button>
+                <input
+                  type="file"
+                  accept="application/json"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleImport}
+                />
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="opacity-80">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Cloud size={16} weight="regular" />
-                云同步
-              </CardTitle>
-              <Badge variant="outline" className="text-xs">即将支持</Badge>
+          <Card className="border-destructive/60">
+            <CardHeader>
+               <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-5 h-5" />
+                <CardTitle>危险操作</CardTitle>
+              </div>
+              <CardDescription>清空本地 IndexedDB 数据，恢复出厂状态。</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm leading-7 text-muted-foreground">
-                云同步会在后续版本上线，到时支持登录账号和跨设备同步。
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">关于</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm leading-7 text-muted-foreground">
-              <p>Crypto Insight V1.0.0</p>
-              <p>个人加密资产面板 · 数据仅保存在本地 · 无需注册登录</p>
+              <Button variant="destructive" className="w-full gap-2" onClick={handleReset}>
+                <Trash2 className="size-4" />
+                清空本地系统数据
+              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
-  )
-}
-
-function SettingRow({
-  label,
-  description,
-  control,
-}: {
-  label: string
-  description: string
-  control: ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <Label>{label}</Label>
-        <p className="mt-1 text-xs leading-6 text-muted-foreground">{description}</p>
-      </div>
-      <div className="shrink-0">{control}</div>
     </div>
   )
 }

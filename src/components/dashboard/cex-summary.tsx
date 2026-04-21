@@ -18,7 +18,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-4">
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <p className="muted-kicker">来源</p>
           <CardTitle className="text-base">交易所</CardTitle>
         </div>
@@ -37,7 +37,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
             </Link>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="flex flex-col gap-2.5">
             {displayAccounts.map((a) => {
               const snapshot = snapshots[a.id]
               return (
@@ -45,7 +45,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
                   key={a.id}
                   className="flex items-center justify-between rounded-[1rem] border border-border/60 bg-muted/20 p-3.5 hover:bg-muted/30"
                 >
-                  <div className="min-w-0 space-y-1">
+                  <div className="min-w-0 flex flex-col gap-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary" className="text-[10px]">
                         {getExchangeLabel(a.exchange)}
@@ -55,7 +55,7 @@ export function CexSummary({ accounts, snapshots }: CexSummaryProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     {snapshot?.status === 'error' && (
-                      <Badge variant="destructive" className="text-[10px]">
+                      <Badge variant="secondary" className="text-[10px]">
                         异常
                       </Badge>
                     )}

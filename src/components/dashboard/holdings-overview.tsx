@@ -4,7 +4,6 @@ import { useDeferredValue, useMemo, useState } from 'react'
 import { CaretDown, CaretRight, MagnifyingGlass } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatPercent } from '@/lib/validators'
@@ -108,8 +107,8 @@ function getGroupPrice(value: number, balance: number) {
 }
 
 function getChangeColor(change24h: number | null) {
-  if (change24h === null) return 'text-muted-foreground'
-  return change24h < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'
+  if (change24h === null) return 'text-muted-foreground/50'
+  return change24h < 0 ? 'text-muted-foreground' : 'text-foreground'
 }
 
 function matchesStatusFilter(row: GroupRow, filter: StatusFilter) {
@@ -139,9 +138,9 @@ function MetricBlock({
   toneClassName?: string
 }) {
   return (
-    <div className="rounded-[0.95rem] border border-border/60 bg-background/72 px-3 py-3">
-      <p className="text-[11px] tracking-[0.08em] text-muted-foreground">{label}</p>
-      <p className={`mt-1 text-sm font-medium tabular-nums ${toneClassName ?? 'text-foreground'}`}>{value}</p>
+    <div className="flex flex-col border-b sm:border-b-0 sm:border-r border-border/30 last:border-0 last:pr-0 pb-3 sm:pb-0 sm:pr-6">
+      <p className="text-[11px] tracking-widest text-muted-foreground uppercase">{label}</p>
+      <p className={`mt-1.5 text-lg font-semibold tracking-tight tabular-nums ${toneClassName ?? 'text-foreground'}`}>{value}</p>
     </div>
   )
 }
@@ -154,7 +153,7 @@ function SourceRow({ row }: { row: DetailRow }) {
     <div className="grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] items-center gap-x-4 border-b border-border/40 py-3 last:border-0">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="truncate text-sm font-medium">{row.title}</span>
+          <span className="truncate text-base font-semibold">{row.title}</span>
           {priceStatusLabel ? (
             <Badge variant="outline" className="text-[10px]">{priceStatusLabel}</Badge>
           ) : null}
@@ -198,8 +197,8 @@ function GroupCard({
   const CaretIcon = expanded ? CaretDown : CaretRight
 
   return (
-    <div className={`overflow-hidden rounded-lg border bg-card transition-colors ${expanded ? 'border-primary/40 shadow-sm' : 'border-border/60'}`}>
-      <button type="button" className={`w-full p-4 text-left transition-colors ${expanded ? 'bg-muted/20' : 'hover:bg-muted/30'}`} onClick={onToggle}>
+    <div className={`overflow-hidden border-b border-border/40 last:border-0 transition-colors ${expanded ? 'bg-zinc-50/30 dark:bg-zinc-950/20 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]' : 'hover:bg-muted/30'}`}>
+      <button type="button" className="w-full p-4 lg:py-6 text-left outline-none" onClick={onToggle}>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_190px] lg:grid-rows-[auto_auto]">
           <div className="min-w-0 lg:col-start-1 lg:row-start-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -214,29 +213,29 @@ function GroupCard({
                 </Badge>
               ) : null}
             </div>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{row.subtitle}</p>
+            <p className="mt-1.5 text-sm leading-6 text-muted-foreground ml-6">{row.subtitle}</p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3 lg:col-start-1 lg:row-start-2">
+          <div className="grid gap-2 sm:gap-0 sm:grid-cols-3 sm:items-center lg:col-start-1 lg:row-start-2 mt-3 lg:mt-0 ml-0 lg:ml-6">
             <MetricBlock label="持仓" value={formatBalance(row.balance)} />
             <MetricBlock label="均价" value={formatCurrency(row.price)} />
             <MetricBlock label="24h" value={formatPercent(row.change24h)} toneClassName={getChangeColor(row.change24h)} />
           </div>
-          <div className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 text-left lg:col-start-2 lg:row-start-2 lg:flex lg:h-full lg:flex-col lg:justify-center lg:text-right">
-            <p className="text-[10px] tracking-[0.1em] text-muted-foreground uppercase">总市值</p>
-            <p className="mt-1.5 text-2xl font-bold tracking-[-0.04em] tabular-nums text-foreground">{formatCurrency(row.value)}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">占组合 {share.toFixed(1)}%</p>
+          <div className="lg:px-4 lg:py-0 text-left lg:col-start-2 lg:row-start-2 lg:flex lg:h-full lg:flex-col lg:justify-center lg:text-right mt-3 lg:mt-0 ml-0 lg:ml-6">
+            <p className="text-[10px] tracking-widest text-muted-foreground uppercase">总市值</p>
+            <p className="mt-1.5 text-2xl lg:text-3xl font-semibold tracking-tighter tabular-nums text-foreground">{formatCurrency(row.value)}</p>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">占组合 {share.toFixed(1)}%</p>
           </div>
         </div>
       </button>
 
       {expanded ? (
-        <div className="border-t border-border/60 bg-muted/40 px-5 pb-4 pt-2">
-          <div className="mb-1 flex items-center gap-2.5 py-2.5">
-            <div className="h-4 w-0.5 shrink-0 rounded-full bg-primary/80" />
-            <p className="text-xs font-semibold text-foreground">{row.title}</p>
-            <p className="text-[11px] text-muted-foreground">· {row.details.length} 个来源</p>
+        <div className="border-t border-border/40 bg-muted/10 px-4 lg:px-10 pb-6 pt-4">
+          <div className="mb-2 flex items-center gap-2.5 py-2.5">
+            <div className="h-4 w-0.5 shrink-0 bg-foreground/20" />
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wider">{row.title}</p>
+            <p className="text-[11px] text-muted-foreground tracking-widest">· {row.details.length} 来源</p>
           </div>
-          <div>
+          <div className="flex flex-col gap-1">
             {row.details.map((detail) => (
               <SourceRow key={detail.key} row={detail} />
             ))}
@@ -444,7 +443,7 @@ function GroupedHoldingsView({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <p className="text-xs leading-6 text-muted-foreground">
         {mode === 'token'
           ? '按代币查看，同一代币将汇总来自不同来源的持仓。'
@@ -494,14 +493,14 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
   }, [deferredQuery, groupedData, statusFilter])
 
   return (
-    <Card className="col-span-full">
-      <CardHeader className="gap-4 border-b border-border/60">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1.5">
-            <CardTitle className="text-base font-semibold tracking-[-0.02em]">明细工作台</CardTitle>
-            <p className="text-xs leading-6 text-muted-foreground">支持搜索与筛选，可在代币、钱包、链三个视角间切换。</p>
+    <div className="col-span-full mt-2">
+      <div className="gap-6 border-y border-border/40 pb-6 pt-5 px-4 sm:px-0">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="flex flex-col gap-2">
+            <h3 className="text-lg font-semibold tracking-tight">明细工作台</h3>
+            <p className="text-sm text-muted-foreground">支持搜索与筛选，可在代币、钱包、链三个视角间切换。</p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-3 sm:gap-0 sm:grid-cols-3 sm:items-center">
             <MetricBlock label="平均单项" value={formatCurrency(analytics.averagePositionValue)} />
             <MetricBlock
               label="最大仓位"
@@ -510,18 +509,18 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
             <MetricBlock
               label="价格异常"
               value={`${analytics.missingPriceCount + analytics.stalePriceCount} 个`}
-              toneClassName={analytics.missingPriceCount + analytics.stalePriceCount > 0 ? 'text-amber-600 dark:text-amber-400' : undefined}
+              toneClassName={analytics.missingPriceCount + analytics.stalePriceCount > 0 ? 'text-foreground font-medium' : undefined}
             />
           </div>
         </div>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center justify-between mt-6">
           <div className="relative w-full max-w-md">
             <MagnifyingGlass size={16} weight="regular" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="搜索代币、钱包、交易所账户或链"
-              className="pl-9"
+              className="pl-9 bg-muted/20 border-border/40 rounded-none h-10 shadow-none focus-visible:ring-0 focus-visible:border-border"
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -530,6 +529,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
                 key={filter.key}
                 type="button"
                 size="sm"
+                className="rounded-none shadow-none h-10 px-4 font-medium tracking-tight"
                 variant={statusFilter === filter.key ? 'secondary' : 'outline'}
                 onClick={() => setStatusFilter(filter.key)}
               >
@@ -538,22 +538,22 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
             ))}
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="pt-4">
+      </div>
+      <div className="pt-8 px-4 sm:px-0">
         <Tabs defaultValue="token" className="gap-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList variant="line" className="grid w-full grid-cols-3 sm:w-fit">
-              <TabsTrigger className="w-full" value="token">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between mb-6">
+            <TabsList variant="line" className="grid w-full grid-cols-3 sm:w-fit bg-transparent gap-6">
+              <TabsTrigger className="w-full data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none px-0 pb-3" value="token">
                 按代币
               </TabsTrigger>
-              <TabsTrigger className="w-full" value="wallet">
+              <TabsTrigger className="w-full data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none px-0 pb-3" value="wallet">
                 按钱包
               </TabsTrigger>
-              <TabsTrigger className="w-full" value="chain">
+              <TabsTrigger className="w-full data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none px-0 pb-3" value="chain">
                 按链
               </TabsTrigger>
             </TabsList>
-            <Badge variant="secondary">{data.length} 个代币条目</Badge>
+            <Badge variant="outline" className="border-border/40 tracking-widest uppercase text-xs rounded-none bg-muted/10 pb-1">{data.length} 个代币条目</Badge>
           </div>
           <TabsContent className="mt-0" value="token">
             <GroupedHoldingsView rows={filteredData.token} mode="token" totalValue={totalValue} />
@@ -565,7 +565,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
             <GroupedHoldingsView rows={filteredData.chain} mode="chain" totalValue={totalValue} />
           </TabsContent>
         </Tabs>
-        <p className="mt-4 text-xs leading-6 text-muted-foreground">
+        <p className="mt-8 pt-4 border-t border-border/40 text-xs leading-6 text-muted-foreground mb-4">
           主流资产价格来自{' '}
           <a
             href="https://developers.binance.com/docs/zh-CN/binance-spot-api-docs/rest-api/market-data-endpoints"
@@ -585,7 +585,7 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
             CoinGecko
           </a>
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

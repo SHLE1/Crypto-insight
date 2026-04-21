@@ -21,7 +21,7 @@ export function SourceDistribution({ walletTotal, cexTotal }: SourceDistribution
     return (
       <Card>
         <CardHeader>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <p className="muted-kicker">来源</p>
             <CardTitle className="text-base">资产来源</CardTitle>
           </div>
@@ -36,19 +36,19 @@ export function SourceDistribution({ walletTotal, cexTotal }: SourceDistribution
   return (
     <Card>
       <CardHeader className="border-b border-border/60">
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <p className="muted-kicker">来源</p>
           <CardTitle className="text-base">资产来源</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 pt-5">
+      <CardContent className="flex flex-col gap-4 pt-5">
         <div className="h-3 overflow-hidden rounded-full bg-muted/70">
           <div
             className="h-full rounded-full bg-[linear-gradient(90deg,var(--chart-1)_0%,var(--chart-1)_var(--wallet-share),var(--chart-2)_var(--wallet-share),var(--chart-2)_100%)]"
             style={{ ['--wallet-share' as string]: `${(walletTotal / total) * 100}%` }}
           />
         </div>
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {data.map((item, index) => {
             const share = total > 0 ? (item.value / total) * 100 : 0
 

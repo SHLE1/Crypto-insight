@@ -39,7 +39,7 @@ export function NetWorthTrend({ data }: NetWorthTrendProps) {
     return (
       <Card className="col-span-full">
         <CardHeader>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <p className="muted-kicker">趋势</p>
             <CardTitle className="text-base">总资产趋势</CardTitle>
           </div>
@@ -88,7 +88,7 @@ export function NetWorthTrend({ data }: NetWorthTrendProps) {
         <div className="mb-5 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-foreground">{formatCurrency(lastPoint.totalValue)}</p>
-            <p className={`mt-1 text-xs ${isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+            <p className="mt-1 text-xs text-muted-foreground">
               {isPositive ? '+' : ''}
               {formatCurrency(netChange)} · {formatPercent(netChangePercent)}
             </p>

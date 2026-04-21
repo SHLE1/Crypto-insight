@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Key, Plus, Trash, X } from '@phosphor-icons/react'
+import { Key, Plus, Trash, X, Building2 } from 'lucide-react'
 import { EmptyState } from '@/components/layout/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -79,6 +79,7 @@ export default function CexPage() {
 
     if (editingAccountId) {
       updateAccount(editingAccountId, {
+        ...accounts.find(a => a.id === editingAccountId)!,
         exchange,
         label: label.trim() || getExchangeLabel(exchange),
         apiKey: apiKey.trim(),
@@ -117,39 +118,43 @@ export default function CexPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        badge="交易所"
-        title="交易所账户"
-        description="接入只读 API 后，账户余额将自动汇入资产总览与持仓明细。密钥仅保存在本地浏览器，导出文件不包含任何密钥。"
-        actions={
-          !showForm ? (
-            <Button onClick={() => setShowForm(true)} className="gap-2">
-              <Plus size={16} weight="regular" />
-              添加账户
-            </Button>
-          ) : null
-        }
-      />
+    <div className="flex flex-1 flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-2xl font-bold tracking-tight">交易所账户</h2>
+          <p className="text-sm text-muted-foreground">
+            接入只读 API 后，账户余额将自动汇入资产总览与持仓明细。密钥仅保存在本地浏览器，导出文件不包含任何密钥。
+          </p>
+        </div>
+        {!showForm ? (
+          <Button size="sm" onClick={() => setShowForm(true)} className="gap-2">
+            <Plus className="size-4" />
+            添加账户
+          </Button>
+        ) : null}
+      </div>
 
       {showForm ? (
-        <Card className="max-w-4xl">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-border/75">
-            <CardTitle className="text-base">{editingAccountId ? '重新填写或更新密钥' : '添加交易所账户'}</CardTitle>
-            <Button variant="ghost" size="icon-sm" onClick={resetForm}>
-              <X size={16} weight="regular" />
+        <Card className="max-w-3xl mt-4">
+          <CardHeader className="flex flex-row items-center justify-between gap-0">
+            <div>
+               <CardTitle>{editingAccountId ? '重新填写或更新密钥' : '添加交易所账户'}</CardTitle>
+               <CardDescription>配置您的只读 API 密钥，请勿授予交易或提现权限。</CardDescription>
+            </div>
+            <Button variant="ghost" size="icon" onClick={resetForm}>
+              <X className="size-4" />
             </Button>
           </CardHeader>
-          <CardContent className="grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
+          <CardContent>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
                 <Label>交易所</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {EXCHANGE_OPTIONS.map((ex) => (
                     <Button
                       key={ex}
                       type="button"
-                      variant={exchange === ex ? 'secondary' : 'outline'}
+                      variant={exchange === ex ? 'default' : 'outline'}
                       size="sm"
                       disabled={editingAccountId !== null}
                       onClick={() => setExchange(ex)}
@@ -160,108 +165,109 @@ export default function CexPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="label">备注名称（可选）</Label>
                 <Input id="label" placeholder="例如：主账户 / 量化账户" value={label} onChange={(e) => setLabel(e.target.value)} />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="apiKey">API Key（只读权限）</Label>
-                <Input id="apiKey" placeholder="输入只读 API Key" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="font-mono" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="apiSecret">API Secret</Label>
-                <Input id="apiSecret" type="password" placeholder="输入 API Secret" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} className="font-mono" />
-              </div>
-
-              {exchange === 'okx' ? (
-                <div className="space-y-2">
-                  <Label htmlFor="passphrase">Passphrase</Label>
-                  <Input id="passphrase" type="password" placeholder="输入 OKX Passphrase" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="apiKey">API Key (Access Key)</Label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    placeholder="输入只读权限的 API Key"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
                 </div>
-              ) : null}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="apiSecret">API Secret</Label>
+                  <Input
+                    id="apiSecret"
+                    type="password"
+                    placeholder="输入对应的 API Secret"
+                    value={apiSecret}
+                    onChange={(e) => setApiSecret(e.target.value)}
+                  />
+                </div>
+              </div>
 
-              <p className="text-xs leading-6 text-muted-foreground">
-                密钥只保存在当前浏览器，导出文件不会包含它们。请确认这组 Key 只有只读权限。
-              </p>
+              {exchange === 'okx' && (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="passphrase">Passphrase</Label>
+                  <Input
+                    id="passphrase"
+                    type="password"
+                    placeholder="OKX API 创建时设置的 Passphrase"
+                    value={passphrase}
+                    onChange={(e) => setPassphrase(e.target.value)}
+                  />
+                </div>
+              )}
 
-              <div className="flex gap-3">
-                <Button type="submit">保存账户</Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  取消
-                </Button>
+              <Separator className="my-4" />
+              
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={resetForm}>取消</Button>
+                <Button type="submit">{editingAccountId ? '更新密钥' : '保存配置'}</Button>
               </div>
             </form>
-
-            <div className="subtle-panel p-5">
-              <p className="muted-kicker">绑定前先看</p>
-              <ul className="mt-3 space-y-2 text-sm leading-7 text-muted-foreground">
-                <li>只使用只读权限的 API Key。</li>
-                <li>导出文件不会包含任何密钥。</li>
-                <li>删除账户时将同步清除对应的本地缓存。</li>
-              </ul>
-            </div>
           </CardContent>
         </Card>
-      ) : null}
-
-      <Separator />
-
-      {accounts.length === 0 && !showForm ? (
-        <EmptyState
-          title="暂无交易所账户"
-          description="接入只读 API 后，账户资产将自动汇入总览和持仓明细。"
-          action={<Button onClick={() => setShowForm(true)}>添加第一个账户</Button>}
-        />
+      ) : accounts.length === 0 ? (
+        <div className="mt-4">
+          <EmptyState
+            title="没有绑定的交易所账户"
+            description="添加只读权限的 API 密钥以追踪汇集所有加密资产。"
+            action={
+              <Button onClick={() => setShowForm(true)} className="gap-2">
+                <Plus className="size-4" />
+                添加账户
+              </Button>
+            }
+          />
+        </div>
       ) : (
-        <div className="space-y-3">
-          {accounts.map((a) => {
-            const snapshot = snapshots[a.id]
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
+          {accounts.map((account) => {
+            const snapshot = snapshots[account.id]
+            const isOkx = account.exchange === 'okx'
             return (
-              <Card key={a.id}>
-                <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex min-w-0 flex-1 items-start gap-3.5">
-                    <Switch checked={a.enabled} onCheckedChange={() => handleToggle(a.id, a.enabled)} />
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium text-foreground">{a.label}</p>
-                        <Badge variant="secondary" className="text-[10px]">
-                          {getExchangeLabel(a.exchange)}
-                        </Badge>
-                        {!a.apiKey.trim() ? (
-                          <Badge variant="outline" className="text-[10px]">
-                            需要重新填写密钥
-                          </Badge>
-                        ) : null}
-                        {snapshot?.status === 'error' ? (
-                          <Badge variant="destructive" className="text-[10px]">
-                            异常
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <p className="mt-1 font-mono text-xs leading-6 text-muted-foreground">
-                        {a.apiKey.trim()
-                          ? `Key: ${a.apiKey.slice(0, 6)}...${a.apiKey.slice(-4)}`
-                          : '当前浏览器中未保存密钥，重新填写后方可刷新此账户。'}
-                      </p>
-                    </div>
+              <Card key={account.id} className={!account.enabled ? 'opacity-60' : ''}>
+                <CardHeader className="flex flex-row items-start justify-between gap-0 pb-2">
+                  <div className="flex items-center gap-2">
+                     <Building2 className="w-5 h-5 text-muted-foreground" />
+                     <div className="flex flex-col gap-1">
+                       <CardTitle className="text-base">{account.label}</CardTitle>
+                       <CardDescription className="text-xs uppercase font-mono">{account.exchange}</CardDescription>
+                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-foreground tabular-nums">
-                        {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
-                      </p>
-                      <p className="text-xs leading-6 text-muted-foreground">
-                        {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '尚未刷新'}
-                      </p>
+                  <Switch
+                    checked={account.enabled}
+                    onCheckedChange={(checked) => handleToggle(account.id, checked)}
+                    aria-label="切换账户启用状态"
+                  />
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-baseline justify-between">
+                      <div className="flex flex-col gap-1">
+                        <p className="text-xs text-muted-foreground">快照价值</p>
+                        <p className="text-xl font-bold tracking-tight">
+                          {snapshot ? formatCurrency(snapshot.totalValue) : '--'}
+                        </p>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="icon-sm" onClick={() => startEditing(a.id)}>
-                      <Key size={16} weight="regular" />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" onClick={() => handleRemove(a.id, a.label)}>
-                      <Trash size={16} weight="regular" />
-                    </Button>
+                    
+                    <div className="flex flex-wrap gap-2 pt-2 border-t">
+                      <Button variant="secondary" size="sm" className="flex-1 gap-2" onClick={() => startEditing(account.id)}>
+                        <Key className="size-4" />更新密钥
+                      </Button>
+                      <Button variant="destructive" size="sm" className="px-3" onClick={() => handleRemove(account.id, account.label)}>
+                        <Trash className="size-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -1,449 +1,235 @@
 'use client'
 
-import Link from 'next/link'
+import * as React from "react"
+import { ArrowClockwise } from "@phosphor-icons/react"
+import { TrendingUp, TrendingDown, Wallet, Activity, Database, AlertCircle } from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
-  ArrowClockwise,
-  ArrowDown,
-  ArrowUp,
-  ListBullets,
-} from '@phosphor-icons/react'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Area,
   AreaChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
-} from 'recharts'
-import { AlertsPanel } from '@/components/dashboard/alerts'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { formatCurrency, formatPercent } from '@/lib/validators'
-import type {
-  ApiErrorState,
-  PortfolioAnalytics,
-  PortfolioHistoryPoint,
-} from '@/types'
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts"
+import { formatCurrency, formatPercent } from "@/lib/validators"
+import type { PortfolioHistoryPoint, PortfolioAnalytics, ApiErrorState } from "@/types"
 
-const ASSET_COLORS = [
-  'color-mix(in oklch, var(--chart-1) 74%, var(--background) 26%)',
-  'color-mix(in oklch, var(--chart-2) 74%, var(--background) 26%)',
-  'color-mix(in oklch, var(--chart-3) 74%, var(--background) 26%)',
-  'color-mix(in oklch, var(--chart-4) 72%, var(--background) 28%)',
-  'color-mix(in oklch, var(--chart-5) 72%, var(--background) 28%)',
-  'color-mix(in oklch, var(--foreground) 18%, var(--background) 82%)',
-]
-
-const shellClassName =
-  'rounded-md border border-border bg-card'
-const sectionLabelClassName = 'text-[11px] font-medium tracking-[0.14em] text-muted-foreground'
-
-function formatTickLabel(value: string | number) {
-  return new Date(value).toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function formatTooltipLabel(label: unknown) {
-  if (typeof label !== 'string' && typeof label !== 'number') {
-    return ''
-  }
-
-  return new Date(label).toLocaleString('zh-CN')
-}
-
-function SummaryItem({
-  label,
-  value,
-  detail,
-  tone = 'default',
-}: {
-  label: string
-  value: string
-  detail: string
-  tone?: 'default' | 'positive' | 'negative' | 'warning'
-}) {
-  const toneClassName =
-    tone === 'positive'
-      ? 'text-emerald-700 dark:text-emerald-400'
-      : tone === 'negative'
-        ? 'text-red-600 dark:text-red-400'
-        : tone === 'warning'
-          ? 'text-amber-600 dark:text-amber-400'
-          : 'text-foreground'
-
-  return (
-    <div className="border-t border-border/50 pt-3 first:border-t-0 first:pt-0 sm:first:border-t sm:first:pt-3 xl:first:border-t-0 xl:first:pt-0">
-      <p className={sectionLabelClassName}>{label}</p>
-      <p className={`mt-2 text-[0.98rem] font-medium tracking-[-0.03em] ${toneClassName}`}>{value}</p>
-      <p className="mt-1 text-xs leading-5.5 text-muted-foreground">{detail}</p>
-    </div>
-  )
-}
-
-function DashboardHero({
+function SectionCards({
   totalValue,
   change24hValue,
   change24hPercent,
-  lastRefresh,
-  assetCount,
-  activeSourceCount,
   walletCount,
   accountCount,
-  pricedAssetCount,
-  missingPriceCount,
-  stalePriceCount,
-  isUsingCachedData,
-  issueCount,
-  isFetching,
-  onRefresh,
+  assetCount,
+  coveragePercent,
+  hasErrors
 }: {
   totalValue: number
   change24hValue: number
   change24hPercent: number
-  lastRefresh: string | null
-  assetCount: number
-  activeSourceCount: number
   walletCount: number
   accountCount: number
-  pricedAssetCount: number
-  missingPriceCount: number
-  stalePriceCount: number
-  isUsingCachedData: boolean
-  issueCount: number
-  isFetching: boolean
-  onRefresh: () => void
+  assetCount: number
+  coveragePercent: number
+  hasErrors: boolean
 }) {
   const isPositive = change24hPercent >= 0
-  const coveragePercent = assetCount > 0 ? (pricedAssetCount / assetCount) * 100 : 0
-  const statusText = isUsingCachedData ? '显示缓存' : issueCount > 0 ? '需要留意' : '已同步'
-  const lastRefreshText = lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '尚未刷新'
 
   return (
-    <section className={`${shellClassName} px-5 py-5 md:px-6 md:py-6`}>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 space-y-2">
-            <p className={sectionLabelClassName}>总览</p>
-            <div className="space-y-1.5">
-              <h1 className="max-w-[28ch] text-xl font-semibold tracking-[-0.04em] text-foreground">
-                资产总览
-              </h1>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-0 pb-2">
+          <CardTitle className="text-sm font-medium">总资产价值</CardTitle>
+          <Wallet className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
+          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+            {isPositive ? (
+              <TrendingUp className="h-3 w-3 text-muted-foreground" />
+            ) : (
+              <TrendingDown className="h-3 w-3 text-muted-foreground" />
+            )}
+            <span className="text-foreground font-medium">
+              {isPositive ? '+' : '-'}{formatPercent(Math.abs(change24hPercent))}
+            </span>
+            <span>较昨日</span>
+          </p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-0 pb-2">
+          <CardTitle className="text-sm font-medium">来源连接数</CardTitle>
+          <Database className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{walletCount + accountCount}</div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {walletCount} 个钱包, {accountCount} 个交易所账户
+          </p>
+        </CardContent>
+      </Card>
 
-            </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-0 pb-2">
+          <CardTitle className="text-sm font-medium">资产种类</CardTitle>
+          <Activity className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{assetCount}</div>
+          <p className="text-xs text-muted-foreground mt-1">
+            价格覆盖率 {coveragePercent.toFixed(1)}%
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-0 pb-2">
+          <CardTitle className="text-sm font-medium">系统状态</CardTitle>
+          <AlertCircle className={`h-4 w-4 ${hasErrors ? 'text-foreground' : 'text-muted-foreground'}`} />
+        </CardHeader>
+        <CardContent>
+          <div className={`text-2xl font-bold ${hasErrors ? 'text-foreground' : ''}`}>
+            {hasErrors ? '需要留意' : '运行正常'}
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="text-muted-foreground">
-              {statusText}
-            </Badge>
-            <Button variant="outline" size="sm" className="gap-2" onClick={onRefresh} disabled={isFetching}>
-              <ArrowClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
-              刷新
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-6 border-y border-border/55 py-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] lg:items-end">
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <p className={sectionLabelClassName}>总资产价值</p>
-              <p className="text-[2.5rem] font-semibold tracking-[-0.06em] tabular-nums text-foreground">
-                {formatCurrency(totalValue)}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <span
-                className={isPositive
-                  ? 'inline-flex items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/8 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400'
-                  : 'inline-flex items-center gap-1.5 rounded-md border border-red-500/20 bg-red-500/8 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400'}
-              >
-                {isPositive ? <ArrowUp size={14} weight="bold" /> : <ArrowDown size={14} weight="bold" />}
-                {formatPercent(change24hPercent)}
-              </span>
-              <p className="text-sm text-muted-foreground">
-                {isPositive ? '+' : '-'}{formatCurrency(Math.abs(change24hValue))} · 近期变化
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3 rounded-md border border-border/60 bg-muted/30 p-4">
-            <div className="space-y-1.5">
-              <p className={sectionLabelClassName}>数据概况</p>
-              <p className="text-sm leading-7 text-muted-foreground">
-                总值与近期涨跌一览，价格覆盖异常可前往明细页定位。
-              </p>
-            </div>
-            <div className="space-y-1 text-xs leading-6 text-muted-foreground">
-              <p>最近刷新：{lastRefreshText}</p>
-              <p>缺价 {missingPriceCount} 个 · 旧价 {stalePriceCount} 个</p>
-            </div>
-            <Link href="/holdings" className="inline-flex">
-              <Button variant="outline" className="gap-2">
-                <ListBullets size={16} weight="regular" />
-                查看资产明细
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryItem
-            label="资产种类"
-            value={`${assetCount}`}
-            detail={`${pricedAssetCount} 个已有估值`}
-          />
-          <SummaryItem
-            label="已启用来源"
-            value={`${activeSourceCount}`}
-            detail={`${walletCount} 个钱包 · ${accountCount} 个交易所账户`}
-          />
-          <SummaryItem
-            label="价格覆盖"
-            value={`${coveragePercent.toFixed(1)}%`}
-            detail={`缺价 ${missingPriceCount} 个 · 旧价 ${stalePriceCount} 个`}
-            tone={missingPriceCount + stalePriceCount > 0 ? 'warning' : 'default'}
-          />
-          <SummaryItem
-            label="最近刷新"
-            value={lastRefreshText}
-            detail={isUsingCachedData ? '当前显示的是最近一次可用快照' : issueCount > 0 ? `${issueCount} 条提醒需要留意` : '本轮刷新已完成各来源同步'}
-            tone={issueCount > 0 ? 'warning' : 'default'}
-          />
-        </dl>
-      </div>
-    </section>
+          <p className="text-xs text-muted-foreground mt-1">
+            {hasErrors ? '部分接口请求异常，请查看下方' : '全部数据源已同步并估值'}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
-function DashboardComposition({
-  assetData,
-  totalValue,
-  walletTotal,
-  cexTotal,
-  walletCount,
-  accountCount,
-}: {
-  assetData: Array<{ name: string; value: number }>
-  totalValue: number
-  walletTotal: number
-  cexTotal: number
-  walletCount: number
-  accountCount: number
-}) {
-  if (assetData.length === 0) {
-    return (
-      <section className={`${shellClassName} px-5 py-5 md:px-6 md:py-6`}>
-        <div className="space-y-2">
-          <p className={sectionLabelClassName}>结构</p>
-          <h2 className="text-lg font-medium tracking-[-0.04em] text-foreground">资产占比</h2>
-          <p className="text-sm leading-7 text-muted-foreground">暂无可显示的资产结构。</p>
-        </div>
-      </section>
-    )
-  }
-
-  const dominantAsset = assetData[0]
-  const dominantShare = totalValue > 0 ? (dominantAsset.value / totalValue) * 100 : 0
-  const totalSources = walletCount + accountCount
-  const walletShare = walletTotal + cexTotal > 0 ? (walletTotal / (walletTotal + cexTotal)) * 100 : 0
-  const cexShare = walletTotal + cexTotal > 0 ? (cexTotal / (walletTotal + cexTotal)) * 100 : 0
+function ChartAreaInteractive({ history }: { history: PortfolioHistoryPoint[] }) {
+  const visibleHistory = history.slice(-30)
 
   return (
-    <section className={`${shellClassName} px-5 py-5 md:px-6 md:py-6`}>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <p className={sectionLabelClassName}>结构</p>
-          <div>
-            <h2 className="text-lg font-medium tracking-[-0.04em] text-foreground">资产占比</h2>
-            <p className="mt-1 text-sm leading-7 text-muted-foreground">
-              各资产类别占比，便于评估持仓集中度。
-            </p>
-          </div>
+    <Card>
+      <CardHeader className="flex items-center gap-2 gap-0 border-b py-5 sm:flex-row">
+        <div className="grid flex-1 gap-1 text-center sm:text-left">
+          <CardTitle>总资产走势</CardTitle>
+          <CardDescription>
+            显示近 30 次同步刷新的净值变化记录
+          </CardDescription>
         </div>
-
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-center">
-          <div className="min-w-0">
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={assetData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={76}
-                  outerRadius={110}
-                  paddingAngle={2}
-                  dataKey="value"
-                  stroke="transparent"
-                >
-                  {assetData.map((_, index) => (
-                    <Cell key={`asset-cell-${index}`} fill={ASSET_COLORS[index % ASSET_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) => formatCurrency(Number(value))}
-                  contentStyle={{
-                    borderRadius: '6px',
-                    border: '1px solid var(--border)',
-                    background: 'color-mix(in oklch, var(--popover) 96%, white 4%)',
-                    boxShadow: '0 16px 40px -28px color-mix(in oklch, var(--foreground) 24%, transparent)',
+      </CardHeader>
+      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        <div className="h-[250px] w-full">
+          {visibleHistory.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={visibleHistory} margin={{ left: 12, right: 12, top: 12, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="timestamp"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  minTickGap={32}
+                  tickFormatter={(value) => {
+                    return new Date(value).toLocaleTimeString("zh-CN", { hour: '2-digit', minute: '2-digit' })
                   }}
+                  style={{ fontSize: '12px', fill: 'hsl(var(--muted-foreground))' }}
                 />
-              </PieChart>
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => `$${value.toLocaleString()}`}
+                  style={{ fontSize: '12px', fill: 'hsl(var(--muted-foreground))' }}
+                />
+                <Tooltip
+                  cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--background))',
+                    borderColor: 'hsl(var(--border))',
+                    borderRadius: 'var(--radius)',
+                  }}
+                  formatter={(value) => [formatCurrency(value as number), "总价值"]}
+                  labelFormatter={(label) => new Date(label).toLocaleString("zh-CN")}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="totalValue"
+                  stroke="hsl(var(--chart-1))"
+                  fill="url(#fillValue)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
             </ResponsiveContainer>
-          </div>
-
-          <div>
-            {assetData.map((item, index) => {
-              const share = totalValue > 0 ? (item.value / totalValue) * 100 : 0
-
-              return (
-                <div key={item.name} className="flex items-start justify-between gap-3 border-b border-border/50 py-3 last:border-b-0 last:pb-0 first:pt-0">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="mt-0.5 h-2 w-2 rounded-full"
-                        style={{ backgroundColor: ASSET_COLORS[index % ASSET_COLORS.length] }}
-                      />
-                      <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
-                    </div>
-                    <p className="mt-1 text-xs leading-6 text-muted-foreground">占总资产的 {share.toFixed(1)}%</p>
-                  </div>
-                  <p className="shrink-0 text-sm font-medium tabular-nums text-foreground">{formatCurrency(item.value)}</p>
-                </div>
-              )
-            })}
-          </div>
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              累计多次刷新后在此展示走势图表
+            </div>
+          )}
         </div>
-
-        <dl className="grid gap-4 border-t border-border/50 pt-4 sm:grid-cols-3">
-          <SummaryItem
-            label="主导资产"
-            value={dominantAsset.name}
-            detail={`当前占总资产 ${dominantShare.toFixed(1)}%`}
-          />
-          <SummaryItem
-            label="来源结构"
-            value={`链上 ${walletShare.toFixed(1)}% · 交易所 ${cexShare.toFixed(1)}%`}
-            detail="链上与中心化交易所的资产分布比例"
-          />
-          <SummaryItem
-            label="来源数量"
-            value={`${totalSources}`}
-            detail={`${walletCount} 个钱包 · ${accountCount} 个交易所账户`}
-          />
-        </dl>
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
 }
 
-function DashboardTrend({ history }: { history: PortfolioHistoryPoint[] }) {
-  const visibleHistory = history.slice(-24)
-
-  if (visibleHistory.length === 0) {
-    return (
-      <section className={`${shellClassName} px-5 py-5 md:px-6 md:py-6`}>
-        <div className="space-y-2">
-          <p className={sectionLabelClassName}>趋势</p>
-          <h2 className="text-lg font-medium tracking-[-0.04em] text-foreground">总资产趋势</h2>
-          <p className="text-sm leading-7 text-muted-foreground">刷新几次后，这里会开始显示总资产趋势。</p>
-        </div>
-      </section>
-    )
-  }
-
-  const firstPoint = visibleHistory[0]
-  const lastPoint = visibleHistory[visibleHistory.length - 1]
-  const netChange = lastPoint.totalValue - firstPoint.totalValue
-  const netChangePercent = firstPoint.totalValue > 0 ? (netChange / firstPoint.totalValue) * 100 : 0
-  const rangeHigh = Math.max(...visibleHistory.map((point) => point.totalValue))
-  const rangeLow = Math.min(...visibleHistory.map((point) => point.totalValue))
-  const rangePercent = rangeLow > 0 ? ((rangeHigh - rangeLow) / rangeLow) * 100 : 0
-
+function DataTable({ assetData }: { assetData: Array<{ name: string; value: number }> }) {
   return (
-    <section className={`${shellClassName} px-5 py-5 md:px-6 md:py-6`}>
-      <div className="space-y-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <p className={sectionLabelClassName}>趋势</p>
-            <div>
-              <h2 className="text-lg font-medium tracking-[-0.04em] text-foreground">总资产趋势</h2>
-              <p className="mt-1 text-sm leading-7 text-muted-foreground">基于本地刷新记录，反映资产净值的近期走势。</p>
-            </div>
-          </div>
-
-          <div className="text-left lg:text-right">
-            <p className={sectionLabelClassName}>当前值</p>
-            <p className="mt-2 text-lg font-medium tracking-[-0.04em] text-foreground">{formatCurrency(lastPoint.totalValue)}</p>
-            <p className={`mt-1 text-sm ${netChange >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-              {formatCurrency(netChange)} · {formatPercent(netChangePercent)}
-            </p>
-          </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>资产明细分布</CardTitle>
+        <CardDescription>当前有价值的资产种类与市值。</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="relative w-full overflow-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="[&_tr]:border-b">
+              <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">资产</th>
+                <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">价值</th>
+              </tr>
+            </thead>
+            <tbody className="[&_tr:last-child]:border-0">
+              {assetData.length > 0 ? (
+                assetData.map((item, index) => (
+                  <tr key={index} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                    <td className="p-4 align-middle">
+                      <div className="flex items-center gap-2 font-medium">
+                        <span
+                          className="h-2 w-2 rounded-full hidden sm:block"
+                          style={{ backgroundColor: `hsl(var(--chart-${(index % 5) + 1}))` }}
+                        />
+                        {item.name}
+                      </div>
+                    </td>
+                    <td className="p-4 align-middle text-right tabular-nums">
+                      {formatCurrency(item.value)}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={2} className="p-4 text-center text-muted-foreground">暂无持有资产</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-
-        <div className="min-w-0">
-          <ResponsiveContainer width="100%" height={320}>
-            <AreaChart data={visibleHistory} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
-              <defs>
-                <linearGradient id="dashboardNetWorthFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="color-mix(in oklch, var(--chart-1) 72%, var(--background) 28%)" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="color-mix(in oklch, var(--chart-1) 72%, var(--background) 28%)" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="2 6" stroke="var(--border)" vertical={false} />
-              <XAxis
-                dataKey="timestamp"
-                tickFormatter={formatTickLabel}
-                minTickGap={36}
-                tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tickFormatter={(value) => `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
-                tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
-                width={80}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                labelFormatter={formatTooltipLabel}
-                formatter={(value) => formatCurrency(Number(value))}
-                contentStyle={{
-                  borderRadius: '6px',
-                  border: '1px solid var(--border)',
-                  background: 'color-mix(in oklch, var(--popover) 96%, white 4%)',
-                  boxShadow: '0 16px 40px -28px color-mix(in oklch, var(--foreground) 24%, transparent)',
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="totalValue"
-                stroke="color-mix(in oklch, var(--chart-1) 72%, var(--foreground) 28%)"
-                fill="url(#dashboardNetWorthFill)"
-                strokeWidth={2}
-                dot={visibleHistory.length === 1}
-                activeDot={{ r: 4 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 border-t border-border/50 pt-4 text-xs text-muted-foreground">
-          <span>近 {visibleHistory.length} 次刷新记录</span>
-          <span>高点 {formatCurrency(rangeHigh)}</span>
-          <span>低点 {formatCurrency(rangeLow)}</span>
-          <span>振幅 {formatPercent(rangePercent)}</span>
-        </div>
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -480,48 +266,84 @@ export function DashboardOverview({
   accountCount: number
   onRefresh: () => void
 }) {
+  const coveragePercent = analytics.assetCount > 0 ? (analytics.pricedAssetCount / analytics.assetCount) * 100 : 0
+  const hasErrors = errors.length > 0
+
   return (
-    <div className="space-y-5">
-      <DashboardHero
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge variant={isUsingCachedData ? "secondary" : "outline"} className="cursor-default">
+            {isUsingCachedData ? "显示缓存" : "最新数据"}
+          </Badge>
+          <span className="text-xs text-muted-foreground hidden sm:inline-block">
+            {lastRefresh ? `上次更新: ${new Date(lastRefresh).toLocaleString('zh-CN')}` : "尚未刷新"}
+          </span>
+        </div>
+        <Button size="sm" onClick={onRefresh} disabled={isFetching} className="gap-2">
+          <ArrowClockwise className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+          刷新同步
+        </Button>
+      </div>
+
+      <SectionCards 
         totalValue={totalValue}
         change24hValue={change24hValue}
         change24hPercent={change24hPercent}
-        lastRefresh={lastRefresh}
+        walletCount={walletCount}
+        accountCount={accountCount}
         assetCount={analytics.assetCount}
-        activeSourceCount={analytics.activeSourceCount}
-        walletCount={walletCount}
-        accountCount={accountCount}
-        pricedAssetCount={analytics.pricedAssetCount}
-        missingPriceCount={analytics.missingPriceCount}
-        stalePriceCount={analytics.stalePriceCount}
-        isUsingCachedData={isUsingCachedData}
-        issueCount={errors.length}
-        isFetching={isFetching}
-        onRefresh={onRefresh}
+        coveragePercent={coveragePercent}
+        hasErrors={hasErrors}
       />
-
-      <DashboardComposition
-        assetData={assetData}
-        totalValue={totalValue}
-        walletTotal={walletTotal}
-        cexTotal={cexTotal}
-        walletCount={walletCount}
-        accountCount={accountCount}
-      />
-
-      <DashboardTrend history={history} />
-
-      {errors.length > 0 ? <AlertsPanel errors={errors} /> : null}
+      
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="col-span-4 lg:col-span-4">
+          <ChartAreaInteractive history={history} />
+        </div>
+        <div className="col-span-4 lg:col-span-3">
+          <DataTable assetData={assetData} />
+        </div>
+      </div>
+      
+      {hasErrors && (
+        <Card className="border-border/50 bg-muted/20">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2 text-base">
+              <AlertCircle className="w-5 h-5" />
+              数据同步异常
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {errors.map((err, i) => (
+              <div key={i} className="flex flex-col gap-1">
+                <span className="text-sm font-semibold">{err.title || err.source}</span>
+                <span className="text-xs text-muted-foreground">{err.message}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
 
 export function DashboardOverviewLoadingState() {
   return (
-    <div className="space-y-5">
-      <div className={`${shellClassName} h-[24rem] animate-pulse bg-muted/24`} />
-      <div className={`${shellClassName} h-[28rem] animate-pulse bg-muted/18`} />
-      <div className={`${shellClassName} h-[24rem] animate-pulse bg-muted/16`} />
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0 animate-pulse">
+      <div className="flex justify-between items-center mb-2">
+        <div className="h-6 w-32 bg-muted rounded"></div>
+        <div className="h-8 w-24 bg-muted rounded"></div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="h-32 bg-muted/50"></Card>
+        ))}
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4 h-[350px] bg-muted/50"></Card>
+        <Card className="col-span-3 h-[350px] bg-muted/50"></Card>
+      </div>
     </div>
   )
 }

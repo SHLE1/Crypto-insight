@@ -2,17 +2,21 @@ import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
 import { Providers } from '@/components/providers'
-import { AppSidebar, MobileNav } from '@/components/layout/app-sidebar'
+import { AppSidebar } from '@/components/layout/app-sidebar'
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
+import { cn } from "@/lib/utils";
 
 const geistSans = localFont({
   src: './fonts/geist-sans.woff2',
-  variable: '--app-font-sans',
+  variable: '--font-sans',
   display: 'swap',
 })
 
 const geistMono = localFont({
   src: './fonts/geist-mono.woff2',
-  variable: '--app-font-mono',
+  variable: '--font-mono',
   display: 'swap',
 })
 
@@ -22,20 +26,7 @@ export const metadata: Metadata = {
     default: 'Crypto Insight',
     template: '%s · Crypto Insight',
   },
-  description: '本地优先的个人加密资产面板，用更清晰的方式管理钱包、交易所与 DeFi 仓位。',
-  applicationName: 'Crypto Insight',
-  openGraph: {
-    title: 'Crypto Insight',
-    description: '本地优先的个人加密资产面板，用更清晰的方式管理钱包、交易所与 DeFi 仓位。',
-    siteName: 'Crypto Insight',
-    locale: 'zh_CN',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Crypto Insight',
-    description: '本地优先的个人加密资产面板，用更清晰的方式管理钱包、交易所与 DeFi 仓位。',
-  },
+  description: '本地优先的个人加密资产面板，基于 Shadcn UI 重构。',
 }
 
 export const viewport: Viewport = {
@@ -52,19 +43,26 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth`}
+      className={cn(geistSans.variable, geistMono.variable)}
       suppressHydrationWarning
     >
-      <body className="dashboard-shell">
-        <a className="skip-link" href="#main-content">
-          跳到主要内容
-        </a>
+      <body className="antialiased font-sans tabular-nums min-h-screen flex flex-col bg-background text-foreground">
         <Providers>
-          <AppSidebar />
-          <main id="main-content" className="dashboard-main">
-            <div className="dashboard-container">{children}</div>
-          </main>
-          <MobileNav />
+          <TooltipProvider>
+            <SidebarProvider>
+              <AppSidebar />
+              <SidebarInset>
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
+                  <SidebarTrigger className="-ml-1" />
+                  <div className="flex-1" />
+                  <ThemeToggle />
+                </header>
+                <main className="flex-1 p-4 md:p-6">
+                  {children}
+                </main>
+              </SidebarInset>
+            </SidebarProvider>
+          </TooltipProvider>
         </Providers>
       </body>
     </html>

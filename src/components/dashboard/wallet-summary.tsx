@@ -18,7 +18,7 @@ export function WalletSummary({ wallets, snapshots }: WalletSummaryProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-4">
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <p className="muted-kicker">来源</p>
           <CardTitle className="text-base">钱包</CardTitle>
         </div>
@@ -37,7 +37,7 @@ export function WalletSummary({ wallets, snapshots }: WalletSummaryProps) {
             </Link>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="flex flex-col gap-2.5">
             {displayWallets.map((w) => {
               const snapshot = snapshots[w.id]
               return (

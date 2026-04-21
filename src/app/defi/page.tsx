@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowsClockwise, Coins, SlidersHorizontal, Wallet } from '@phosphor-icons/react'
+import { RefreshCw, Coins, Settings, Wallet } from 'lucide-react'
 import { DefiSummary } from '@/components/dashboard/defi-summary'
 import { EmptyState } from '@/components/layout/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDefiData } from '@/hooks/use-defi-data'
 
 export default function DefiPage() {
@@ -34,18 +35,19 @@ export default function DefiPage() {
   } = useDefiData()
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        badge="DeFi"
-        title="DeFi 仓位"
-        description="汇总 EVM 和 Solana 钱包的协议仓位，跟踪净值构成与当前刷新状态。"
-        actions={
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || (!hasDefiSources && isEnabled)} className="gap-2">
-            <ArrowsClockwise size={14} weight="regular" className={isFetching ? 'animate-spin' : ''} />
-            全量刷新 DeFi
-          </Button>
-        }
-      />
+    <div className="flex flex-1 flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-2xl font-bold tracking-tight">DeFi 仓位</h2>
+          <p className="text-sm text-muted-foreground">
+            汇总 EVM 和 Solana 钱包的协议仓位，跟踪净值构成与当前刷新状态。
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching || (!hasDefiSources && isEnabled)} className="gap-2">
+          <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+          全量刷新
+        </Button>
+      </div>
 
       {!isEnabled ? (
         <EmptyState
@@ -54,7 +56,7 @@ export default function DefiPage() {
           action={
             <Link href="/settings">
               <Button className="gap-2">
-                <SlidersHorizontal size={16} weight="regular" />
+                <Settings className="size-4" />
                 去设置页开启
               </Button>
             </Link>
@@ -67,7 +69,7 @@ export default function DefiPage() {
           action={
             <Link href="/wallets/add">
               <Button className="gap-2">
-                <Wallet size={16} weight="regular" />
+                <Wallet className="size-4" />
                 添加钱包
               </Button>
             </Link>
@@ -99,18 +101,22 @@ export default function DefiPage() {
             refetch={() => refetch()}
           />
 
-          <div className="rounded-md border border-border/60 bg-muted/30 p-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2 text-foreground">
-              <Coins size={16} weight="regular" />
-              <span className="font-medium tracking-[-0.02em]">数据说明</span>
-            </div>
-            <ul className="mt-3 space-y-2 leading-7">
-              <li>DeFi 净值同步计入总资产，并在总览分布中单独展示。</li>
-              <li>优先使用 Zapper；若识别失败，EVM 链路将依次尝试 Moralis 与 DeBank 公共页面补全数据。</li>
-              <li>遇到限速或短暂异常时，系统将按钱包轮转刷新，避免阻塞在单一钱包上。</li>
-              <li>若本轮未能覆盖全部钱包，系统将在后续轮次逐步补全。</li>
-            </ul>
-          </div>
+          <Card className="bg-card/40 border border-border/40 shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/80 hover:scale-[1.01] rounded-xl mt-6">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                <Coins className="size-4 opacity-70" />
+                数据说明
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc pl-4 flex flex-col gap-1 text-xs text-muted-foreground">
+                <li>DeFi 净值同步计入总资产，并在总览分布中单独展示。</li>
+                <li>优先使用 Zapper；若识别失败，EVM 链路将依次尝试 Moralis 与 DeBank 公共页面补全数据。</li>
+                <li>遇到限速或短暂异常时，系统将按钱包轮转刷新，避免阻塞在单一钱包上。</li>
+                <li>若本轮未能覆盖全部钱包，系统将在后续轮次逐步补全。</li>
+              </ul>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

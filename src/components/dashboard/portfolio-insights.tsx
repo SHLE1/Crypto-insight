@@ -26,11 +26,11 @@ function InsightBlock({
 }) {
   const toneClassName =
     tone === 'positive'
-      ? 'text-emerald-700 dark:text-emerald-400'
+      ? 'text-foreground font-medium'
       : tone === 'negative'
-        ? 'text-red-600 dark:text-red-400'
+        ? 'text-muted-foreground'
         : tone === 'warning'
-          ? 'text-amber-600 dark:text-amber-400'
+          ? 'text-foreground font-medium'
           : 'text-foreground'
 
   return (
@@ -63,7 +63,7 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
   return (
     <Card className="col-span-full">
       <CardHeader className="flex flex-col gap-3 border-b border-border/60 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-1">
+        <div className="flex flex-col gap-1">
           <p className="muted-kicker">组合摘要</p>
           <CardTitle className="text-base">组合摘要</CardTitle>
           <p className="text-xs leading-6 text-muted-foreground">把集中度、价格覆盖和涨跌分化放在一屏里快速看清。</p>

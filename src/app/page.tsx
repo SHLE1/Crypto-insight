@@ -8,7 +8,6 @@ import {
 } from '@/components/dashboard/dashboard-overview'
 import { EmptyState } from '@/components/layout/empty-state'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { usePortfolioData } from '@/hooks/use-portfolio-data'
 
 export default function DashboardPage() {
@@ -36,7 +35,7 @@ export default function DashboardPage() {
   } = usePortfolioData()
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {isRestoring || isInitialLoading ? (
         <DashboardOverviewLoadingState />
       ) : isEmpty ? (
@@ -63,11 +62,9 @@ export default function DashboardPage() {
       ) : (
         <>
           {!isFetching && !hasValuedAssets && hasSources ? (
-            <Card className="border-dashed">
-              <CardContent className="py-6 text-sm leading-7 text-muted-foreground">
-                暂无可估值的资产。可能原因：地址余额为零、交易所 API 权限不足、DeFi 数据尚在加载，或第三方报价暂时不可用。
-              </CardContent>
-            </Card>
+            <div className="py-8 border-y border-dashed border-border/50 text-sm leading-7 text-muted-foreground">
+              暂无可估值的资产。可能原因：地址余额为零、交易所 API 权限不足、DeFi 数据尚在加载，或第三方报价暂时不可用。
+            </div>
           ) : null}
 
           <DashboardOverview

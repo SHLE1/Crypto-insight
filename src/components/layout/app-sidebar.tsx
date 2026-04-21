@@ -1,104 +1,138 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import * as React from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
-  Buildings,
-  ChartPieSlice,
-  Coins,
-  ListBullets,
-  Rows,
   Wallet,
-} from '@phosphor-icons/react'
-import { ThemeToggle } from '@/components/layout/theme-toggle'
-import { cn } from '@/lib/utils'
+  Building2,
+  Settings,
+  LayoutDashboard,
+  Boxes,
+  Activity,
+  PieChart,
+} from "lucide-react"
 
-const navItems = [
-  { href: '/', label: '总览', icon: Rows },
-  { href: '/holdings', label: '资产明细', icon: ListBullets },
-  { href: '/wallets', label: '钱包', icon: Wallet },
-  { href: '/cex', label: '交易所', icon: Buildings },
-  { href: '/defi', label: 'DeFi', icon: Coins },
-  { href: '/settings', label: '设置', icon: ChartPieSlice },
-]
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
 
-export function AppSidebar() {
-  const pathname = usePathname()
-
-  return (
-    <aside className="dashboard-sidebar">
-      <div className="flex h-[60px] items-center justify-between border-b border-sidebar-border/60 px-4">
-        <Link href="/" className="flex items-center gap-3 text-sidebar-foreground">
-          <span className="flex size-8 items-center justify-center rounded-md border border-sidebar-border/70 bg-card text-xs font-semibold tracking-[-0.03em]">
-            CI
-          </span>
-          <span className="space-y-0.5">
-            <span className="block text-sm font-semibold tracking-[-0.03em]">Crypto Insight</span>
-            <span className="block text-[11px] tracking-[0.14em] text-muted-foreground">PORTFOLIO TRACKING</span>
-          </span>
-        </Link>
-        <ThemeToggle />
-      </div>
-
-      <div className="flex-1 px-3 py-4">
-        <div className="mb-2 px-1">
-          <p className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground">导航</p>
-        </div>
-        <nav className="space-y-0.5">
-          {navItems.map((item) => {
-            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn('top-nav-link', isActive && 'top-nav-link-active')}
-              >
-                <item.icon size={18} weight={isActive ? 'fill' : 'regular'} />
-                <span>{item.label}</span>
-              </Link>
-            )
-          })}
-        </nav>
-      </div>
-
-      <div className="space-y-3 border-t border-sidebar-border/60 p-4">
-        <div className="rounded-md border border-sidebar-border/60 bg-muted/40 p-3">
-          <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground">数据策略</p>
-          <p className="mt-2 text-sm leading-6 text-sidebar-foreground/90">
-            数据仅存储在当前设备，不会自动上传或同步。
-          </p>
-        </div>
-        <p className="text-[11px] tracking-[0.08em] text-muted-foreground">LOCAL FIRST</p>
-      </div>
-    </aside>
-  )
+const data = {
+  navMain: [
+    {
+      title: "概览",
+      url: "/",
+      icon: LayoutDashboard,
+      isActive: true,
+    },
+    {
+      title: "资产明细",
+      url: "/holdings",
+      icon: PieChart,
+    },
+  ],
+  navSecondary: [
+    {
+      title: "钱包管理",
+      url: "/wallets",
+      icon: Wallet,
+    },
+    {
+      title: "交易所",
+      url: "/cex",
+      icon: Building2,
+    },
+    {
+      title: "DeFi 协议",
+      url: "/defi",
+      icon: Activity,
+    },
+  ],
 }
 
-export function MobileNav() {
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-card md:hidden">
-      <div className="grid grid-cols-6 gap-1">
-        {navItems.map((item) => {
-          const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[10px] font-medium transition-colors',
-                isActive
-                  ? 'bg-accent/60 text-foreground'
-                  : 'text-muted-foreground'
-              )}
+    <Sidebar variant="sidebar" collapsible="icon" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" render={<Link href="/" />}>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Boxes className="size-4" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">Crypto Insight</span>
+                <span className="truncate text-xs">个人的资产控制台</span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      
+      <SidebarContent>
+        <SidebarMenu className="mt-4 px-3 gap-1">
+          {data.navMain.map((item) => {
+            const isActive = pathname === item.url
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  isActive={isActive}
+                  className={isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/70"}
+                  tooltip={item.title}
+                  render={<Link href={item.url} />}
+                >
+                  <item.icon />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarMenu>
+
+        <SidebarMenu className="px-3 pt-8 gap-1">
+          <div className="px-2 text-xs font-semibold text-sidebar-foreground/50 mb-2 uppercase tracking-wider">数据源配置</div>
+          {data.navSecondary.map((item) => {
+            const isActive = pathname?.startsWith(item.url)
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  isActive={isActive}
+                  className={isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/70"}
+                  tooltip={item.title}
+                  render={<Link href={item.url} />}
+                >
+                  <item.icon />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarMenu>
+      </SidebarContent>
+      
+      <SidebarFooter className="p-3">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={pathname === "/settings"}
+              className={pathname === "/settings" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/70"}
+              tooltip="系统偏好设置"
+              render={<Link href="/settings" />}
             >
-              <item.icon size={18} weight={isActive ? 'fill' : 'regular'} />
-              {item.label}
-            </Link>
-          )
-        })}
-      </div>
-    </nav>
+              <Settings />
+              <span>系统偏好设置</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   )
 }

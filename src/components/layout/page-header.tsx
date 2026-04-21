@@ -23,9 +23,9 @@ export function PageHeader({
         className
       )}
     >
-      <div className="min-w-0 space-y-2.5">
+      <div className="min-w-0 flex flex-col gap-2.5">
         {badge ? <span className="section-eyebrow">{badge}</span> : null}
-        <div className="space-y-1.5">
+        <div className="flex flex-col gap-1.5">
           <h1 className="max-w-3xl text-2xl font-semibold tracking-[-0.04em] text-foreground">
             {title}
           </h1>

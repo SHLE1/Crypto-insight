@@ -29,7 +29,7 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
     return (
       <Card>
         <CardHeader>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <p className="muted-kicker">结构</p>
             <CardTitle className="text-base">资产占比</CardTitle>
           </div>
@@ -44,7 +44,7 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
   return (
     <Card>
       <CardHeader className="border-b border-border/60">
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <p className="muted-kicker">结构</p>
           <CardTitle className="text-base">资产占比</CardTitle>
         </div>
@@ -76,7 +76,7 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {data.map((item, index) => {
             const share = totalValue > 0 ? (item.value / totalValue) * 100 : 0
 
