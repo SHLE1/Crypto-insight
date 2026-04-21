@@ -187,7 +187,7 @@ export default function AddWalletPage() {
               />
             </div>
 
-            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+            {error && <p className="text-sm font-medium text-foreground">{error}</p>}
 
             <div className="pt-4 flex gap-3">
               <Button type="button" variant="outline" onClick={() => router.push('/wallets')}>

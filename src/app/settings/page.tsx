@@ -242,9 +242,9 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-destructive/60">
+          <Card className="border-border/40">
             <CardHeader>
-               <div className="flex items-center gap-2 text-destructive">
+               <div className="flex items-center gap-2 text-foreground">
                 <AlertTriangle className="w-5 h-5" />
                 <CardTitle>危险操作</CardTitle>
               </div>

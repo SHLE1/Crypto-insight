@@ -119,7 +119,7 @@ export default function WalletsPage() {
                                if (e.key === 'Enter') handleRename(w.id, w.name ?? '')
                              }}
                            />
-                           <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500" onClick={() => handleRename(w.id, w.name ?? '')}>
+                           <Button size="icon" variant="ghost" className="h-8 w-8 text-foreground" onClick={() => handleRename(w.id, w.name ?? '')}>
                               <Check className="h-4 w-4" />
                            </Button>
                            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={cancelRenaming}>
@@ -161,7 +161,7 @@ export default function WalletsPage() {
                           {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '尚未拉取'}
                         </div>
                      </div>
-                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleRemove(w.id, w.name ?? '')}>
+                     <Button variant="ghost" size="icon" className="text-foreground hover:text-foreground hover:bg-muted/10" onClick={() => handleRemove(w.id, w.name ?? '')}>
                         <Trash2 className="h-4 w-4" />
                      </Button>
                   </div>
