@@ -3,21 +3,19 @@
 import { useState } from 'react'
 import { Key, Plus, Trash, X, Building2 } from 'lucide-react'
 import { EmptyState } from '@/components/layout/empty-state'
-import { PageHeader } from '@/components/layout/page-header'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import { formatCurrency, getExchangeLabel } from '@/lib/validators'
+import { exchangeRequiresPassphrase, formatCurrency, getExchangeLabel } from '@/lib/validators'
 import { useCexStore } from '@/stores/cex'
 import { usePortfolioStore } from '@/stores/portfolio'
 import type { ExchangeType } from '@/types'
 import { toast } from 'sonner'
 
-const EXCHANGE_OPTIONS: ExchangeType[] = ['binance', 'okx']
+const EXCHANGE_OPTIONS: ExchangeType[] = ['binance', 'okx', 'bitget', 'gate']
 
 export default function CexPage() {
   const { accounts, addAccount, removeAccount, toggleAccount, updateAccount } = useCexStore()
@@ -30,6 +28,7 @@ export default function CexPage() {
   const [apiKey, setApiKey] = useState('')
   const [apiSecret, setApiSecret] = useState('')
   const [passphrase, setPassphrase] = useState('')
+  const requiresPassphrase = exchangeRequiresPassphrase(exchange)
 
   const resetForm = () => {
     setLabel('')
@@ -60,8 +59,8 @@ export default function CexPage() {
       return
     }
 
-    if (exchange === 'okx' && !passphrase.trim()) {
-      toast.error('OKX 账户还需要填写 Passphrase。')
+    if (requiresPassphrase && !passphrase.trim()) {
+      toast.error(`${getExchangeLabel(exchange)} 账户还需要填写 Passphrase。`)
       return
     }
 
@@ -84,7 +83,7 @@ export default function CexPage() {
         label: label.trim() || getExchangeLabel(exchange),
         apiKey: apiKey.trim(),
         apiSecret: apiSecret.trim(),
-        passphrase: exchange === 'okx' ? passphrase.trim() : undefined,
+        passphrase: requiresPassphrase ? passphrase.trim() : undefined,
       })
       removeSnapshot(editingAccountId)
       toast.success('密钥已更新，下次刷新会重新拉取这个账户的数据。')
@@ -95,7 +94,7 @@ export default function CexPage() {
         label: label.trim() || getExchangeLabel(exchange),
         apiKey: apiKey.trim(),
         apiSecret: apiSecret.trim(),
-        passphrase: exchange === 'okx' ? passphrase.trim() : undefined,
+        passphrase: requiresPassphrase ? passphrase.trim() : undefined,
         enabled: true,
       })
       toast.success('交易所账户已添加，现在可以回到总览查看资产。')
@@ -193,13 +192,13 @@ export default function CexPage() {
                 </div>
               </div>
 
-              {exchange === 'okx' && (
+              {requiresPassphrase && (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="passphrase">Passphrase</Label>
                   <Input
                     id="passphrase"
                     type="password"
-                    placeholder="OKX API 创建时设置的 Passphrase"
+                    placeholder={`${getExchangeLabel(exchange)} API 创建时设置的 Passphrase`}
                     value={passphrase}
                     onChange={(e) => setPassphrase(e.target.value)}
                   />
@@ -232,7 +231,6 @@ export default function CexPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
           {accounts.map((account) => {
             const snapshot = snapshots[account.id]
-            const isOkx = account.exchange === 'okx'
             return (
               <Card key={account.id} className={!account.enabled ? 'opacity-60' : ''}>
                 <CardHeader className="flex flex-row items-start justify-between gap-0 pb-2">
@@ -240,7 +238,9 @@ export default function CexPage() {
                      <Building2 className="w-5 h-5 text-muted-foreground" />
                      <div className="flex flex-col gap-1">
                        <CardTitle className="text-base">{account.label}</CardTitle>
-                       <CardDescription className="text-xs uppercase font-mono">{account.exchange}</CardDescription>
+                       <CardDescription className="text-xs uppercase font-mono">
+                         {getExchangeLabel(account.exchange)}
+                       </CardDescription>
                      </div>
                   </div>
                   <Switch

@@ -1,7 +1,7 @@
 // ===== 基础类型 =====
 
 export type ChainType = 'evm' | 'solana' | 'btc'
-export type ExchangeType = 'binance' | 'okx'
+export type ExchangeType = 'binance' | 'okx' | 'bitget' | 'gate'
 
 // ===== 数据模型 =====
 

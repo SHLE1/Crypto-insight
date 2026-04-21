@@ -1,4 +1,4 @@
-import type { ChainType } from '@/types'
+import type { ChainType, ExchangeType } from '@/types'
 
 const EVM_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/
 const SOLANA_ADDRESS_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
@@ -26,12 +26,18 @@ export function getChainLabel(chainType: ChainType): string {
   return labels[chainType]
 }
 
-export function getExchangeLabel(exchange: string): string {
-  const labels: Record<string, string> = {
+export function getExchangeLabel(exchange: ExchangeType | string): string {
+  const labels: Record<ExchangeType, string> = {
     binance: 'Binance',
     okx: 'OKX',
+    bitget: 'Bitget',
+    gate: 'Gate',
   }
-  return labels[exchange] || exchange
+  return exchange in labels ? labels[exchange as ExchangeType] : exchange
+}
+
+export function exchangeRequiresPassphrase(exchange: ExchangeType): boolean {
+  return exchange === 'okx' || exchange === 'bitget'
 }
 
 export function formatCurrency(value: number | null, currency = 'USD'): string {

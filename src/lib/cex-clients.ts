@@ -75,6 +75,63 @@ interface OkxBalanceResponse {
   }>
 }
 
+interface BitgetApiResponse<T> {
+  code?: string
+  msg?: string
+  message?: string
+  data?: T
+}
+
+interface BitgetSpotAssetResponseItem {
+  coin?: string
+  available?: string
+  frozen?: string
+  locked?: string
+  limitAvailable?: string
+}
+
+interface BitgetMixAssetListItem {
+  coin?: string
+  available?: string
+}
+
+interface BitgetMixAccountResponseItem {
+  marginCoin?: string
+  available?: string
+  locked?: string
+  accountEquity?: string
+  assetMode?: string
+  assetList?: BitgetMixAssetListItem[]
+}
+
+interface BitgetAllAccountBalanceResponseItem {
+  accountType?: string
+  usdtBalance?: string
+}
+
+interface GateApiErrorResponse {
+  label?: string
+  message?: string
+}
+
+interface GateSpotAccountResponseItem {
+  currency?: string
+  available?: string
+  locked?: string
+}
+
+interface GateTotalBalanceDetail {
+  amount?: string
+  currency?: string
+  borrowed?: string
+  unrealised_pnl?: string
+}
+
+interface GateTotalBalanceResponse {
+  total?: GateTotalBalanceDetail
+  details?: Record<string, GateTotalBalanceDetail | undefined>
+}
+
 type BinanceWalletName =
   | 'Spot'
   | 'Funding'
@@ -118,6 +175,24 @@ interface BinanceWalletFetchResult {
   queryAttempted: boolean
 }
 
+interface ExchangeAssetEntry {
+  symbol: string
+  balance: number
+  sourceKey: string
+  sourceLabel: string
+  reconciliationGroup: string
+  assetId?: string
+  name?: string
+  priceOverride?: number
+}
+
+interface PricedExchangeAssetEntry extends ExchangeAssetEntry {
+  price: number | null
+  value: number | null
+  change24h: number | null
+  priceStatus: PriceStatus
+}
+
 const BINANCE_WALLET_META: Record<BinanceWalletName, BinanceWalletMeta> = {
   Spot: { key: 'spot', label: '现货', expandable: true },
   Funding: { key: 'funding', label: '资金账户', expandable: true },
@@ -141,7 +216,34 @@ class BinanceRequestError extends Error {
   }
 }
 
-function normalizeCexError(exchange: CexAccountInput['exchange'], message: string) {
+class BitgetRequestError extends Error {
+  code?: string
+  status?: number
+
+  constructor(message: string, options?: { code?: string; status?: number }) {
+    super(message)
+    this.name = 'BitgetRequestError'
+    this.code = options?.code
+    this.status = options?.status
+  }
+}
+
+class GateRequestError extends Error {
+  label?: string
+  status?: number
+
+  constructor(message: string, options?: { label?: string; status?: number }) {
+    super(message)
+    this.name = 'GateRequestError'
+    this.label = options?.label
+    this.status = options?.status
+  }
+}
+
+function normalizeCexError(account: CexAccountInput, error: unknown) {
+  const message = error instanceof Error ? error.message : '查询失败'
+  const exchange = account.exchange
+
   if (
     exchange === 'binance' &&
     message.includes('Service unavailable from a restricted location')
@@ -163,6 +265,78 @@ function normalizeCexError(exchange: CexAccountInput['exchange'], message: strin
     return 'Binance API Secret 不正确，签名校验失败。请重新填写 API Key 与 Secret。'
   }
 
+  if (exchange === 'bitget') {
+    const code = error instanceof BitgetRequestError ? error.code : undefined
+    const status = error instanceof BitgetRequestError ? error.status : undefined
+
+    if (status === 429 || code === '429' || message.includes('Too many requests')) {
+      return 'Bitget 请求过于频繁，请稍后重试。'
+    }
+
+    if (code === '40011' || code === '40036') {
+      return 'Bitget Passphrase 缺失或不正确，请重新填写 Bitget Passphrase。'
+    }
+
+    if (code === '40038' || code === '22010' || message.toLowerCase().includes('whitelist')) {
+      return 'Bitget API Key 权限不足，或 IP 白名单不匹配。请检查只读权限和 IP 白名单。'
+    }
+
+    if (code === '40006' || message.includes('Invalid ACCESS_KEY')) {
+      return 'Bitget API Key 无效，或读取权限不足。请检查只读权限和 IP 白名单。'
+    }
+
+    if (code === '40012' || message.includes('passphrase is error') || message.includes('apikey/password is incorrect')) {
+      return 'Bitget Passphrase 缺失或不正确，请重新填写 Bitget Passphrase。'
+    }
+
+    if (code === '40002' || message.toLowerCase().includes('signature')) {
+      return 'Bitget API Secret 不正确，签名校验失败。请重新填写 API Key、API Secret 和 Passphrase。'
+    }
+
+    if (message.includes('返回格式异常')) {
+      return 'Bitget 返回数据无法识别，请稍后重试。'
+    }
+
+    if (message.toLowerCase().includes('fetch failed') || message.toLowerCase().includes('network')) {
+      return 'Bitget 当前请求失败，请检查网络后重试。'
+    }
+  }
+
+  if (exchange === 'gate') {
+    const label = error instanceof GateRequestError ? error.label : undefined
+    const status = error instanceof GateRequestError ? error.status : undefined
+
+    if (status === 429 || label === 'TOO_MANY_REQUESTS') {
+      return 'Gate 请求过于频繁，请稍后重试。'
+    }
+
+    if (label === 'REQUEST_EXPIRED') {
+      return 'Gate 请求时间戳无效，本机或服务器时间可能不准确，请稍后重试。'
+    }
+
+    if (label === 'INVALID_SIGNATURE') {
+      return 'Gate API Secret 不正确，签名校验失败。请重新填写 API Key 与 API Secret。'
+    }
+
+    if (
+      label === 'INVALID_KEY' ||
+      label === 'INVALID_CREDENTIALS' ||
+      label === 'IP_FORBIDDEN' ||
+      label === 'FORBIDDEN' ||
+      label === 'MISSING_REQUIRED_HEADER'
+    ) {
+      return 'Gate API v4 Key 无效、权限不足，或 IP 白名单不匹配。请检查 API v4 Key 权限和 IP 白名单。'
+    }
+
+    if (message.includes('返回格式异常')) {
+      return 'Gate 返回数据无法识别，请稍后重试。'
+    }
+
+    if (message.toLowerCase().includes('fetch failed') || message.toLowerCase().includes('network')) {
+      return 'Gate 当前请求失败，请检查网络后重试。'
+    }
+  }
+
   return message
 }
 
@@ -171,6 +345,14 @@ function isBinanceApiErrorResponse(value: unknown): value is BinanceApiErrorResp
     value &&
       typeof value === 'object' &&
       ('code' in value || 'msg' in value)
+  )
+}
+
+function isGateApiErrorResponse(value: unknown): value is GateApiErrorResponse {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      ('label' in value || 'message' in value)
   )
 }
 
@@ -291,21 +473,36 @@ function dedupeWarnings(items: string[]) {
 }
 
 async function signHmac(secret: string, payload: string, encoding: 'hex' | 'base64') {
+  return signHmacWithHash(secret, payload, { encoding, hash: 'SHA-256' })
+}
+
+async function signHmacWithHash(
+  secret: string,
+  payload: string,
+  options: { encoding: 'hex' | 'base64'; hash: 'SHA-256' | 'SHA-512' }
+) {
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
+    { name: 'HMAC', hash: options.hash },
     false,
     ['sign']
   )
   const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload))
   const bytes = Array.from(new Uint8Array(signature))
 
-  if (encoding === 'hex') {
+  if (options.encoding === 'hex') {
     return bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('')
   }
 
-  return btoa(String.fromCharCode(...bytes))
+  return Buffer.from(bytes).toString('base64')
+}
+
+async function sha512Hex(payload: string) {
+  const digest = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(payload))
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 async function fetchBinanceSigned<T>(
@@ -379,6 +576,113 @@ function buildSnapshot(
     status,
     error: options?.error ?? options?.warning,
   }
+}
+
+function mergeExchangeEntries(entries: ExchangeAssetEntry[]) {
+  const merged = new Map<string, ExchangeAssetEntry>()
+
+  entries.forEach((entry) => {
+    const key = `${entry.sourceKey}:${entry.symbol}:${entry.assetId ?? ''}`
+    const existing = merged.get(key)
+
+    if (existing) {
+      existing.balance += entry.balance
+      return
+    }
+
+    merged.set(key, { ...entry })
+  })
+
+  return Array.from(merged.values()).filter((entry) => entry.balance > 0)
+}
+
+async function priceExchangeEntries(entries: ExchangeAssetEntry[]) {
+  const uniqueSymbols = Array.from(
+    new Set(
+      entries
+        .filter((entry) => entry.priceOverride === undefined)
+        .map((entry) => entry.symbol.trim().toUpperCase())
+    )
+  )
+  const prices = uniqueSymbols.length > 0 ? await getPrices(uniqueSymbols) : {}
+
+  return entries.map<PricedExchangeAssetEntry>((entry) => {
+    if (entry.priceOverride !== undefined) {
+      return {
+        ...entry,
+        price: entry.priceOverride,
+        value: entry.balance * entry.priceOverride,
+        change24h: 0,
+        priceStatus: 'live',
+      }
+    }
+
+    const priceInfo = prices[entry.symbol.trim().toUpperCase()]
+    const price = priceInfo?.price ?? null
+
+    return {
+      ...entry,
+      price,
+      value: price !== null ? entry.balance * price : null,
+      change24h: priceInfo?.change24h ?? null,
+      priceStatus: priceInfo?.status ?? 'missing',
+    }
+  })
+}
+
+function buildExchangeAssets(
+  account: Pick<CexAccountInput, 'id' | 'label' | 'exchange'>,
+  entries: PricedExchangeAssetEntry[]
+): AssetBalance[] {
+  const aggregated = new Map<string, AssetBalance & { sources: AssetSourceDetail[] }>()
+  const accountLabel = account.label || account.exchange.toUpperCase()
+
+  entries.forEach((entry) => {
+    const assetId = entry.assetId ?? `cex:${entry.symbol.toUpperCase()}`
+    const sourceDetail: AssetSourceDetail = {
+      sourceId: `${account.id}:${entry.sourceKey}`,
+      sourceType: 'cex',
+      sourceLabel: `${accountLabel} · ${entry.sourceLabel}`,
+      assetId,
+      balance: entry.balance,
+    }
+    const existing = aggregated.get(assetId)
+
+    if (existing) {
+      existing.balance += entry.balance
+      existing.value =
+        existing.value !== null || entry.value !== null
+          ? (existing.value ?? 0) + (entry.value ?? 0)
+          : null
+      existing.change24h = entry.change24h ?? existing.change24h
+      existing.price = entry.price ?? existing.price
+      existing.priceStatus =
+        existing.priceStatus === 'missing' || entry.priceStatus === 'missing'
+          ? 'missing'
+          : existing.priceStatus === 'stale' || entry.priceStatus === 'stale'
+            ? 'stale'
+            : 'live'
+      existing.sources.push(sourceDetail)
+      return
+    }
+
+    aggregated.set(assetId, {
+      assetId,
+      symbol: entry.symbol,
+      name: entry.name ?? entry.symbol,
+      balance: entry.balance,
+      price: entry.price,
+      value: entry.value,
+      change24h: entry.change24h,
+      priceStatus: entry.priceStatus,
+      sources: [sourceDetail],
+    })
+  })
+
+  return Array.from(aggregated.values()).map((asset) => ({
+    ...asset,
+    sources: asset.sources,
+  }))
 }
 
 async function fetchBinanceAccountInfo(account: CexAccountInput) {
@@ -952,10 +1256,478 @@ async function fetchOkxBalances(account: CexAccountInput) {
     .filter((asset) => asset.balance > 0)
 }
 
+async function fetchBitgetSigned<T>(
+  account: CexAccountInput,
+  options: {
+    path: string
+    method?: 'GET' | 'POST'
+    params?: Record<string, string | undefined>
+    body?: unknown
+  }
+) {
+  const method = options.method ?? 'GET'
+  const searchParams = new URLSearchParams()
+
+  Object.entries(options.params ?? {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      searchParams.set(key, value)
+    }
+  })
+
+  const queryString = searchParams.toString()
+  const requestBody = options.body ? JSON.stringify(options.body) : ''
+  const timestamp = Date.now().toString()
+  const prehash = `${timestamp}${method}${options.path}${queryString ? `?${queryString}` : ''}${requestBody}`
+  const signature = await signHmac(account.apiSecret, prehash, 'base64')
+  const response = await fetch(
+    `https://api.bitget.com${options.path}${queryString ? `?${queryString}` : ''}`,
+    {
+      method,
+      cache: 'no-store',
+      headers: {
+        'ACCESS-KEY': account.apiKey,
+        'ACCESS-SIGN': signature,
+        'ACCESS-TIMESTAMP': timestamp,
+        'ACCESS-PASSPHRASE': account.passphrase ?? '',
+        'Content-Type': 'application/json',
+        locale: 'en-US',
+      },
+      body: requestBody || undefined,
+    }
+  )
+
+  let payload: unknown = null
+
+  try {
+    payload = await response.json()
+  } catch {
+    throw new BitgetRequestError('Bitget 返回格式异常', { status: response.status })
+  }
+
+  const result = payload as BitgetApiResponse<T>
+  const successCode = result.code === '00000' || result.code === '0'
+
+  if (!response.ok || !successCode) {
+    throw new BitgetRequestError(
+      result.msg || result.message || 'Bitget 请求失败',
+      { code: result.code, status: response.status }
+    )
+  }
+
+  return result.data as T
+}
+
+async function fetchBitgetSpotAssets(account: CexAccountInput) {
+  const data = await fetchBitgetSigned<BitgetSpotAssetResponseItem[]>(account, {
+    path: '/api/v2/spot/account/assets',
+    params: {
+      assetType: 'hold_only',
+    },
+  })
+
+  if (!Array.isArray(data)) {
+    throw new Error('Bitget 现货账户返回格式异常')
+  }
+
+  return data
+    .map<ExchangeAssetEntry | null>((item) => {
+      const symbol = item.coin?.trim().toUpperCase()
+      if (!symbol) return null
+
+      const balance =
+        toPositiveNumber(item.available) +
+        toPositiveNumber(item.frozen) +
+        toPositiveNumber(item.locked) +
+        toPositiveNumber(item.limitAvailable)
+
+      if (balance <= 0) return null
+
+      return {
+        symbol,
+        balance,
+        sourceKey: 'spot',
+        sourceLabel: '现货账户',
+        reconciliationGroup: 'spot',
+      }
+    })
+    .filter((item): item is ExchangeAssetEntry => Boolean(item))
+}
+
+async function fetchBitgetMixAccounts(account: CexAccountInput, productType: 'USDT-FUTURES' | 'USDC-FUTURES' | 'COIN-FUTURES') {
+  const data = await fetchBitgetSigned<BitgetMixAccountResponseItem[]>(account, {
+    path: '/api/v2/mix/account/accounts',
+    params: {
+      productType,
+    },
+  })
+
+  if (!Array.isArray(data)) {
+    throw new Error('Bitget 合约账户返回格式异常')
+  }
+
+  return data.flatMap<ExchangeAssetEntry>((item) => {
+    const entries: ExchangeAssetEntry[] = []
+
+    if (Array.isArray(item.assetList) && item.assetList.length > 0) {
+      item.assetList.forEach((asset) => {
+        const symbol = asset.coin?.trim().toUpperCase()
+        const balance = toPositiveNumber(asset.available)
+
+        if (!symbol || balance <= 0) return
+
+        entries.push({
+          symbol,
+          balance,
+          sourceKey: `futures-${productType.toLowerCase()}`,
+          sourceLabel: `${productType} 合约`,
+          reconciliationGroup: 'futures',
+        })
+      })
+      return entries
+    }
+
+    const symbol = item.marginCoin?.trim().toUpperCase()
+    const balance = toPositiveNumber(item.accountEquity) || toPositiveNumber(item.available) + toPositiveNumber(item.locked)
+
+    if (!symbol || balance <= 0) {
+      return entries
+    }
+
+    entries.push({
+      symbol,
+      balance,
+      sourceKey: `futures-${productType.toLowerCase()}`,
+      sourceLabel: `${productType} 合约`,
+      reconciliationGroup: 'futures',
+    })
+
+    return entries
+  })
+}
+
+async function fetchBitgetAllAccountBalances(account: CexAccountInput) {
+  const data = await fetchBitgetSigned<BitgetAllAccountBalanceResponseItem[]>(account, {
+    path: '/api/v2/account/all-account-balance',
+  })
+
+  if (!Array.isArray(data)) {
+    throw new Error('Bitget 账户总额返回格式异常')
+  }
+
+  return data
+}
+
+function getBitgetAccountTypeLabel(accountType: string) {
+  const labels: Record<string, string> = {
+    spot: '现货账户',
+    futures: '合约账户',
+    funding: '资金账户',
+    earn: 'Earn',
+    bots: 'Bots',
+    margin: '杠杆账户',
+  }
+
+  return labels[accountType] ?? accountType
+}
+
+async function fetchBitgetSnapshot(account: CexAccountInput): Promise<{
+  assets: AssetBalance[]
+  warning?: string
+}> {
+  const [spotResult, usdtResult, usdcResult, coinResult, totalResult] = await Promise.allSettled([
+    fetchBitgetSpotAssets(account),
+    fetchBitgetMixAccounts(account, 'USDT-FUTURES'),
+    fetchBitgetMixAccounts(account, 'USDC-FUTURES'),
+    fetchBitgetMixAccounts(account, 'COIN-FUTURES'),
+    fetchBitgetAllAccountBalances(account),
+  ])
+
+  const warnings: string[] = []
+  const entries: ExchangeAssetEntry[] = []
+  const failedGroups = new Set<string>()
+  const firstFailure = [spotResult, usdtResult, usdcResult, coinResult, totalResult].find(
+    (result): result is PromiseRejectedResult => result.status === 'rejected'
+  )
+
+  if (spotResult.status === 'fulfilled') {
+    entries.push(...spotResult.value)
+  } else {
+    failedGroups.add('spot')
+    warnings.push(`Bitget 现货账户查询失败：${normalizeCexError(account, spotResult.reason)}`)
+  }
+
+  const futuresResults = [usdtResult, usdcResult, coinResult]
+  futuresResults.forEach((result, index) => {
+    const productType = ['USDT-FUTURES', 'USDC-FUTURES', 'COIN-FUTURES'][index]
+    if (result.status === 'fulfilled') {
+      entries.push(...result.value)
+      return
+    }
+
+    failedGroups.add('futures')
+    warnings.push(`Bitget ${productType} 查询失败：${normalizeCexError(account, result.reason)}`)
+  })
+
+  if (entries.length === 0 && totalResult.status === 'rejected') {
+    throw firstFailure?.reason ?? totalResult.reason
+  }
+
+  const pricedEntries = await priceExchangeEntries(mergeExchangeEntries(entries))
+  const detailedValueByGroup = new Map<string, number>()
+
+  pricedEntries.forEach((entry) => {
+    detailedValueByGroup.set(
+      entry.reconciliationGroup,
+      (detailedValueByGroup.get(entry.reconciliationGroup) ?? 0) + (entry.value ?? 0)
+    )
+  })
+
+  const fallbackEntries: ExchangeAssetEntry[] = []
+
+  if (totalResult.status === 'fulfilled') {
+    totalResult.value.forEach((item) => {
+      const accountType = item.accountType?.trim().toLowerCase()
+      const officialTotal = toPositiveNumber(item.usdtBalance)
+
+      if (!accountType || officialTotal <= 0) return
+
+      const detailedValue = detailedValueByGroup.get(accountType) ?? 0
+      const tolerance = Math.max(1, officialTotal * 0.02)
+      const gap = officialTotal - detailedValue
+
+      if (gap <= tolerance) {
+        return
+      }
+
+      const label = getBitgetAccountTypeLabel(accountType)
+      fallbackEntries.push({
+        symbol: `${label}未展开资产`,
+        name: `Bitget ${label}未展开资产`,
+        balance: gap,
+        assetId: `cex:bitget:account-gap:${accountType}`,
+        sourceKey: `account-gap-${accountType}`,
+        sourceLabel: label,
+        reconciliationGroup: accountType,
+        priceOverride: 1,
+      })
+
+      if (accountType !== 'spot' && accountType !== 'futures') {
+        warnings.push(`${label} 暂未接入币种级展开，已按账户总额保留 ${formatUsdValue(gap)}。`)
+        return
+      }
+
+      if (failedGroups.has(accountType)) {
+        warnings.push(`${label} 明细查询未完整返回，已按账户总额补齐 ${formatUsdValue(gap)}。`)
+        return
+      }
+
+      warnings.push(`${label} 仍有 ${formatUsdValue(gap)} 暂时不能按币种完全展开，已按账户总额补齐。`)
+    })
+  } else if (entries.length > 0) {
+    warnings.push(`Bitget 账户总额查询失败：${normalizeCexError(account, totalResult.reason)}`)
+  } else {
+    throw totalResult.reason
+  }
+
+  const assets = buildExchangeAssets(
+    account,
+    pricedEntries.concat(await priceExchangeEntries(fallbackEntries))
+  )
+
+  return {
+    assets,
+    warning: dedupeWarnings(warnings).join('；') || undefined,
+  }
+}
+
+async function fetchGateSigned<T>(
+  account: CexAccountInput,
+  options: {
+    path: string
+    method?: 'GET' | 'POST'
+    params?: Record<string, string | undefined>
+    body?: unknown
+  }
+) {
+  const method = options.method ?? 'GET'
+  const prefix = '/api/v4'
+  const searchParams = new URLSearchParams()
+
+  Object.entries(options.params ?? {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      searchParams.set(key, value)
+    }
+  })
+
+  const queryString = searchParams.toString()
+  const requestBody = options.body ? JSON.stringify(options.body) : ''
+  const bodyHash = await sha512Hex(requestBody)
+  const timestamp = Math.floor(Date.now() / 1000).toString()
+  const signString = `${method}\n${prefix}${options.path}\n${queryString}\n${bodyHash}\n${timestamp}`
+  const signature = await signHmacWithHash(account.apiSecret, signString, {
+    encoding: 'hex',
+    hash: 'SHA-512',
+  })
+  const response = await fetch(
+    `https://api.gateio.ws${prefix}${options.path}${queryString ? `?${queryString}` : ''}`,
+    {
+      method,
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        KEY: account.apiKey,
+        Timestamp: timestamp,
+        SIGN: signature,
+      },
+      body: requestBody || undefined,
+    }
+  )
+
+  let payload: unknown = null
+
+  try {
+    payload = await response.json()
+  } catch {
+    throw new GateRequestError('Gate 返回格式异常', { status: response.status })
+  }
+
+  if (!response.ok) {
+    throw new GateRequestError(
+      isGateApiErrorResponse(payload) ? payload.message || 'Gate 请求失败' : 'Gate 请求失败',
+      {
+        label: isGateApiErrorResponse(payload) ? payload.label : undefined,
+        status: response.status,
+      }
+    )
+  }
+
+  return payload as T
+}
+
+async function fetchGateSpotAccounts(account: CexAccountInput) {
+  const data = await fetchGateSigned<GateSpotAccountResponseItem[]>(account, {
+    path: '/spot/accounts',
+  })
+
+  if (!Array.isArray(data)) {
+    throw new Error('Gate 现货账户返回格式异常')
+  }
+
+  return data
+    .map<ExchangeAssetEntry | null>((item) => {
+      const symbol = item.currency?.trim().toUpperCase()
+      if (!symbol) return null
+
+      const balance = toPositiveNumber(item.available) + toPositiveNumber(item.locked)
+      if (balance <= 0) return null
+
+      return {
+        symbol,
+        balance,
+        sourceKey: 'spot',
+        sourceLabel: '现货账户',
+        reconciliationGroup: 'spot',
+      }
+    })
+    .filter((item): item is ExchangeAssetEntry => Boolean(item))
+}
+
+async function fetchGateTotalBalance(account: CexAccountInput) {
+  const data = await fetchGateSigned<GateTotalBalanceResponse>(account, {
+    path: '/wallet/total_balance',
+    params: {
+      currency: 'USDT',
+    },
+  })
+
+  if (!data || typeof data !== 'object') {
+    throw new Error('Gate 账户总额返回格式异常')
+  }
+
+  return data
+}
+
+async function fetchGateSnapshot(account: CexAccountInput): Promise<{
+  assets: AssetBalance[]
+  warning?: string
+}> {
+  const [spotResult, totalResult] = await Promise.allSettled([
+    fetchGateSpotAccounts(account),
+    fetchGateTotalBalance(account),
+  ])
+  const warnings: string[] = []
+  const firstFailure = [spotResult, totalResult].find(
+    (result): result is PromiseRejectedResult => result.status === 'rejected'
+  )
+
+  if (spotResult.status === 'rejected' && totalResult.status === 'rejected') {
+    throw firstFailure?.reason ?? totalResult.reason
+  }
+
+  const detailedEntries = spotResult.status === 'fulfilled' ? mergeExchangeEntries(spotResult.value) : []
+  if (spotResult.status === 'rejected') {
+    warnings.push(`Gate 现货账户查询失败：${normalizeCexError(account, spotResult.reason)}`)
+  }
+
+  const pricedEntries = await priceExchangeEntries(detailedEntries)
+  const fallbackEntries: ExchangeAssetEntry[] = []
+  const detailedValue = pricedEntries.reduce((sum, entry) => sum + (entry.value ?? 0), 0)
+
+  if (totalResult.status === 'fulfilled') {
+    const officialTotal = toPositiveNumber(totalResult.value.total?.amount)
+    const tolerance = Math.max(1, officialTotal * 0.02)
+    const gap = officialTotal - detailedValue
+
+    if (gap > tolerance) {
+      fallbackEntries.push({
+        symbol: 'Gate未展开资产',
+        name: 'Gate 未展开资产',
+        balance: gap,
+        assetId: 'cex:gate:account-gap',
+        sourceKey: 'account-gap',
+        sourceLabel: '账户总额补齐',
+        reconciliationGroup: 'overview',
+        priceOverride: 1,
+      })
+
+      warnings.push(
+        spotResult.status === 'fulfilled'
+          ? `Gate 总额中仍有 ${formatUsdValue(gap)} 未能展开到币种明细，已按账户总额补齐。`
+          : `Gate 现货明细未能取回，已按账户总额保留 ${formatUsdValue(gap)}。`
+      )
+    }
+  } else if (pricedEntries.length > 0) {
+    warnings.push(`Gate 账户总额查询失败：${normalizeCexError(account, totalResult.reason)}`)
+  } else {
+    throw totalResult.reason
+  }
+
+  const assets = buildExchangeAssets(
+    account,
+    pricedEntries.concat(await priceExchangeEntries(fallbackEntries))
+  )
+
+  return {
+    assets,
+    warning: dedupeWarnings(warnings).join('；') || undefined,
+  }
+}
+
 export async function getCexSnapshot(account: CexAccountInput): Promise<PortfolioSnapshot> {
   try {
     if (account.exchange === 'binance') {
       const { assets, warning } = await fetchBinanceSnapshot(account)
+      return buildSnapshot(account, assets, { warning })
+    }
+
+    if (account.exchange === 'bitget') {
+      const { assets, warning } = await fetchBitgetSnapshot(account)
+      return buildSnapshot(account, assets, { warning })
+    }
+
+    if (account.exchange === 'gate') {
+      const { assets, warning } = await fetchGateSnapshot(account)
       return buildSnapshot(account, assets, { warning })
     }
 
@@ -979,7 +1751,6 @@ export async function getCexSnapshot(account: CexAccountInput): Promise<Portfoli
 
     return buildSnapshot(account, assets)
   } catch (error) {
-    const message = error instanceof Error ? error.message : '查询失败'
-    return buildSnapshot(account, [], { error: normalizeCexError(account.exchange, message) })
+    return buildSnapshot(account, [], { error: normalizeCexError(account, error) })
   }
 }

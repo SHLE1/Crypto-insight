@@ -3,12 +3,14 @@
 这份文档只说明两件事：
 
 - 钱包地址怎么添加
-- `Binance` 和 `OKX` 的只读 API 怎么申请、怎么填进程序
+- `Binance`、`OKX`、`Bitget`、`Gate` 的只读 API 怎么申请、怎么填进程序
 
 ## 先说结论
 
 - 链上钱包不需要 API Key
 - 交易所账户需要只读 API
+- `OKX` 和 `Bitget` 需要额外填写 `Passphrase`
+- `Gate` 不需要 `Passphrase`
 - 不要开启交易权限
 - 不要开启提币权限
 - 导出文件不会包含 API Key、API Secret、Passphrase
@@ -63,7 +65,7 @@
 
 1. 打开程序
 2. 进入 `交易所`
-3. 点 `绑定账户`
+3. 点 `添加账户`
 4. 选择 `Binance`
 5. 填写备注名
 6. 填入 `API Key`
@@ -100,7 +102,7 @@
 
 1. 打开程序
 2. 进入 `交易所`
-3. 点 `绑定账户`
+3. 点 `添加账户`
 4. 选择 `OKX`
 5. 填写备注名
 6. 填入 `API Key`
@@ -113,6 +115,79 @@
 - `Passphrase` 不是登录密码
 - 它是你创建 API 时自己设置的那一项
 - 少了它，`OKX` 无法正常查询
+
+## Bitget API 配置
+
+### 你需要准备什么
+
+- `API Key`
+- `API Secret`
+- `Passphrase`
+
+### 创建步骤
+
+1. 登录 `Bitget`
+2. 进入 API 管理页面
+3. 创建新的 API Key
+4. 记录系统返回的 `API Key`
+5. 自定义或确认 `Passphrase`
+6. 权限只保留读取或只读
+7. 不要开启交易
+8. 不要开启提币
+9. 如平台支持，建议绑定 IP 白名单
+
+### 程序里怎么填
+
+1. 打开程序
+2. 进入 `交易所`
+3. 点 `添加账户`
+4. 选择 `Bitget`
+5. 填写备注名
+6. 填入 `API Key`
+7. 填入 `API Secret`
+8. 填入 `Passphrase`
+9. 提交
+
+### 注意
+
+- `Bitget` 缺少 `Passphrase` 无法正常查询
+- 权限只需要读取，不需要交易或提币
+- 如果开启了 IP 白名单，记得同步当前实际出口 IP
+
+## Gate API 配置
+
+### 你需要准备什么
+
+- `API v4 Key`
+- `API Secret`
+
+### 创建步骤
+
+1. 登录 `Gate`
+2. 进入 API 管理页面
+3. 创建新的 `API v4 Key`
+4. 权限只保留读取或只读
+5. 不要开启现货、合约等交易权限
+6. 不要开启提币权限
+7. 建议配置 IP 白名单
+8. 保存配置
+
+### 程序里怎么填
+
+1. 打开程序
+2. 进入 `交易所`
+3. 点 `添加账户`
+4. 选择 `Gate`
+5. 填写备注名
+6. 填入 `API Key`
+7. 填入 `API Secret`
+8. 提交
+
+### 注意
+
+- `Gate` 这里使用的是 `API v4`
+- 程序里不需要填写 `Passphrase`
+- 如果使用白名单，记得把当前出口 IP 加进去
 
 ## DeFi 数据源配置
 
@@ -165,7 +240,7 @@ MORALIS_API_KEY=your_moralis_key # 可选，作为 EVM DeFi 回退源
 
 - `API Key` 填错
 - `API Secret` 填错
-- `OKX Passphrase` 填错
+- `OKX` 或 `Bitget` 的 `Passphrase` 填错
 - API 没开只读权限
 - API 被平台风控限制
 - IP 白名单没配对
@@ -181,6 +256,6 @@ MORALIS_API_KEY=your_moralis_key # 可选，作为 EVM DeFi 回退源
 ## 推荐的配置顺序
 
 1. 先添加一个钱包地址，确认页面能正常刷新
-2. 再去创建 `Binance` 或 `OKX` 的只读 API
-3. 回到 `交易所` 页面绑定账户
+2. 再去创建 `Binance`、`OKX`、`Bitget` 或 `Gate` 的只读 API
+3. 回到 `交易所` 页面添加账户
 4. 最后检查首页总览、资产明细和异常提示

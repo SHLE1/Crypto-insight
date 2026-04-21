@@ -41,7 +41,7 @@ export const useCexStore = create<CexStore>()(
     }),
     {
       name: 'crypto-insight-cex',
-      version: 2,
+      version: 3,
       partialize: (state) => ({
         accounts: state.accounts.map((account) => ({
           id: account.id,
