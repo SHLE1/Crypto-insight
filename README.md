@@ -5,6 +5,8 @@
 - 链上钱包地址查询
 - `Binance` 只读 API 查询
 - `OKX` 只读 API 查询
+- `Bitget` 只读 API 查询
+- `Gate` 只读 API 查询
 - 本地保存配置与最近资产快照
 
 ## 开发
@@ -35,6 +37,15 @@ pnpm build
 ## 使用说明
 
 - API 和钱包配置说明见 `docs/api-setup.md`
+
+## 交易所 API 获取入口
+
+| 交易所 | 官方入口 |
+| --- | --- |
+| `Binance` | [API Management](https://www.binance.com/en/my/settings/api-management) |
+| `OKX` | [My API](https://www.okx.com/account/my-api) |
+| `Bitget` | [Bitget API](https://www.bitget.com/bitget-api) |
+| `Gate` | [APIv4 Keys](https://www.gate.com/myaccount/apiv4keys) |
 
 ## 当前范围
 

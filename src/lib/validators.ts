@@ -40,6 +40,17 @@ export function exchangeRequiresPassphrase(exchange: ExchangeType): boolean {
   return exchange === 'okx' || exchange === 'bitget'
 }
 
+export function getExchangeApiSetupUrl(exchange: ExchangeType): string {
+  const urls: Record<ExchangeType, string> = {
+    binance: 'https://www.binance.com/en/my/settings/api-management',
+    okx: 'https://www.okx.com/account/my-api',
+    bitget: 'https://www.bitget.com/bitget-api',
+    gate: 'https://www.gate.com/myaccount/apiv4keys',
+  }
+
+  return urls[exchange]
+}
+
 export function formatCurrency(value: number | null, currency = 'USD'): string {
   if (value === null) return '待补充'
   return new Intl.NumberFormat('en-US', {

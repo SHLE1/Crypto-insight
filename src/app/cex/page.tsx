@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Key, Plus, Trash, X, Building2 } from 'lucide-react'
+import { Key, Plus, Trash, X, Building2, ExternalLink } from 'lucide-react'
 import { EmptyState } from '@/components/layout/empty-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import { exchangeRequiresPassphrase, formatCurrency, getExchangeLabel } from '@/lib/validators'
+import { exchangeRequiresPassphrase, formatCurrency, getExchangeApiSetupUrl, getExchangeLabel } from '@/lib/validators'
 import { useCexStore } from '@/stores/cex'
 import { usePortfolioStore } from '@/stores/portfolio'
 import type { ExchangeType } from '@/types'
@@ -162,6 +162,32 @@ export default function CexPage() {
                     </Button>
                   ))}
                 </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                  {EXCHANGE_OPTIONS.map((ex) => (
+                    <a
+                      key={`${ex}-api-link`}
+                      href={getExchangeApiSetupUrl(ex)}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+                    >
+                      获取 {getExchangeLabel(ex)} API
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  当前选择：
+                  <a
+                    href={getExchangeApiSetupUrl(exchange)}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="ml-1 inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+                  >
+                    前往 {getExchangeLabel(exchange)} 官方入口
+                    <ExternalLink className="size-3.5" />
+                  </a>
+                </p>
               </div>
 
               <div className="flex flex-col gap-2">

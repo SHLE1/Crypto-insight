@@ -45,6 +45,8 @@
 
 ## Binance API 配置
 
+官方入口：[`API Management`](https://www.binance.com/en/my/settings/api-management)
+
 ### 你需要准备什么
 
 - `API Key`
@@ -79,6 +81,8 @@
 - 如果加了 IP 白名单，记得把当前实际出口 IP 加进去
 
 ## OKX API 配置
+
+官方入口：[`My API`](https://www.okx.com/account/my-api)
 
 ### 你需要准备什么
 
@@ -118,6 +122,8 @@
 
 ## Bitget API 配置
 
+官方入口：[`Bitget API`](https://www.bitget.com/bitget-api)
+
 ### 你需要准备什么
 
 - `API Key`
@@ -155,6 +161,8 @@
 - 如果开启了 IP 白名单，记得同步当前实际出口 IP
 
 ## Gate API 配置
+
+官方入口：[`APIv4 Keys`](https://www.gate.com/myaccount/apiv4keys)
 
 ### 你需要准备什么
 
