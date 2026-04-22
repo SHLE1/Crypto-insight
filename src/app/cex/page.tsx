@@ -162,22 +162,8 @@ export default function CexPage() {
                     </Button>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                  {EXCHANGE_OPTIONS.map((ex) => (
-                    <a
-                      key={`${ex}-api-link`}
-                      href={getExchangeApiSetupUrl(ex)}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
-                    >
-                      获取 {getExchangeLabel(ex)} API
-                      <ExternalLink className="size-3.5" />
-                    </a>
-                  ))}
-                </div>
                 <p className="text-sm text-muted-foreground">
-                  当前选择：
+                  获取入口：
                   <a
                     href={getExchangeApiSetupUrl(exchange)}
                     target="_blank"
