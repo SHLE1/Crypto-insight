@@ -1,4 +1,4 @@
-import type { DefiPosition, DefiProtocolSummary, DefiSnapshot, DefiTokenBalance, WalletInput } from '@/types'
+import type { DefiPosition, DefiProtocolSummary, DefiSnapshot, DefiTokenBalance, WalletInput, WalletQuoteInput } from '@/types'
 import { getDebankFallbackSnapshot } from '@/lib/defi/debank'
 import {
   getDefiChainKeyFromZapperChainId,
@@ -152,7 +152,7 @@ interface MoralisPositionItem {
     balance_usd?: string | number
     total_unclaimed_usd_value?: string | number
     address?: string
-    position_details?: MoralisPositionDetails & Record<string, unknown>
+    position_details?: MoralisPositionDetails
   }
 }
 
@@ -620,7 +620,7 @@ function buildZapperPosition({
   }
 }
 
-async function getZapperSnapshots(wallet: Pick<WalletInput, 'id' | 'chainType' | 'address' | 'evmChains'>) {
+async function getZapperSnapshots(wallet: WalletQuoteInput) {
   const chainKeys = getDefiChains(wallet.chainType, wallet.evmChains)
   const chainIds = getZapperChainIds(chainKeys)
   const apiKey = process.env.ZAPPER_API_KEY?.trim()
@@ -1004,7 +1004,7 @@ async function resolveChainSnapshot(
   return zapperSnapshot
 }
 
-export async function getDefiSnapshots(wallet: Pick<WalletInput, 'id' | 'chainType' | 'address' | 'evmChains'>): Promise<DefiSnapshot[]> {
+export async function getDefiSnapshots(wallet: WalletQuoteInput): Promise<DefiSnapshot[]> {
   const chainKeys = getDefiChains(wallet.chainType, wallet.evmChains)
 
   if (wallet.chainType === 'btc' || chainKeys.length === 0) {

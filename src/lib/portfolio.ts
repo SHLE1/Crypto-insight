@@ -14,7 +14,7 @@ function getPriceStatusRank(status: PriceStatus | undefined) {
   return 0
 }
 
-function mergePriceStatus(current: PriceStatus | undefined, next: PriceStatus | undefined): PriceStatus {
+export function mergePriceStatus(current: PriceStatus | undefined, next: PriceStatus | undefined): PriceStatus {
   return getPriceStatusRank(next) > getPriceStatusRank(current) ? (next ?? 'live') : (current ?? 'live')
 }
 

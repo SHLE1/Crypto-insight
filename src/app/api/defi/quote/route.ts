@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDefiSnapshots } from '@/lib/defi/providers'
-import type { ChainType, DefiQuoteResponse, DefiSnapshot } from '@/types'
+import type { DefiQuoteResponse, DefiSnapshot, WalletQuoteInput } from '@/types'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const wallets: { id: string; chainType: ChainType; address: string; evmChains?: string[] }[] = body.wallets || []
+    const wallets: WalletQuoteInput[] = body.wallets || []
     const cursor = typeof body.cursor === 'number' ? body.cursor : 0
     const mode = body.mode === 'full' ? 'full' : 'single'
     const maxWalletsPerRequest = 1

@@ -129,7 +129,7 @@ function buildSyntheticPosition(
     tokens: [],
     rewards: [],
     metadata: {
-      provider: 'debank-public-page',
+      provider: 'debank',
       synthetic: true,
     },
   }

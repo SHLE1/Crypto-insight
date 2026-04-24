@@ -24,6 +24,14 @@ export interface CexAccountInput {
   enabled: boolean
 }
 
+/** Minimal wallet info required to fetch a quote (subset of WalletInput) */
+export interface WalletQuoteInput {
+  id: string
+  chainType: ChainType
+  address: string
+  evmChains?: string[]
+}
+
 export interface Settings {
   quoteCurrency: string
   refreshInterval: number // seconds
@@ -149,6 +157,29 @@ export interface DefiTokenBalance {
   value: number | null
 }
 
+export type DefiPositionMetadata =
+  | {
+      provider: 'zapper'
+      kind: 'contract-position' | 'app-token-position'
+      appId?: string
+      groupId?: string
+      groupLabel?: string
+    }
+  | {
+      provider: 'moralis'
+      protocolLogo?: string
+      positionAddress?: string
+      positionDetails?: {
+        is_debt?: boolean
+        is_variable_debt?: boolean
+        is_stable_debt?: boolean
+      }
+    }
+  | {
+      provider: 'debank'
+      synthetic?: boolean
+    }
+
 export interface DefiPosition {
   id: string
   walletId: string
@@ -162,7 +193,7 @@ export interface DefiPosition {
   value: number
   tokens: DefiTokenBalance[]
   rewards: DefiTokenBalance[]
-  metadata?: Record<string, unknown>
+  metadata?: DefiPositionMetadata
 }
 
 export interface DefiProtocolSummary {

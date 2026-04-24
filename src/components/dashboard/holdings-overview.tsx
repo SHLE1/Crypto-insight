@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { mergePriceStatus } from '@/lib/portfolio'
 import { formatCurrency, formatPercent } from '@/lib/validators'
 import type { HoldingRow, PortfolioAnalytics, PriceStatus } from '@/types'
 
@@ -65,16 +66,6 @@ const FILTERS: Array<{ key: StatusFilter; label: string }> = [
   { key: 'stale', label: '旧价格' },
   { key: 'live', label: '价格正常' },
 ]
-
-function getPriceStatusRank(status: PriceStatus) {
-  if (status === 'missing') return 2
-  if (status === 'stale') return 1
-  return 0
-}
-
-function mergePriceStatus(current: PriceStatus, next: PriceStatus) {
-  return getPriceStatusRank(next) > getPriceStatusRank(current) ? next : current
-}
 
 function getPriceStatusLabel(status: PriceStatus) {
   if (status === 'stale') return '旧价'

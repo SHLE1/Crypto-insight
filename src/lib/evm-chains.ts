@@ -1,6 +1,6 @@
 // EVM 多链配置 — multicall3 地址 + 热门 ERC-20 代币列表
 
-export interface EvmChainConfig {
+interface EvmChainConfig {
   chainId: number
   name: string
   symbol: string // native token symbol

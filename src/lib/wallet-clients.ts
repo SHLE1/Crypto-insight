@@ -1,13 +1,6 @@
-import type { AssetBalance, ChainType, PortfolioSnapshot } from '@/types'
+import type { AssetBalance, PortfolioSnapshot, WalletQuoteInput } from '@/types'
 import { getEvmTokenPrices, getPrices, getSolanaTokenMarketData } from '@/lib/market'
 import { DEFAULT_EVM_CHAINS, EVM_CHAINS } from '@/lib/evm-chains'
-
-interface WalletQuoteInput {
-  id: string
-  chainType: ChainType
-  address: string
-  evmChains?: string[]
-}
 
 interface WalletQuoteResult {
   assets: AssetBalance[]
@@ -42,6 +35,13 @@ const SOLANA_TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 const SOLANA_TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
 const EVM_CHAIN_TIMEOUT_MS = 20_000
 
+interface JsonRpcRequest {
+  jsonrpc: string
+  id: number
+  method: string
+  params: unknown[]
+}
+
 let uniswapTokenCache: UniswapTokenEntry[] | null = null
 
 async function fetchUniswapTokenList() {
@@ -59,8 +59,9 @@ async function fetchUniswapTokenList() {
     uniswapTokenCache = data.tokens ?? []
     return uniswapTokenCache
   } catch {
-    uniswapTokenCache = []
-    return uniswapTokenCache
+    // Do not write to uniswapTokenCache on failure — [] is truthy and would
+    // permanently prevent retry for the lifetime of this server instance.
+    return []
   }
 }
 
@@ -179,7 +180,7 @@ function getSolanaRpcUrls() {
   )
 }
 
-async function callSolanaRpc<T>(body: Record<string, unknown>, errorMessage: string) {
+async function callSolanaRpc<T>(body: JsonRpcRequest, errorMessage: string) {
   const rpcUrls = getSolanaRpcUrls()
   let lastError: Error | null = null
 

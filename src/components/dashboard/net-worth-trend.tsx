@@ -25,11 +25,7 @@ function formatTickLabel(value: string | number) {
 }
 
 function formatTooltipLabel(label: unknown) {
-  if (typeof label !== 'string' && typeof label !== 'number') {
-    return ''
-  }
-
-  return new Date(label).toLocaleString('zh-CN')
+  return new Date(label as string | number).toLocaleString('zh-CN')
 }
 
 export function NetWorthTrend({ data }: NetWorthTrendProps) {

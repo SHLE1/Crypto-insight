@@ -8,7 +8,7 @@ import { usePortfolioStore } from '@/stores/portfolio'
 import { useSettingsStore } from '@/stores/settings'
 import { useDefiData } from '@/hooks/use-defi-data'
 import { buildHoldingsData, buildPortfolioAnalytics } from '@/lib/portfolio'
-import { getChainLabel } from '@/lib/validators'
+import { getChainLabel, shortAddress } from '@/lib/validators'
 import type { ApiErrorState, DefiHistoryPoint, PortfolioHistoryPoint, PortfolioSnapshot, QuoteResponse } from '@/types'
 
 interface QuoteRequestSuccess {
@@ -23,10 +23,6 @@ interface QuoteRequestFailure {
 }
 
 type QuoteRequestResult = QuoteRequestSuccess | QuoteRequestFailure
-
-function shortenAddress(address: string) {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
-}
 
 function toTimestamp(value: string | null | undefined) {
   if (!value) return 0
@@ -268,7 +264,7 @@ export function usePortfolioData() {
   const activeSourceKey = useMemo(() => activeSourceIds.join('|'), [activeSourceIds])
   const hasSources = activeSourceIds.length > 0
   const walletNameMap = useMemo(
-    () => new Map(wallets.map((wallet) => [wallet.id, wallet.name || shortenAddress(wallet.address)])),
+    () => new Map(wallets.map((wallet) => [wallet.id, wallet.name || shortAddress(wallet.address)])),
     [wallets]
   )
   const cexLabelMap = useMemo(

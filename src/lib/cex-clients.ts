@@ -6,6 +6,7 @@ import type {
   PriceStatus,
 } from '@/types'
 import { getPrices } from '@/lib/market'
+import { formatCurrency } from '@/lib/validators'
 
 interface BinanceUserAssetResponseItem {
   asset: string
@@ -359,15 +360,6 @@ function isGateApiErrorResponse(value: unknown): value is GateApiErrorResponse {
 function toPositiveNumber(value: string | undefined) {
   const parsed = Number(value ?? 0)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
-}
-
-function formatUsdValue(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
 }
 
 function mergeBalances(items: Array<{ symbol: string; balance: number }>) {
@@ -1191,27 +1183,27 @@ async function fetchBinanceSnapshot(account: CexAccountInput): Promise<{
 
     if (!walletMeta.expandable) {
       warnings.push(
-        `${walletMeta.label} 暂不支持币种级展开，已先按钱包总额保留 ${formatUsdValue(reconciliationGap)}。`
+        `${walletMeta.label} 暂不支持币种级展开，已先按钱包总额保留 ${formatCurrency(reconciliationGap)}。`
       )
       return
     }
 
     if (!result?.queryAttempted) {
       warnings.push(
-        `${walletMeta.label} 当前未接入明细查询，已先按钱包总额保留 ${formatUsdValue(reconciliationGap)}。`
+        `${walletMeta.label} 当前未接入明细查询，已先按钱包总额保留 ${formatCurrency(reconciliationGap)}。`
       )
       return
     }
 
     if (result.warnings.length > 0) {
       warnings.push(
-        `${walletMeta.label} 明细查询未完整返回，已按钱包总额补齐 ${formatUsdValue(reconciliationGap)}。`
+        `${walletMeta.label} 明细查询未完整返回，已按钱包总额补齐 ${formatCurrency(reconciliationGap)}。`
       )
       return
     }
 
     warnings.push(
-      `${walletMeta.label} 仍有 ${formatUsdValue(reconciliationGap)} 未能按币种或价格完全展开，已按钱包总额补齐。`
+      `${walletMeta.label} 仍有 ${formatCurrency(reconciliationGap)} 未能按币种或价格完全展开，已按钱包总额补齐。`
     )
   })
 
@@ -1512,16 +1504,16 @@ async function fetchBitgetSnapshot(account: CexAccountInput): Promise<{
       })
 
       if (accountType !== 'spot' && accountType !== 'futures') {
-        warnings.push(`${label} 暂未接入币种级展开，已按账户总额保留 ${formatUsdValue(gap)}。`)
+        warnings.push(`${label} 暂未接入币种级展开，已按账户总额保留 ${formatCurrency(gap)}。`)
         return
       }
 
       if (failedGroups.has(accountType)) {
-        warnings.push(`${label} 明细查询未完整返回，已按账户总额补齐 ${formatUsdValue(gap)}。`)
+        warnings.push(`${label} 明细查询未完整返回，已按账户总额补齐 ${formatCurrency(gap)}。`)
         return
       }
 
-      warnings.push(`${label} 仍有 ${formatUsdValue(gap)} 暂时不能按币种完全展开，已按账户总额补齐。`)
+      warnings.push(`${label} 仍有 ${formatCurrency(gap)} 暂时不能按币种完全展开，已按账户总额补齐。`)
     })
   } else if (entries.length > 0) {
     warnings.push(`Bitget 账户总额查询失败：${normalizeCexError(account, totalResult.reason)}`)
@@ -1693,8 +1685,8 @@ async function fetchGateSnapshot(account: CexAccountInput): Promise<{
 
       warnings.push(
         spotResult.status === 'fulfilled'
-          ? `Gate 总额中仍有 ${formatUsdValue(gap)} 未能展开到币种明细，已按账户总额补齐。`
-          : `Gate 现货明细未能取回，已按账户总额保留 ${formatUsdValue(gap)}。`
+          ? `Gate 总额中仍有 ${formatCurrency(gap)} 未能展开到币种明细，已按账户总额补齐。`
+          : `Gate 现货明细未能取回，已按账户总额保留 ${formatCurrency(gap)}。`
       )
     }
   } else if (pricedEntries.length > 0) {
