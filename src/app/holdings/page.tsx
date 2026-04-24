@@ -6,7 +6,100 @@ import { HoldingsOverview } from '@/components/dashboard/holdings-overview'
 import { EmptyState } from '@/components/layout/empty-state'
 import { Button } from '@/components/ui/button'
 import { usePortfolioData } from '@/hooks/use-portfolio-data'
+import { formatDefiChainLabel } from '@/lib/defi/chains'
 import { formatCurrency } from '@/lib/validators'
+
+function DefiProtocolSection({
+  totalValue,
+  depositedValue,
+  borrowedValue,
+  rewardsValue,
+  positionCount,
+  protocolData,
+  chainData,
+}: {
+  totalValue: number
+  depositedValue: number
+  borrowedValue: number
+  rewardsValue: number
+  positionCount: number
+  protocolData: Array<{
+    protocolId: string
+    protocolName: string
+    chainKey: string
+    category?: string
+    value: number
+    positionCount: number
+  }>
+  chainData: Array<{ name: string; value: number }>
+}) {
+  if (totalValue <= 0 && protocolData.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="mt-8 border-t border-border/40 pt-6">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-base font-semibold tracking-tight">DeFi 协议</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {positionCount > 0 ? `${positionCount} 个仓位，净值 ${formatCurrency(totalValue)}` : '暂无可计价协议仓位'}
+          </p>
+        </div>
+        <Link href="/defi">
+          <Button variant="outline" size="sm" className="gap-1">
+            查看 DeFi 仓位 <Navigation className="size-3" />
+          </Button>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-px border border-border/40 bg-border/40 md:grid-cols-4">
+        {[
+          ['净值', formatCurrency(totalValue)],
+          ['总存入', formatCurrency(depositedValue)],
+          ['总借出', formatCurrency(borrowedValue)],
+          ['待领取奖励', formatCurrency(rewardsValue)],
+        ].map(([label, value]) => (
+          <div key={label} className="bg-background px-4 py-3">
+            <p className="muted-kicker">{label}</p>
+            <p className="mt-2 text-base font-semibold tabular-nums">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-6 border-x border-b border-border/40 p-4 lg:grid-cols-2">
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">协议分布</h4>
+          <div className="mt-3 divide-y divide-border/30">
+            {protocolData.slice(0, 5).map((protocol) => (
+              <div key={`${protocol.chainKey}:${protocol.protocolId}`} className="flex items-center justify-between gap-4 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{protocol.protocolName}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatDefiChainLabel(protocol.chainKey)}
+                    {protocol.category ? ` · ${protocol.category}` : ''}
+                  </p>
+                </div>
+                <p className="shrink-0 text-sm font-semibold tabular-nums">{formatCurrency(protocol.value)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">链分布</h4>
+          <div className="mt-3 divide-y divide-border/30">
+            {chainData.slice(0, 5).map((chain) => (
+              <div key={chain.name} className="flex items-center justify-between gap-4 py-2.5">
+                <p className="text-sm font-medium">{formatDefiChainLabel(chain.name)}</p>
+                <p className="text-sm font-semibold tabular-nums">{formatCurrency(chain.value)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function HoldingsPage() {
   const {
@@ -14,6 +107,12 @@ export default function HoldingsPage() {
     totalValue,
     analytics,
     defiTotalValue,
+    defiTotalDepositedValue,
+    defiTotalBorrowedValue,
+    defiTotalRewardsValue,
+    defiProtocolData,
+    defiChainData,
+    defiPositionCount,
     isDefiEnabled,
     isEmpty,
     hasSources,
@@ -101,6 +200,18 @@ export default function HoldingsPage() {
           <div className="mt-4">
              <HoldingsOverview data={holdingsData} analytics={analytics} totalValue={totalValue} />
           </div>
+
+          {isDefiEnabled ? (
+            <DefiProtocolSection
+              totalValue={defiTotalValue}
+              depositedValue={defiTotalDepositedValue}
+              borrowedValue={defiTotalBorrowedValue}
+              rewardsValue={defiTotalRewardsValue}
+              positionCount={defiPositionCount}
+              protocolData={defiProtocolData}
+              chainData={defiChainData}
+            />
+          ) : null}
 
           {isDefiEnabled && defiTotalValue > 0 ? (
             <div className="mt-8 border-t border-border/40 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-muted-foreground">

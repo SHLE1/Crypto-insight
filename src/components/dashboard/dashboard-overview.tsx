@@ -1,8 +1,9 @@
 'use client'
 
 import * as React from "react"
+import Link from "next/link"
 import { ArrowClockwise } from "@phosphor-icons/react"
-import { TrendingUp, TrendingDown, AlertCircle } from "lucide-react"
+import { TrendingUp, TrendingDown, AlertCircle, Navigation } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,11 +24,11 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { formatCurrency, formatPercent } from "@/lib/validators"
+import { formatDefiChainLabel } from "@/lib/defi/chains"
 import type { PortfolioHistoryPoint, PortfolioAnalytics, ApiErrorState } from "@/types"
 
 function MetricsBand({
   totalValue,
-  change24hValue,
   change24hPercent,
   walletCount,
   accountCount,
@@ -36,7 +37,6 @@ function MetricsBand({
   hasErrors
 }: {
   totalValue: number
-  change24hValue: number
   change24hPercent: number
   walletCount: number
   accountCount: number
@@ -47,42 +47,40 @@ function MetricsBand({
   const isPositive = change24hPercent >= 0
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border/40">
-      <div className="grid grid-cols-2 md:grid-cols-4">
-        <div className="border-b border-r border-border/40 px-5 py-5 md:border-b-0">
-          <p className="muted-kicker">净资产</p>
-          <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums">{formatCurrency(totalValue)}</p>
-          <div className="mt-2 flex items-center gap-1.5">
-            {isPositive ? (
-              <TrendingUp className="h-3 w-3 text-muted-foreground" />
-            ) : (
-              <TrendingDown className="h-3 w-3 text-muted-foreground" />
-            )}
-            <span className="text-sm font-medium text-foreground">
-              {isPositive ? '+' : '-'}{formatPercent(Math.abs(change24hPercent))}
-            </span>
-            <span className="text-xs text-muted-foreground">较昨日</span>
-          </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="rounded-xl border border-border/60 px-5 py-5">
+        <p className="muted-kicker">净资产</p>
+        <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums">{formatCurrency(totalValue)}</p>
+        <div className="mt-2 flex items-center gap-1.5">
+          {isPositive ? (
+            <TrendingUp className="h-3 w-3 text-muted-foreground" />
+          ) : (
+            <TrendingDown className="h-3 w-3 text-muted-foreground" />
+          )}
+          <span className="text-sm font-medium text-foreground">
+            {isPositive ? '+' : '-'}{formatPercent(Math.abs(change24hPercent))}
+          </span>
+          <span className="text-xs text-muted-foreground">较昨日</span>
         </div>
-        <div className="border-b border-border/40 px-5 py-5 md:border-b-0 md:border-r">
-          <p className="muted-kicker">数据来源</p>
-          <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">{walletCount + accountCount}</p>
-          <p className="mt-2 text-xs text-muted-foreground">{walletCount} 个钱包 · {accountCount} 个交易所</p>
-        </div>
-        <div className="border-r border-border/40 px-5 py-5">
-          <p className="muted-kicker">资产种类</p>
-          <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">{assetCount}</p>
-          <p className="mt-2 text-xs text-muted-foreground">覆盖率 {coveragePercent.toFixed(1)}%</p>
-        </div>
-        <div className="px-5 py-5">
-          <p className="muted-kicker">系统状态</p>
-          <p className={`mt-2 text-2xl font-bold tracking-tight ${hasErrors ? 'text-foreground' : ''}`}>
-            {hasErrors ? '需留意' : '正常'}
-          </p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {hasErrors ? '部分接口请求异常' : '全部来源已同步'}
-          </p>
-        </div>
+      </div>
+      <div className="rounded-xl border border-border/60 px-5 py-5">
+        <p className="muted-kicker">数据来源</p>
+        <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">{walletCount + accountCount}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{walletCount} 个钱包 · {accountCount} 个交易所</p>
+      </div>
+      <div className="rounded-xl border border-border/60 px-5 py-5">
+        <p className="muted-kicker">资产种类</p>
+        <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">{assetCount}</p>
+        <p className="mt-2 text-xs text-muted-foreground">覆盖率 {coveragePercent.toFixed(1)}%</p>
+      </div>
+      <div className="rounded-xl border border-border/60 px-5 py-5">
+        <p className="muted-kicker">系统状态</p>
+        <p className={`mt-2 text-2xl font-bold tracking-tight ${hasErrors ? 'text-foreground' : ''}`}>
+          {hasErrors ? '需留意' : '正常'}
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {hasErrors ? '部分接口请求异常' : '全部来源已同步'}
+        </p>
       </div>
     </div>
   )
@@ -91,11 +89,26 @@ function MetricsBand({
 function ChartAreaInteractive({ history }: { history: PortfolioHistoryPoint[] }) {
   const visibleHistory = history.slice(-30)
 
+  const spansMultipleDays = visibleHistory.length > 1 && (() => {
+    const first = new Date(visibleHistory[0].timestamp)
+    const last = new Date(visibleHistory[visibleHistory.length - 1].timestamp)
+    return first.toDateString() !== last.toDateString()
+  })()
+
+  const formatTick = (value: string) => {
+    const d = new Date(value)
+    if (spansMultipleDays) {
+      return d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) + ' ' +
+        d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    }
+    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  }
+
   return (
     <Card>
       <CardHeader className="border-b border-border/40">
         <CardTitle>总资产走势</CardTitle>
-        <CardDescription>显示近 30 次同步刷新的净值变化记录</CardDescription>
+        <CardDescription>每个数据点对应一次实际刷新，不填充空白时间段</CardDescription>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         <div className="h-[250px] w-full">
@@ -114,10 +127,8 @@ function ChartAreaInteractive({ history }: { history: PortfolioHistoryPoint[] })
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  minTickGap={32}
-                  tickFormatter={(value) => {
-                    return new Date(value).toLocaleTimeString("zh-CN", { hour: '2-digit', minute: '2-digit' })
-                  }}
+                  minTickGap={48}
+                  tickFormatter={formatTick}
                   style={{ fontSize: '12px', fill: 'hsl(var(--muted-foreground))' }}
                 />
                 <YAxis
@@ -143,6 +154,8 @@ function ChartAreaInteractive({ history }: { history: PortfolioHistoryPoint[] })
                   stroke="hsl(var(--chart-1))"
                   fill="url(#fillValue)"
                   strokeWidth={2}
+                  dot={{ r: 3, fill: 'hsl(var(--chart-1))', strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: 'hsl(var(--chart-1))', strokeWidth: 0 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -196,37 +209,148 @@ function DataTable({ assetData }: { assetData: Array<{ name: string; value: numb
   )
 }
 
+function DefiProtocolPanel({
+  totalValue,
+  depositedValue,
+  borrowedValue,
+  rewardsValue,
+  positionCount,
+  protocolData,
+  chainData,
+}: {
+  totalValue: number
+  depositedValue: number
+  borrowedValue: number
+  rewardsValue: number
+  positionCount: number
+  protocolData: Array<{
+    protocolId: string
+    protocolName: string
+    chainKey: string
+    category?: string
+    value: number
+    positionCount: number
+  }>
+  chainData: Array<{ name: string; value: number }>
+}) {
+  if (totalValue <= 0 && protocolData.length === 0) {
+    return null
+  }
+
+  return (
+    <Card>
+      <CardHeader className="border-b border-border/40">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>DeFi 协议</CardTitle>
+            <CardDescription>
+              {positionCount > 0 ? `${positionCount} 个仓位，按协议和链汇总` : '协议仓位正在等待可用数据'}
+            </CardDescription>
+          </div>
+          <Link href="/defi">
+            <Button variant="outline" size="sm" className="gap-1">
+              查看详情 <Navigation className="size-3" />
+            </Button>
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="grid grid-cols-2 gap-px border-b border-border/40 bg-border/40 md:grid-cols-4">
+          {[
+            ['净值', formatCurrency(totalValue)],
+            ['总存入', formatCurrency(depositedValue)],
+            ['总借出', formatCurrency(borrowedValue)],
+            ['待领取奖励', formatCurrency(rewardsValue)],
+          ].map(([label, value]) => (
+            <div key={label} className="bg-card px-5 py-4">
+              <p className="muted-kicker">{label}</p>
+              <p className="mt-2 text-lg font-semibold tabular-nums">{value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-0 divide-y divide-border/40 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+          <div className="p-5">
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">协议分布</h4>
+            <div className="mt-3 divide-y divide-border/30">
+              {protocolData.slice(0, 4).map((protocol) => (
+                <div key={`${protocol.chainKey}:${protocol.protocolId}`} className="flex items-center justify-between gap-4 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{protocol.protocolName}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatDefiChainLabel(protocol.chainKey)}
+                      {protocol.category ? ` · ${protocol.category}` : ''}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm font-semibold tabular-nums">{formatCurrency(protocol.value)}</p>
+                </div>
+              ))}
+              {protocolData.length === 0 ? <p className="py-4 text-sm text-muted-foreground">暂无协议仓位</p> : null}
+            </div>
+          </div>
+          <div className="p-5">
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">链分布</h4>
+            <div className="mt-3 divide-y divide-border/30">
+              {chainData.slice(0, 4).map((chain) => (
+                <div key={chain.name} className="flex items-center justify-between gap-4 py-2.5">
+                  <p className="text-sm font-medium">{formatDefiChainLabel(chain.name)}</p>
+                  <p className="text-sm font-semibold tabular-nums">{formatCurrency(chain.value)}</p>
+                </div>
+              ))}
+              {chainData.length === 0 ? <p className="py-4 text-sm text-muted-foreground">暂无链分布数据</p> : null}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function DashboardOverview({
   history,
   errors,
   lastRefresh,
   totalValue,
-  change24hValue,
   change24hPercent,
   assetData,
-  walletTotal,
-  cexTotal,
   analytics,
   isUsingCachedData,
   isFetching,
   walletCount,
   accountCount,
+  defiTotalValue,
+  defiTotalDepositedValue,
+  defiTotalBorrowedValue,
+  defiTotalRewardsValue,
+  defiProtocolData,
+  defiChainData,
+  defiPositionCount,
   onRefresh,
 }: {
   history: PortfolioHistoryPoint[]
   errors: ApiErrorState[]
   lastRefresh: string | null
   totalValue: number
-  change24hValue: number
   change24hPercent: number
   assetData: Array<{ name: string; value: number }>
-  walletTotal: number
-  cexTotal: number
   analytics: PortfolioAnalytics
   isUsingCachedData: boolean
   isFetching: boolean
   walletCount: number
   accountCount: number
+  defiTotalValue: number
+  defiTotalDepositedValue: number
+  defiTotalBorrowedValue: number
+  defiTotalRewardsValue: number
+  defiProtocolData: Array<{
+    protocolId: string
+    protocolName: string
+    chainKey: string
+    category?: string
+    value: number
+    positionCount: number
+  }>
+  defiChainData: Array<{ name: string; value: number }>
+  defiPositionCount: number
   onRefresh: () => void
 }) {
   const coveragePercent = analytics.assetCount > 0 ? (analytics.pricedAssetCount / analytics.assetCount) * 100 : 0
@@ -251,7 +375,6 @@ export function DashboardOverview({
 
       <MetricsBand
         totalValue={totalValue}
-        change24hValue={change24hValue}
         change24hPercent={change24hPercent}
         walletCount={walletCount}
         accountCount={accountCount}
@@ -263,6 +386,16 @@ export function DashboardOverview({
       <ChartAreaInteractive history={history} />
 
       <DataTable assetData={assetData} />
+
+      <DefiProtocolPanel
+        totalValue={defiTotalValue}
+        depositedValue={defiTotalDepositedValue}
+        borrowedValue={defiTotalBorrowedValue}
+        rewardsValue={defiTotalRewardsValue}
+        positionCount={defiPositionCount}
+        protocolData={defiProtocolData}
+        chainData={defiChainData}
+      />
 
       {hasErrors && (
         <Card className="border-border/50 bg-muted/20">
@@ -293,16 +426,14 @@ export function DashboardOverviewLoadingState() {
         <div className="h-6 w-32 bg-muted rounded-lg"></div>
         <div className="h-8 w-24 bg-muted rounded-lg"></div>
       </div>
-      <div className="overflow-hidden rounded-xl border border-border/40">
-        <div className="grid grid-cols-2 md:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="border-border/40 px-5 py-5 border-b border-r last:border-r-0 md:border-b-0">
-              <div className="h-3 w-16 bg-muted rounded mb-3"></div>
-              <div className="h-8 w-24 bg-muted rounded"></div>
-              <div className="h-3 w-20 bg-muted rounded mt-2"></div>
-            </div>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="rounded-xl border border-border/60 px-5 py-5">
+            <div className="h-3 w-16 bg-muted rounded mb-3"></div>
+            <div className="h-8 w-24 bg-muted rounded"></div>
+            <div className="h-3 w-20 bg-muted rounded mt-2"></div>
+          </div>
+        ))}
       </div>
       <Card className="h-[310px] bg-muted/50 border-border/40"></Card>
       <Card className="h-40 bg-muted/50 border-border/40"></Card>

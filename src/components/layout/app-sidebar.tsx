@@ -36,10 +36,15 @@ const data = {
       url: "/holdings",
       icon: PieChart,
     },
+    {
+      title: "DeFi 协议",
+      url: "/defi",
+      icon: Activity,
+    },
   ],
   navSecondary: [
     {
-      title: "钱包管理",
+      title: "钱包",
       url: "/wallets",
       icon: Wallet,
     },
@@ -47,11 +52,6 @@ const data = {
       title: "交易所",
       url: "/cex",
       icon: Building2,
-    },
-    {
-      title: "DeFi 协议",
-      url: "/defi",
-      icon: Activity,
     },
   ],
 }

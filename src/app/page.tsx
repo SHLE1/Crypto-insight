@@ -18,12 +18,16 @@ export default function DashboardPage() {
     errors,
     lastRefresh,
     totalValue,
-    change24hValue,
     change24hPercent,
     assetData,
-    walletTotal,
-    cexTotal,
     analytics,
+    defiTotalValue,
+    defiTotalDepositedValue,
+    defiTotalBorrowedValue,
+    defiTotalRewardsValue,
+    defiProtocolData,
+    defiChainData,
+    defiPositionCount,
     isEmpty,
     hasSources,
     hasValuedAssets,
@@ -72,16 +76,20 @@ export default function DashboardPage() {
             errors={errors}
             lastRefresh={lastRefresh}
             totalValue={totalValue}
-            change24hValue={change24hValue}
             change24hPercent={change24hPercent}
             assetData={assetData}
-            walletTotal={walletTotal}
-            cexTotal={cexTotal}
             analytics={analytics}
             isUsingCachedData={isUsingCachedData}
             isFetching={isFetching}
             walletCount={wallets.filter((wallet) => wallet.enabled).length}
             accountCount={accounts.filter((account) => account.enabled).length}
+            defiTotalValue={defiTotalValue}
+            defiTotalDepositedValue={defiTotalDepositedValue}
+            defiTotalBorrowedValue={defiTotalBorrowedValue}
+            defiTotalRewardsValue={defiTotalRewardsValue}
+            defiProtocolData={defiProtocolData}
+            defiChainData={defiChainData}
+            defiPositionCount={defiPositionCount}
             onRefresh={() => refetch()}
           />
         </>
@@ -89,4 +97,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-

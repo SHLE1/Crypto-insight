@@ -128,29 +128,12 @@ function getRowSearchText(row: GroupRow) {
     .toLowerCase()
 }
 
-function MetricBlock({
-  label,
-  value,
-  toneClassName,
-}: {
-  label: string
-  value: string
-  toneClassName?: string
-}) {
-  return (
-    <div className="flex flex-col border-b sm:border-b-0 sm:border-r border-border/30 last:border-0 last:pr-0 pb-3 sm:pb-0 sm:pr-6">
-      <p className="text-[11px] tracking-widest text-muted-foreground uppercase">{label}</p>
-      <p className={`mt-1.5 text-lg font-semibold tracking-tight tabular-nums ${toneClassName ?? 'text-foreground'}`}>{value}</p>
-    </div>
-  )
-}
-
 function SourceRow({ row }: { row: DetailRow }) {
   const priceStatusLabel = getPriceStatusLabel(row.priceStatus)
   const changeColor = getChangeColor(row.change24h)
 
   return (
-    <div className="grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] items-center gap-x-4 border-b border-border/40 py-3 last:border-0">
+    <div className="grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] items-center gap-x-4 border-b border-border/40 py-2.5 last:border-0">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="truncate text-base font-semibold">{row.title}</span>
@@ -197,44 +180,46 @@ function GroupCard({
   const CaretIcon = expanded ? CaretDown : CaretRight
 
   return (
-    <div className={`overflow-hidden border-b border-border/40 last:border-0 transition-colors ${expanded ? 'bg-zinc-50/30 dark:bg-zinc-950/20 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]' : 'hover:bg-muted/30'}`}>
-      <button type="button" className="w-full p-4 lg:py-6 text-left outline-none" onClick={onToggle}>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_190px] lg:grid-rows-[auto_auto]">
-          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <CaretIcon size={14} weight="bold" className="shrink-0 text-muted-foreground" />
-              <p className="truncate text-base font-semibold tracking-[-0.03em]">{row.title}</p>
-              <Badge variant="secondary" className="text-[10px]">
-                {row.badge}
-              </Badge>
-              {priceStatusLabel ? (
-                <Badge variant="outline" className="text-[10px]">
-                  {priceStatusLabel}
-                </Badge>
-              ) : null}
-            </div>
-            <p className="mt-1.5 text-sm leading-6 text-muted-foreground ml-6">{row.subtitle}</p>
+    <div className={`overflow-hidden transition-colors border-l-2 ${expanded ? 'bg-muted/30 border-l-foreground/25' : 'border-l-transparent hover:bg-muted/10'}`}>
+      <button type="button" className="w-full px-4 py-3 text-left outline-none" onClick={onToggle}>
+        <div className="grid grid-cols-[minmax(0,1fr)_repeat(4,auto)] items-center gap-x-8">
+          {/* 名称列 */}
+          <div className="flex items-center gap-2 min-w-0">
+            <CaretIcon size={12} weight="bold" className="shrink-0 text-muted-foreground" />
+            <span className="truncate text-sm font-semibold tracking-tight">{row.title}</span>
+            <Badge variant="secondary" className="text-[10px] shrink-0">{row.badge}</Badge>
+            {priceStatusLabel ? (
+              <Badge variant="outline" className="text-[10px] shrink-0">{priceStatusLabel}</Badge>
+            ) : null}
+            {row.subtitle && row.subtitle.toLowerCase() !== row.title.split('·')[0].trim().toLowerCase() ? (
+              <span className="hidden lg:inline text-xs text-muted-foreground truncate">{row.subtitle}</span>
+            ) : null}
           </div>
-          <div className="grid gap-2 sm:gap-0 sm:grid-cols-3 sm:items-center lg:col-start-1 lg:row-start-2 mt-3 lg:mt-0 ml-0 lg:ml-6">
-            <MetricBlock label="持仓" value={formatBalance(row.balance)} />
-            <MetricBlock label="均价" value={formatCurrency(row.price)} />
-            <MetricBlock label="24h" value={formatPercent(row.change24h)} toneClassName={getChangeColor(row.change24h)} />
+          {/* 持仓 */}
+          <div className="text-right hidden sm:block">
+            <p className="text-[10px] text-muted-foreground">持仓</p>
+            <p className="text-sm font-medium tabular-nums">{formatBalance(row.balance)}</p>
           </div>
-          <div className="lg:px-4 lg:py-0 text-left lg:col-start-2 lg:row-start-2 lg:flex lg:h-full lg:flex-col lg:justify-center lg:text-right mt-3 lg:mt-0 ml-0 lg:ml-6">
-            <p className="text-[10px] tracking-widest text-muted-foreground uppercase">总市值</p>
-            <p className="mt-1.5 text-2xl lg:text-3xl font-semibold tracking-tighter tabular-nums text-foreground">{formatCurrency(row.value)}</p>
-            <p className="mt-1.5 text-[11px] text-muted-foreground">占组合 {share.toFixed(1)}%</p>
+          {/* 均价 */}
+          <div className="text-right hidden sm:block">
+            <p className="text-[10px] text-muted-foreground">均价</p>
+            <p className="text-sm font-medium tabular-nums">{formatCurrency(row.price)}</p>
+          </div>
+          {/* 24h */}
+          <div className="text-right hidden sm:block">
+            <p className="text-[10px] text-muted-foreground">24H</p>
+            <p className={`text-sm font-medium tabular-nums ${getChangeColor(row.change24h)}`}>{formatPercent(row.change24h)}</p>
+          </div>
+          {/* 总市值 */}
+          <div className="text-right">
+            <p className="text-sm font-semibold tabular-nums">{formatCurrency(row.value)}</p>
+            <p className="text-[10px] text-muted-foreground">{share.toFixed(1)}%</p>
           </div>
         </div>
       </button>
 
       {expanded ? (
-        <div className="border-t border-border/40 bg-muted/10 px-4 lg:px-10 pb-6 pt-4">
-          <div className="mb-2 flex items-center gap-2.5 py-2.5">
-            <div className="h-4 w-0.5 shrink-0 bg-foreground/20" />
-            <p className="text-xs font-semibold text-foreground uppercase tracking-wider">{row.title}</p>
-            <p className="text-[11px] text-muted-foreground tracking-widest">· {row.details.length} 来源</p>
-          </div>
+        <div className="border-t border-border/40 bg-muted/20 px-4 lg:px-8 pb-3 pt-2">
           <div className="flex flex-col gap-1">
             {row.details.map((detail) => (
               <SourceRow key={detail.key} row={detail} />
@@ -443,23 +428,25 @@ function GroupedHoldingsView({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-xs leading-6 text-muted-foreground">
+    <div className="flex flex-col">
+      <p className="text-xs pb-3 leading-6 text-muted-foreground">
         {mode === 'token'
           ? '按代币查看，同一代币将汇总来自不同来源的持仓。'
           : mode === 'wallet'
             ? '按钱包查看，每项代表一个钱包或交易所账户。'
             : '按链查看，同一链上的资产将合并展示。'}
       </p>
-      {rows.map((row) => (
-        <GroupCard
-          key={row.key}
-          row={row}
-          totalValue={totalValue}
-          expanded={activeKey === row.key}
-          onToggle={() => setExpandedKey((current) => (current === row.key ? null : row.key))}
-        />
-      ))}
+      <div className="divide-y divide-border/40">
+        {rows.map((row) => (
+          <GroupCard
+            key={row.key}
+            row={row}
+            totalValue={totalValue}
+            expanded={activeKey === row.key}
+            onToggle={() => setExpandedKey((current) => (current === row.key ? null : row.key))}
+          />
+        ))}
+      </div>
     </div>
   )
 }
