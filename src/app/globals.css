@@ -250,6 +250,36 @@
       opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  :where(
+      a[href],
+      button,
+      select,
+      summary,
+      label[for],
+      [role="button"],
+      [role="link"],
+      [role="menuitem"],
+      [role="option"],
+      [role="tab"],
+      [role="checkbox"],
+      [role="switch"],
+      [data-slot="button"],
+      [data-sidebar="menu-button"]
+    ):where(:not(:disabled, [disabled], [aria-disabled="true"], [data-disabled])):hover {
+    cursor: pointer;
+  }
+
+  :where(
+      input[type="button"],
+      input[type="submit"],
+      input[type="reset"],
+      input[type="checkbox"],
+      input[type="radio"],
+      input[type="file"]
+    ):where(:not(:disabled, [disabled], [aria-disabled="true"], [data-disabled])):hover {
+    cursor: pointer;
+  }
+
   ::selection {
     background: color-mix(in oklch, var(--primary) 18%, transparent);
   }
