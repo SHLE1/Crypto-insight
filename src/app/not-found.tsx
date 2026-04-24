@@ -3,7 +3,7 @@ import Link from 'next/link'
 export default function NotFound() {
   return (
     <main className="flex min-h-[100dvh] items-center justify-center py-10">
-      <section className="w-full max-w-2xl rounded-md border border-border bg-card px-6 py-14 text-center">
+      <section className="w-full max-w-2xl rounded-xl border border-border bg-card px-6 py-14 text-center">
         <span className="section-eyebrow">404</span>
         <h1 className="mx-auto mt-4 max-w-[14ch] text-4xl font-semibold tracking-[-0.06em] text-foreground md:text-5xl">
           找不到这个页面

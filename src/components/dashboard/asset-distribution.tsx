@@ -81,7 +81,7 @@ export function AssetDistribution({ data, totalValue }: AssetDistributionProps) 
             const share = totalValue > 0 ? (item.value / totalValue) * 100 : 0
 
             return (
-              <div key={item.name} className="rounded-md border border-border/60 bg-muted/20 p-3.5">
+              <div key={item.name} className="rounded-lg border border-border/60 bg-muted/20 p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">

@@ -493,67 +493,65 @@ export function HoldingsOverview({ data, analytics, totalValue }: HoldingsOvervi
   }, [deferredQuery, groupedData, statusFilter])
 
   return (
-    <div className="col-span-full mt-2">
-      <div className="gap-6 border-y border-border/40 pb-6 pt-5 px-4 sm:px-0">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="flex flex-col gap-2">
-            <h3 className="text-lg font-semibold tracking-tight">明细工作台</h3>
-            <p className="text-sm text-muted-foreground">支持搜索与筛选，可在代币、钱包、链三个视角间切换。</p>
-          </div>
-          <div className="grid gap-3 sm:gap-0 sm:grid-cols-3 sm:items-center">
-            <MetricBlock label="平均单项" value={formatCurrency(analytics.averagePositionValue)} />
-            <MetricBlock
-              label="最大仓位"
-              value={analytics.topHolding ? `${analytics.topHolding.symbol} ${analytics.topHolding.share.toFixed(1)}%` : '--'}
-            />
-            <MetricBlock
-              label="价格异常"
-              value={`${analytics.missingPriceCount + analytics.stalePriceCount} 个`}
-              toneClassName={analytics.missingPriceCount + analytics.stalePriceCount > 0 ? 'text-foreground font-medium' : undefined}
-            />
-          </div>
+    <div className="col-span-full">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between pb-4 border-b border-border/40">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-base font-semibold tracking-tight">明细工作台</h3>
+          <p className="text-xs text-muted-foreground">支持搜索与筛选，可在代币、钱包、链三个视角间切换。</p>
         </div>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center justify-between mt-6">
-          <div className="relative w-full max-w-md">
-            <MagnifyingGlass size={16} weight="regular" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索代币、钱包、交易所账户或链"
-              className="pl-9 bg-muted/20 border-border/40 rounded-none h-10 shadow-none focus-visible:ring-0 focus-visible:border-border"
-            />
+        <div className="flex items-center gap-6 text-sm shrink-0">
+          <div>
+            <span className="muted-kicker block">平均单项</span>
+            <span className="font-medium tabular-nums">{formatCurrency(analytics.averagePositionValue)}</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.map((filter) => (
-              <Button
-                key={filter.key}
-                type="button"
-                size="sm"
-                className="rounded-none shadow-none h-10 px-4 font-medium tracking-tight"
-                variant={statusFilter === filter.key ? 'secondary' : 'outline'}
-                onClick={() => setStatusFilter(filter.key)}
-              >
-                {filter.label}
-              </Button>
-            ))}
+          <div>
+            <span className="muted-kicker block">价格异常</span>
+            <span className={`font-medium tabular-nums ${analytics.missingPriceCount + analytics.stalePriceCount > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
+              {analytics.missingPriceCount + analytics.stalePriceCount} 个
+            </span>
           </div>
         </div>
       </div>
-      <div className="pt-8 px-4 sm:px-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 pb-4 border-b border-border/40">
+        <div className="relative w-full max-w-sm">
+          <MagnifyingGlass size={15} weight="regular" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="搜索代币、钱包、交易所账户或链"
+            className="pl-9 bg-transparent border-border/40 rounded-lg h-9 shadow-none text-sm focus-visible:ring-0 focus-visible:border-border"
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {FILTERS.map((filter) => (
+            <Button
+              key={filter.key}
+              type="button"
+              size="sm"
+              className="rounded-lg shadow-none h-8 px-3 text-xs font-medium"
+              variant={statusFilter === filter.key ? 'secondary' : 'ghost'}
+              onClick={() => setStatusFilter(filter.key)}
+            >
+              {filter.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div className="pt-5">
         <Tabs defaultValue="token" className="gap-4">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between mb-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
             <TabsList variant="line" className="grid w-full grid-cols-3 sm:w-fit bg-transparent gap-6">
-              <TabsTrigger className="w-full data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none px-0 pb-3" value="token">
+              <TabsTrigger className="w-full data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none px-0 pb-2.5 text-sm" value="token">
                 按代币
               </TabsTrigger>
-              <TabsTrigger className="w-full data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none px-0 pb-3" value="wallet">
+              <TabsTrigger className="w-full data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none px-0 pb-2.5 text-sm" value="wallet">
                 按钱包
               </TabsTrigger>
-              <TabsTrigger className="w-full data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none px-0 pb-3" value="chain">
+              <TabsTrigger className="w-full data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none px-0 pb-2.5 text-sm" value="chain">
                 按链
               </TabsTrigger>
             </TabsList>
-            <Badge variant="outline" className="border-border/40 tracking-widest uppercase text-xs rounded-none bg-muted/10 pb-1">{data.length} 个代币条目</Badge>
+            <span className="text-xs text-muted-foreground">{data.length} 个代币条目</span>
           </div>
           <TabsContent className="mt-0" value="token">
             <GroupedHoldingsView rows={filteredData.token} mode="token" totalValue={totalValue} />

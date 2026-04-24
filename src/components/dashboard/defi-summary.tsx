@@ -45,32 +45,6 @@ interface DefiSummaryProps {
   refetch: () => void
 }
 
-function MetricTile({
-  label,
-  value,
-  tone = 'default',
-}: {
-  label: string
-  value: string
-  tone?: 'default' | 'positive' | 'negative'
-}) {
-  return (
-    <div className="flex flex-col px-4 py-8 sm:px-6 hover:bg-muted/10 transition-colors duration-300">
-      <p className="text-[11px] tracking-widest text-muted-foreground font-medium uppercase">{label}</p>
-      <p
-        className={cn(
-          'mt-3 text-3xl lg:text-4xl font-semibold tracking-tighter tabular-nums',
-          tone === 'positive' && 'text-foreground',
-          tone === 'negative' && 'text-muted-foreground',
-          tone === 'default' && 'text-foreground'
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  )
-}
-
 export function DefiSummary({
   isEnabled,
   hasDefiSources,
@@ -191,7 +165,7 @@ export function DefiSummary({
           </div>
         </div>
         <div className="flex flex-col gap-4 text-sm text-muted-foreground">
-          <div className="border border-border/30 bg-muted/10 p-5">
+          <div className="rounded-lg border border-border/30 bg-muted/10 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs text-muted-foreground">补齐进度</p>
@@ -216,7 +190,7 @@ export function DefiSummary({
             </p>
           </div>
           {primaryError ? (
-            <div className="rounded-md border border-border/50 bg-muted/20 p-4">
+            <div className="rounded-lg border border-border/50 bg-muted/20 p-4">
               <p className="flex items-center gap-2 font-medium text-foreground">
                 <ShieldWarning size={16} weight="fill" className="text-foreground" />
                 {primaryError.message}
@@ -258,16 +232,28 @@ export function DefiSummary({
           </Button>
         </div>
       </div>
-      <div className="flex flex-col gap-6 pt-0 px-0 sm:px-6 sm:pb-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border/40 border-y sm:border-y-0 sm:border-b border-border/40 bg-zinc-50/30 dark:bg-zinc-950/20 sm:mx-0 -mx-4 mb-2">
-          <MetricTile label="DeFi 净值" value={formatCurrency(totalValue)} tone="positive" />
-          <MetricTile label="总存入" value={formatCurrency(totalDepositedValue)} />
-          <MetricTile label="总借出" value={formatCurrency(totalBorrowedValue)} tone={totalBorrowedValue > 0 ? 'negative' : 'default'} />
-          <MetricTile label="待领取奖励" value={formatCurrency(totalRewardsValue)} tone={totalRewardsValue > 0 ? 'positive' : 'default'} />
+      <div className="flex flex-col gap-6 pt-0 px-0 sm:pb-6">
+        <div className="flex flex-wrap gap-x-10 gap-y-5 border-b border-border/40 pb-5 mb-2">
+          <div>
+            <p className="muted-kicker">DeFi 净值</p>
+            <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums">{formatCurrency(totalValue)}</p>
+          </div>
+          <div>
+            <p className="muted-kicker">总存入</p>
+            <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">{formatCurrency(totalDepositedValue)}</p>
+          </div>
+          <div>
+            <p className="muted-kicker">总借出</p>
+            <p className={`mt-2 text-2xl font-bold tracking-tight tabular-nums ${totalBorrowedValue > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{formatCurrency(totalBorrowedValue)}</p>
+          </div>
+          <div>
+            <p className="muted-kicker">待领取奖励</p>
+            <p className={`mt-2 text-2xl font-bold tracking-tight tabular-nums ${totalRewardsValue > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{formatCurrency(totalRewardsValue)}</p>
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] px-4 sm:px-0">
-          <div className="rounded-none border-y sm:border border-border/40 p-4 sm:p-6 mb-8">
+          <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] px-4 sm:px-0">
+          <div className="border-y sm:border sm:rounded-xl border-border/40 p-4 sm:p-6 mb-8">
             <div className="mb-6 flex flex-row items-center justify-between">
               <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">协议分布</h4>
             </div>
@@ -292,7 +278,7 @@ export function DefiSummary({
             </div>
           </div>
 
-          <div className="rounded-none border-y sm:border border-border/40 p-4 sm:p-6 mb-8">
+          <div className="border-y sm:border sm:rounded-xl border-border/40 p-4 sm:p-6 mb-8">
             <div className="mb-6 flex flex-row items-center justify-between">
               <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">链分布</h4>
             </div>
@@ -320,7 +306,7 @@ export function DefiSummary({
 
         {primaryError ? (
           <div className={cn(
-            'rounded-md p-4 text-sm mx-4 sm:mx-0',
+            'rounded-lg p-4 text-sm mx-4 sm:mx-0',
             hasRecoverableWarning
               ? 'border border-border/60 bg-muted/30 text-muted-foreground'
               : 'border border-border/60 bg-muted/30 text-muted-foreground'

@@ -34,7 +34,7 @@ function InsightBlock({
           : 'text-foreground'
 
   return (
-    <div className="rounded-md border border-border/60 bg-muted/20 p-4">
+    <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
       <div className="flex items-center gap-2 text-xs tracking-[0.08em] text-muted-foreground">
         <Icon size={14} weight="regular" />
         <span>{title}</span>
@@ -115,7 +115,7 @@ export function PortfolioInsights({ analytics }: PortfolioInsightsProps) {
           }
           tone={worstTone}
         />
-        <div className="rounded-md border border-border/60 bg-muted/30 p-4 md:col-span-2 xl:col-span-4">
+        <div className="rounded-lg border border-border/60 bg-muted/30 p-4 md:col-span-2 xl:col-span-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs tracking-[0.08em] text-muted-foreground">资产来源</p>

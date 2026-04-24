@@ -26,11 +26,11 @@ export function PageHeader({
       <div className="min-w-0 flex flex-col gap-2.5">
         {badge ? <span className="section-eyebrow">{badge}</span> : null}
         <div className="flex flex-col gap-1.5">
-          <h1 className="max-w-3xl text-2xl font-semibold tracking-[-0.04em] text-foreground">
+          <h1 className="max-w-3xl text-2xl font-bold tracking-tight text-foreground">
             {title}
           </h1>
           {description ? (
-            <p className="max-w-[64ch] text-[0.95rem] leading-7 text-muted-foreground">
+            <p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
               {description}
             </p>
           ) : null}
