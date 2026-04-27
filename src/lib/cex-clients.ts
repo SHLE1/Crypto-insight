@@ -131,6 +131,8 @@ interface BitgetFundingAssetItem {
   balance?: string
 }
 
+type BitgetLooseRecord = Record<string, unknown>
+
 interface GateApiErrorResponse {
   label?: string
   message?: string
@@ -414,9 +416,165 @@ function isGateApiErrorResponse(value: unknown): value is GateApiErrorResponse {
   )
 }
 
-function toPositiveNumber(value: string | undefined) {
+function toPositiveNumber(value: unknown) {
   const parsed = Number(value ?? 0)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
+function isLooseRecord(value: unknown): value is BitgetLooseRecord {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function getStringFromRecord(record: BitgetLooseRecord, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (typeof value === 'string' && value.trim()) {
+      return value
+    }
+  }
+
+  return ''
+}
+
+function getPositiveNumberFromRecord(record: BitgetLooseRecord, keys: string[]) {
+  for (const key of keys) {
+    const value = toPositiveNumber(record[key])
+
+    if (value > 0) {
+      return value
+    }
+  }
+
+  return 0
+}
+
+const BITGET_EARN_LIST_KEYS = [
+  'assets',
+  'assetList',
+  'list',
+  'items',
+  'productList',
+  'resultList',
+  'savingsList',
+  'holdingList',
+  'coinList',
+]
+
+const BITGET_EARN_SYMBOL_KEYS = [
+  'coin',
+  'asset',
+  'currency',
+  'baseCoin',
+  'productCoin',
+  'subscribeCoin',
+  'redeemCoin',
+]
+
+const BITGET_EARN_BALANCE_KEYS = [
+  'totalAmount',
+  'amount',
+  'balance',
+  'holdingAmount',
+  'currentAmount',
+  'assetAmount',
+  'assetsAmount',
+  'subscribeAmount',
+  'availableAmount',
+  'principal',
+  'capitalAmount',
+  'quantity',
+  'coinAmount',
+  'productAmount',
+]
+
+const BITGET_EARN_VALUE_KEYS = [
+  'usdtAmount',
+  'usdAmount',
+  'usdValue',
+  'assetUsdtAmount',
+  'usdtBalance',
+  'assetValue',
+]
+
+function collectBitgetEarnRecords(value: unknown, depth = 0): BitgetLooseRecord[] {
+  if (depth > 4 || value === null || value === undefined) {
+    return []
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectBitgetEarnRecords(item, depth + 1))
+  }
+
+  if (!isLooseRecord(value)) {
+    return []
+  }
+
+  const nestedRecords = BITGET_EARN_LIST_KEYS.flatMap((key) =>
+    collectBitgetEarnRecords(value[key], depth + 1)
+  )
+
+  if (nestedRecords.length > 0) {
+    return nestedRecords
+  }
+
+  const symbol = getStringFromRecord(value, BITGET_EARN_SYMBOL_KEYS)
+  const balance = getPositiveNumberFromRecord(value, BITGET_EARN_BALANCE_KEYS)
+  const usdValue = getPositiveNumberFromRecord(value, BITGET_EARN_VALUE_KEYS)
+
+  if (!symbol || (balance <= 0 && usdValue <= 0)) {
+    return []
+  }
+
+  return [value]
+}
+
+function parseBitgetEarnEntries(payload: unknown) {
+  const records = collectBitgetEarnRecords(payload)
+  const entries: ExchangeAssetEntry[] = []
+  let unresolvedUsdValue = 0
+
+  records.forEach((record) => {
+    const symbol = getStringFromRecord(record, BITGET_EARN_SYMBOL_KEYS).trim().toUpperCase()
+    const balance = getPositiveNumberFromRecord(record, BITGET_EARN_BALANCE_KEYS)
+    const usdValue = getPositiveNumberFromRecord(record, BITGET_EARN_VALUE_KEYS)
+
+    if (!symbol) {
+      return
+    }
+
+    if (balance <= 0) {
+      unresolvedUsdValue += usdValue
+      return
+    }
+
+    const name = getStringFromRecord(record, ['productName', 'assetName']).trim()
+
+    entries.push({
+      symbol,
+      balance,
+      name: name || undefined,
+      sourceKey: 'earn',
+      sourceLabel: '理财',
+      reconciliationGroup: 'earn',
+      priceOverride: usdValue > 0 ? usdValue / balance : undefined,
+    })
+  })
+
+  if (entries.length === 0 && unresolvedUsdValue > 0) {
+    entries.push({
+      symbol: '理财未展开资产',
+      name: 'Bitget 理财未展开资产',
+      balance: unresolvedUsdValue,
+      assetId: 'cex:bitget:earn-unparsed',
+      sourceKey: 'earn-unparsed',
+      sourceLabel: '理财',
+      reconciliationGroup: 'earn',
+      priceOverride: 1,
+    })
+  }
+
+  return mergeExchangeEntries(entries)
 }
 
 function mergeBalances(items: Array<{ symbol: string; balance: number }>) {
@@ -1524,6 +1682,35 @@ async function fetchBitgetFundingAssets(account: CexAccountInput) {
     .filter((item): item is ExchangeAssetEntry => Boolean(item))
 }
 
+async function fetchBitgetEarnAssets(account: CexAccountInput) {
+  const attempts: Array<() => Promise<unknown>> = [
+    () => fetchBitgetSigned(account, { path: '/api/v2/earn/account/assets' }),
+    () => fetchBitgetSigned(account, { path: '/api/v2/earn/savings/assets' }),
+    () => fetchBitgetSigned(account, { path: '/api/v2/earn/savings/account' }),
+  ]
+
+  let lastError: unknown = null
+
+  for (const attempt of attempts) {
+    try {
+      const data = await attempt()
+      const entries = parseBitgetEarnEntries(data)
+
+      if (entries.length > 0) {
+        return entries
+      }
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  if (lastError) {
+    throw lastError
+  }
+
+  return []
+}
+
 function isBitgetUnifiedApiUnavailableForClassic(error: unknown) {
   const message = error instanceof Error ? error.message : ''
   const normalizedMessage = message.toLowerCase()
@@ -1555,10 +1742,10 @@ async function fetchBitgetUnifiedSnapshot(account: CexAccountInput): Promise<{
   assets: AssetBalance[]
   warning?: string
 }> {
-  const [unifiedResult, fundingResult, totalResult] = await Promise.allSettled([
+  const [unifiedResult, fundingResult, earnResult] = await Promise.allSettled([
     fetchBitgetUnifiedAssets(account),
     fetchBitgetFundingAssets(account),
-    fetchBitgetAllAccountBalances(account),
+    fetchBitgetEarnAssets(account),
   ])
 
   const warnings: string[] = []
@@ -1576,57 +1763,13 @@ async function fetchBitgetUnifiedSnapshot(account: CexAccountInput): Promise<{
     warnings.push(`Bitget 资金账户查询失败：${normalizeCexError(account, fundingResult.reason)}`)
   }
 
-  const pricedEntries = await priceExchangeEntries(mergeExchangeEntries(entries))
-  const detailedValueByGroup = new Map<string, number>()
-
-  pricedEntries.forEach((entry) => {
-    detailedValueByGroup.set(
-      entry.reconciliationGroup,
-      (detailedValueByGroup.get(entry.reconciliationGroup) ?? 0) + (entry.value ?? 0)
-    )
-  })
-
-  const fallbackEntries: ExchangeAssetEntry[] = []
-
-  if (totalResult.status === 'fulfilled') {
-    totalResult.value.forEach((item) => {
-      const accountType = item.accountType?.trim().toLowerCase()
-      const officialTotal = toPositiveNumber(item.usdtBalance)
-
-      if (accountType !== 'earn' || officialTotal <= 0) {
-        return
-      }
-
-      const detailedValue = detailedValueByGroup.get(accountType) ?? 0
-      const tolerance = Math.max(1, officialTotal * 0.02)
-      const gap = officialTotal - detailedValue
-
-      if (gap <= tolerance) {
-        return
-      }
-
-      const label = getBitgetAccountTypeLabel(accountType)
-      fallbackEntries.push({
-        symbol: `${label}未展开资产`,
-        name: `Bitget ${label}未展开资产`,
-        balance: gap,
-        assetId: `cex:bitget:account-gap:${accountType}`,
-        sourceKey: `account-gap-${accountType}`,
-        sourceLabel: label,
-        reconciliationGroup: accountType,
-        priceOverride: 1,
-      })
-
-      warnings.push(`${label} 暂未接入币种级展开，已按账户总额保留 ${formatCurrency(gap)}。`)
-    })
+  if (earnResult.status === 'fulfilled') {
+    entries.push(...earnResult.value)
   } else {
-    warnings.push(`Bitget 账户总额查询失败：${normalizeCexError(account, totalResult.reason)}`)
+    warnings.push(`Bitget 理财接口查询失败：${normalizeCexError(account, earnResult.reason)}`)
   }
 
-  const assets = buildExchangeAssets(
-    account,
-    pricedEntries.concat(await priceExchangeEntries(fallbackEntries))
-  )
+  const assets = buildExchangeAssets(account, await priceExchangeEntries(mergeExchangeEntries(entries)))
 
   return {
     assets,
