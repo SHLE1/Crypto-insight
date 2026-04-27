@@ -110,6 +110,27 @@ interface BitgetAllAccountBalanceResponseItem {
   usdtBalance?: string
 }
 
+interface BitgetUnifiedAssetItem {
+  coin?: string
+  equity?: string
+  usdValue?: string
+  balance?: string
+  available?: string
+  locked?: string
+}
+
+interface BitgetUnifiedAssetsResponse {
+  accountEquity?: string
+  assets?: BitgetUnifiedAssetItem[]
+}
+
+interface BitgetFundingAssetItem {
+  coin?: string
+  available?: string
+  frozen?: string
+  balance?: string
+}
+
 interface GateApiErrorResponse {
   label?: string
   message?: string
@@ -280,6 +301,14 @@ function normalizeCexError(account: CexAccountInput, error: unknown) {
 
     if (code === '40038' || code === '22010' || message.toLowerCase().includes('whitelist')) {
       return 'Bitget API Key 权限不足，或 IP 白名单不匹配。请检查只读权限和 IP 白名单。'
+    }
+
+    if (message.includes('Unified Account mode') || message.includes('Classic Account API is not supported')) {
+      return 'Bitget 账号是 Unified Account，请确认 API Key 已开启 Unified Account Management Read 权限。'
+    }
+
+    if (message.toLowerCase().includes('uta') || message.includes('Unified Account')) {
+      return 'Bitget Unified Account 查询失败，请确认 API Key 已开启 Unified Account Management Read 权限。'
     }
 
     if (code === '40006' || message.includes('Invalid ACCESS_KEY')) {
@@ -1409,6 +1438,78 @@ async function fetchBitgetAllAccountBalances(account: CexAccountInput) {
   return data
 }
 
+async function fetchBitgetUnifiedAssets(account: CexAccountInput) {
+  const data = await fetchBitgetSigned<BitgetUnifiedAssetsResponse>(account, {
+    path: '/api/v3/account/assets',
+  })
+
+  if (!data || !Array.isArray(data.assets)) {
+    throw new Error('Bitget Unified Account 返回格式异常')
+  }
+
+  return data.assets
+    .map<ExchangeAssetEntry | null>((item) => {
+      const symbol = item.coin?.trim().toUpperCase()
+      const balance = toPositiveNumber(item.equity) || toPositiveNumber(item.balance)
+      const usdValue = toPositiveNumber(item.usdValue)
+
+      if (!symbol || balance <= 0) return null
+
+      return {
+        symbol,
+        balance,
+        sourceKey: 'unified',
+        sourceLabel: 'Unified Account',
+        reconciliationGroup: 'unified',
+        priceOverride: usdValue > 0 ? usdValue / balance : undefined,
+      }
+    })
+    .filter((item): item is ExchangeAssetEntry => Boolean(item))
+}
+
+async function fetchBitgetFundingAssets(account: CexAccountInput) {
+  const data = await fetchBitgetSigned<BitgetFundingAssetItem[]>(account, {
+    path: '/api/v3/account/funding-assets',
+  })
+
+  if (!Array.isArray(data)) {
+    throw new Error('Bitget Funding Account 返回格式异常')
+  }
+
+  return data
+    .map<ExchangeAssetEntry | null>((item) => {
+      const symbol = item.coin?.trim().toUpperCase()
+      const balance =
+        toPositiveNumber(item.balance) ||
+        toPositiveNumber(item.available) + toPositiveNumber(item.frozen)
+
+      if (!symbol || balance <= 0) return null
+
+      return {
+        symbol,
+        balance,
+        sourceKey: 'funding',
+        sourceLabel: '资金账户',
+        reconciliationGroup: 'funding',
+      }
+    })
+    .filter((item): item is ExchangeAssetEntry => Boolean(item))
+}
+
+function isBitgetUnifiedApiUnavailableForClassic(error: unknown) {
+  const message = error instanceof Error ? error.message : ''
+  const normalizedMessage = message.toLowerCase()
+
+  return (
+    normalizedMessage.includes('classic account') &&
+    (
+      normalizedMessage.includes('unified account') ||
+      normalizedMessage.includes('uta') ||
+      normalizedMessage.includes('not supported')
+    )
+  )
+}
+
 function getBitgetAccountTypeLabel(accountType: string) {
   const labels: Record<string, string> = {
     spot: '现货账户',
@@ -1422,7 +1523,42 @@ function getBitgetAccountTypeLabel(accountType: string) {
   return labels[accountType] ?? accountType
 }
 
-async function fetchBitgetSnapshot(account: CexAccountInput): Promise<{
+async function fetchBitgetUnifiedSnapshot(account: CexAccountInput): Promise<{
+  assets: AssetBalance[]
+  warning?: string
+}> {
+  const [unifiedResult, fundingResult] = await Promise.allSettled([
+    fetchBitgetUnifiedAssets(account),
+    fetchBitgetFundingAssets(account),
+  ])
+
+  const warnings: string[] = []
+  const entries: ExchangeAssetEntry[] = []
+
+  if (unifiedResult.status === 'fulfilled') {
+    entries.push(...unifiedResult.value)
+  } else {
+    throw unifiedResult.reason
+  }
+
+  if (fundingResult.status === 'fulfilled') {
+    entries.push(...fundingResult.value)
+  } else {
+    warnings.push(`Bitget 资金账户查询失败：${normalizeCexError(account, fundingResult.reason)}`)
+  }
+
+  const assets = buildExchangeAssets(
+    account,
+    await priceExchangeEntries(mergeExchangeEntries(entries))
+  )
+
+  return {
+    assets,
+    warning: dedupeWarnings(warnings).join('；') || undefined,
+  }
+}
+
+async function fetchBitgetClassicSnapshot(account: CexAccountInput): Promise<{
   assets: AssetBalance[]
   warning?: string
 }> {
@@ -1529,6 +1665,21 @@ async function fetchBitgetSnapshot(account: CexAccountInput): Promise<{
   return {
     assets,
     warning: dedupeWarnings(warnings).join('；') || undefined,
+  }
+}
+
+async function fetchBitgetSnapshot(account: CexAccountInput): Promise<{
+  assets: AssetBalance[]
+  warning?: string
+}> {
+  try {
+    return await fetchBitgetUnifiedSnapshot(account)
+  } catch (error) {
+    if (isBitgetUnifiedApiUnavailableForClassic(error)) {
+      return fetchBitgetClassicSnapshot(account)
+    }
+
+    throw error
   }
 }
 
