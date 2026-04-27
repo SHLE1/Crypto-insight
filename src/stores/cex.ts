@@ -41,26 +41,15 @@ export const useCexStore = create<CexStore>()(
     }),
     {
       name: 'crypto-insight-cex',
-      version: 3,
+      version: 4,
       partialize: (state) => ({
-        accounts: state.accounts.map((account) => ({
-          id: account.id,
-          exchange: account.exchange,
-          label: account.label,
-          enabled: account.enabled,
-          apiKey: '',
-          apiSecret: '',
-          passphrase: undefined,
-        })),
+        accounts: state.accounts,
       }),
       migrate: (persistedState) => {
         const state = persistedState as Partial<CexStore> | undefined
         const accounts = Array.isArray(state?.accounts)
           ? state.accounts.map((account) => ({
               ...account,
-              apiKey: '',
-              apiSecret: '',
-              passphrase: undefined,
               enabled: account.enabled ?? true,
             }))
           : []
