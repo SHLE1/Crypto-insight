@@ -262,9 +262,37 @@ class GateRequestError extends Error {
   }
 }
 
+function assertCexCredentials(account: CexAccountInput) {
+  const missingFields: string[] = []
+
+  if (!account.apiKey.trim()) {
+    missingFields.push('API Key')
+  }
+
+  if (!account.apiSecret.trim()) {
+    missingFields.push('API Secret')
+  }
+
+  if ((account.exchange === 'okx' || account.exchange === 'bitget') && !account.passphrase?.trim()) {
+    missingFields.push('Passphrase')
+  }
+
+  if (missingFields.length > 0) {
+    throw new Error(`缺少 ${missingFields.join('、')}。出于安全考虑，交易所密钥不会长期保存，请重新填写后再刷新。`)
+  }
+}
+
 function normalizeCexError(account: CexAccountInput, error: unknown) {
   const message = error instanceof Error ? error.message : '查询失败'
   const exchange = account.exchange
+
+  if (message.includes('Zero-length key is not supported')) {
+    return 'API Secret 为空。出于安全考虑，交易所密钥不会长期保存，请重新填写后再刷新。'
+  }
+
+  if (message.startsWith('缺少 ')) {
+    return message
+  }
 
   if (
     exchange === 'binance' &&
@@ -1859,6 +1887,8 @@ async function fetchGateSnapshot(account: CexAccountInput): Promise<{
 
 export async function getCexSnapshot(account: CexAccountInput): Promise<PortfolioSnapshot> {
   try {
+    assertCexCredentials(account)
+
     if (account.exchange === 'binance') {
       const { assets, warning } = await fetchBinanceSnapshot(account)
       return buildSnapshot(account, assets, { warning })
