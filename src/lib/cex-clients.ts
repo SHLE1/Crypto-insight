@@ -1543,7 +1543,7 @@ function getBitgetAccountTypeLabel(accountType: string) {
     spot: '现货账户',
     futures: '合约账户',
     funding: '资金账户',
-    earn: 'Earn',
+    earn: '理财',
     bots: 'Bots',
     margin: '杠杆账户',
   }
@@ -1555,9 +1555,10 @@ async function fetchBitgetUnifiedSnapshot(account: CexAccountInput): Promise<{
   assets: AssetBalance[]
   warning?: string
 }> {
-  const [unifiedResult, fundingResult] = await Promise.allSettled([
+  const [unifiedResult, fundingResult, totalResult] = await Promise.allSettled([
     fetchBitgetUnifiedAssets(account),
     fetchBitgetFundingAssets(account),
+    fetchBitgetAllAccountBalances(account),
   ])
 
   const warnings: string[] = []
@@ -1575,9 +1576,56 @@ async function fetchBitgetUnifiedSnapshot(account: CexAccountInput): Promise<{
     warnings.push(`Bitget 资金账户查询失败：${normalizeCexError(account, fundingResult.reason)}`)
   }
 
+  const pricedEntries = await priceExchangeEntries(mergeExchangeEntries(entries))
+  const detailedValueByGroup = new Map<string, number>()
+
+  pricedEntries.forEach((entry) => {
+    detailedValueByGroup.set(
+      entry.reconciliationGroup,
+      (detailedValueByGroup.get(entry.reconciliationGroup) ?? 0) + (entry.value ?? 0)
+    )
+  })
+
+  const fallbackEntries: ExchangeAssetEntry[] = []
+
+  if (totalResult.status === 'fulfilled') {
+    totalResult.value.forEach((item) => {
+      const accountType = item.accountType?.trim().toLowerCase()
+      const officialTotal = toPositiveNumber(item.usdtBalance)
+
+      if (accountType !== 'earn' || officialTotal <= 0) {
+        return
+      }
+
+      const detailedValue = detailedValueByGroup.get(accountType) ?? 0
+      const tolerance = Math.max(1, officialTotal * 0.02)
+      const gap = officialTotal - detailedValue
+
+      if (gap <= tolerance) {
+        return
+      }
+
+      const label = getBitgetAccountTypeLabel(accountType)
+      fallbackEntries.push({
+        symbol: `${label}未展开资产`,
+        name: `Bitget ${label}未展开资产`,
+        balance: gap,
+        assetId: `cex:bitget:account-gap:${accountType}`,
+        sourceKey: `account-gap-${accountType}`,
+        sourceLabel: label,
+        reconciliationGroup: accountType,
+        priceOverride: 1,
+      })
+
+      warnings.push(`${label} 暂未接入币种级展开，已按账户总额保留 ${formatCurrency(gap)}。`)
+    })
+  } else {
+    warnings.push(`Bitget 账户总额查询失败：${normalizeCexError(account, totalResult.reason)}`)
+  }
+
   const assets = buildExchangeAssets(
     account,
-    await priceExchangeEntries(mergeExchangeEntries(entries))
+    pricedEntries.concat(await priceExchangeEntries(fallbackEntries))
   )
 
   return {
