@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Check, Pencil, Plus, Trash2, X, Wallet as WalletIcon } from 'lucide-react'
+import { Check, Pencil, Plus, RefreshCw, Trash2, X, Wallet as WalletIcon } from 'lucide-react'
 import { EmptyState } from '@/components/layout/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { usePortfolioData } from '@/hooks/use-portfolio-data'
 import { Switch } from '@/components/ui/switch'
 import { EVM_CHAINS } from '@/lib/evm-chains'
 import { formatCurrency, getChainLabel, shortAddress } from '@/lib/validators'
@@ -18,6 +19,7 @@ import { toast } from 'sonner'
 
 export default function WalletsPage() {
   const { wallets, removeWallet, toggleWallet, updateWallet } = useWalletStore()
+  const { refetchWallets, isRefreshingWallets } = usePortfolioData({ autoRefresh: false })
   const snapshots = usePortfolioStore((s) => s.snapshots)
   const removeSnapshot = usePortfolioStore((s) => s.removeSnapshot)
   const [editingWalletId, setEditingWalletId] = useState<string | null>(null)
@@ -70,12 +72,24 @@ export default function WalletsPage() {
             所有启用的钱包地址均参与资产统计和净值趋势计算。
           </p>
         </div>
-        <Link href="/wallets/add">
-          <Button size="sm" className="gap-2">
-            <Plus className="size-4" />
-            添加钱包
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => refetchWallets()}
+            disabled={isRefreshingWallets || wallets.every((wallet) => !wallet.enabled)}
+            className="gap-2"
+          >
+            <RefreshCw className={`size-4 ${isRefreshingWallets ? 'animate-spin' : ''}`} />
+            仅刷新钱包
           </Button>
-        </Link>
+          <Link href="/wallets/add">
+            <Button size="sm" className="gap-2">
+              <Plus className="size-4" />
+              添加钱包
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {wallets.length === 0 ? (

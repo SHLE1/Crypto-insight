@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Key, Plus, Trash, X, Building2, ExternalLink } from 'lucide-react'
+import { Key, Plus, RefreshCw, Trash, X, Building2, ExternalLink } from 'lucide-react'
 import { EmptyState } from '@/components/layout/empty-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { usePortfolioData } from '@/hooks/use-portfolio-data'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -19,6 +20,7 @@ const EXCHANGE_OPTIONS: ExchangeType[] = ['binance', 'okx', 'bitget', 'gate']
 
 export default function CexPage() {
   const { accounts, addAccount, removeAccount, toggleAccount, updateAccount } = useCexStore()
+  const { refetchCex, isRefreshingCex } = usePortfolioData({ autoRefresh: false })
   const snapshots = usePortfolioStore((s) => s.snapshots)
   const removeSnapshot = usePortfolioStore((s) => s.removeSnapshot)
   const [showForm, setShowForm] = useState(false)
@@ -125,12 +127,24 @@ export default function CexPage() {
             接入只读 API 后，账户余额将自动汇入资产总览与持仓明细。密钥仅保存在本地浏览器，导出文件不包含任何密钥。
           </p>
         </div>
-        {!showForm ? (
-          <Button size="sm" onClick={() => setShowForm(true)} className="gap-2">
-            <Plus className="size-4" />
-            添加账户
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => refetchCex()}
+            disabled={isRefreshingCex || accounts.every((account) => !account.enabled)}
+            className="gap-2"
+          >
+            <RefreshCw className={`size-4 ${isRefreshingCex ? 'animate-spin' : ''}`} />
+            仅刷新交易所
           </Button>
-        ) : null}
+          {!showForm ? (
+            <Button size="sm" onClick={() => setShowForm(true)} className="gap-2">
+              <Plus className="size-4" />
+              添加账户
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {showForm ? (

@@ -23,6 +23,11 @@ interface QuoteRequestFailure {
 }
 
 type QuoteRequestResult = QuoteRequestSuccess | QuoteRequestFailure
+type PortfolioSourceKind = 'wallet' | 'cex'
+
+interface UsePortfolioDataOptions {
+  autoRefresh?: boolean
+}
 
 function toTimestamp(value: string | null | undefined) {
   if (!value) return 0
@@ -198,6 +203,14 @@ function buildSnapshotError(snapshot: PortfolioSnapshot, label: string): ApiErro
   }
 }
 
+function isPortfolioErrorForKind(error: ApiErrorState, kind: PortfolioSourceKind) {
+  if (kind === 'wallet') {
+    return error.source === '钱包查询'
+  }
+
+  return error.source === '交易所查询'
+}
+
 async function requestQuote(
   kind: 'wallet' | 'cex',
   url: string,
@@ -216,7 +229,8 @@ async function requestQuote(
   }
 }
 
-export function usePortfolioData() {
+export function usePortfolioData(options: UsePortfolioDataOptions = {}) {
+  const { autoRefresh = true } = options
   const wallets = useWalletStore((s) => s.wallets)
   const {
     totalValue: defiTotalValue,
@@ -249,6 +263,7 @@ export function usePortfolioData() {
     lastRefresh,
     setSnapshot,
     setLastRefresh,
+    setErrors,
     clearErrors,
     addError,
     pruneSnapshots,
@@ -272,6 +287,7 @@ export function usePortfolioData() {
     [accounts]
   )
   const [hasFetchedThisSession, setHasFetchedThisSession] = useState(false)
+  const [manualRefreshingKinds, setManualRefreshingKinds] = useState<PortfolioSourceKind[]>([])
 
   const walletChainLabelMap = useMemo(
     () =>
@@ -287,14 +303,27 @@ export function usePortfolioData() {
   const snapshotCount = Object.keys(snapshots).length
   const hasCachedSnapshots = snapshotCount > 0
 
-  const fetchPortfolio = useCallback(async () => {
-    clearErrors()
-    pruneSnapshots(activeSourceIds)
+  const runPortfolioRefresh = useCallback(async (kinds: PortfolioSourceKind[]) => {
+    const includeWallets = kinds.includes('wallet')
+    const includeCex = kinds.includes('cex')
+    const scopedSourceIds = [
+      ...(includeWallets ? enabledWallets.map((wallet) => wallet.id) : []),
+      ...(includeCex ? enabledAccounts.map((account) => account.id) : []),
+    ]
+
+    if (kinds.length === 2) {
+      clearErrors()
+      pruneSnapshots(activeSourceIds)
+    } else {
+      setErrors(errors.filter((error) => !kinds.some((kind) => isPortfolioErrorForKind(error, kind))))
+      pruneSnapshots(activeSourceIds)
+    }
+
     const results: QuoteResponse[] = []
     const nextSnapshots = new Map<string, PortfolioSnapshot>()
     const requests: Promise<QuoteRequestResult>[] = []
 
-    if (enabledWallets.length > 0) {
+    if (includeWallets && enabledWallets.length > 0) {
       requests.push(
         requestQuote('wallet', '/api/wallets/quote', {
           wallets: enabledWallets.map((wallet) => ({
@@ -307,7 +336,7 @@ export function usePortfolioData() {
       )
     }
 
-    if (enabledAccounts.length > 0) {
+    if (includeCex && enabledAccounts.length > 0) {
       requests.push(
         requestQuote('cex', '/api/cex/quote', {
           accounts: enabledAccounts.map((account) => ({
@@ -393,13 +422,14 @@ export function usePortfolioData() {
         cexTotal,
         sourceCount: effectiveSnapshots.length,
       })
+    } else if (scopedSourceIds.length > 0) {
+      pruneSnapshots(activeSourceIds)
     }
 
     setLastRefresh(new Date().toISOString())
     setHasFetchedThisSession(true)
     return results
   }, [
-    snapshots,
     activeSourceIds,
     addError,
     appendHistoryPoint,
@@ -407,13 +437,22 @@ export function usePortfolioData() {
     clearErrors,
     enabledAccounts,
     enabledWallets,
+    errors,
     pruneSnapshots,
+    setErrors,
     setLastRefresh,
     setSnapshot,
+    snapshots,
     walletNameMap,
   ])
 
-  const shouldAutoRefresh = !isRestoring && hasSources && (hasFetchedThisSession || !hasCachedSnapshots)
+  const fetchPortfolio = useCallback(async () => {
+    return runPortfolioRefresh(['wallet', 'cex'])
+  }, [
+    runPortfolioRefresh,
+  ])
+
+  const shouldAutoRefresh = autoRefresh && !isRestoring && hasSources && (hasFetchedThisSession || !hasCachedSnapshots)
 
   const { refetch, isFetching } = useQuery({
     queryKey: ['portfolio', activeSourceKey],
@@ -422,6 +461,32 @@ export function usePortfolioData() {
     retry: 0,
     refetchInterval: shouldAutoRefresh ? refreshInterval * 1000 : false,
   })
+
+  const refetchWallets = useCallback(async () => {
+    if (isRestoring || enabledWallets.length === 0 || isFetching) {
+      return []
+    }
+
+    setManualRefreshingKinds((current) => Array.from(new Set([...current, 'wallet'])))
+    try {
+      return await runPortfolioRefresh(['wallet'])
+    } finally {
+      setManualRefreshingKinds((current) => current.filter((kind) => kind !== 'wallet'))
+    }
+  }, [enabledWallets.length, isFetching, isRestoring, runPortfolioRefresh])
+
+  const refetchCex = useCallback(async () => {
+    if (isRestoring || enabledAccounts.length === 0 || isFetching) {
+      return []
+    }
+
+    setManualRefreshingKinds((current) => Array.from(new Set([...current, 'cex'])))
+    try {
+      return await runPortfolioRefresh(['cex'])
+    } finally {
+      setManualRefreshingKinds((current) => current.filter((kind) => kind !== 'cex'))
+    }
+  }, [enabledAccounts.length, isFetching, isRestoring, runPortfolioRefresh])
 
   useEffect(() => {
     if (isRestoring) {
@@ -436,7 +501,7 @@ export function usePortfolioData() {
   }, [activeSourceIds, clearErrors, hasSources, isRestoring, pruneSnapshots, setLastRefresh])
 
   useEffect(() => {
-    if (isRestoring || !hasSources) {
+    if (!autoRefresh || isRestoring || !hasSources) {
       return
     }
 
@@ -446,7 +511,7 @@ export function usePortfolioData() {
     if (!hasAnySnapshot || missingActiveSnapshot) {
       void refetch()
     }
-  }, [activeSourceIds, hasSources, isRestoring, refetch, snapshotCount, snapshots])
+  }, [activeSourceIds, autoRefresh, hasSources, isRestoring, refetch, snapshotCount, snapshots])
 
   const basePortfolio = useMemo(
     () =>
@@ -529,6 +594,8 @@ export function usePortfolioData() {
   const isEmpty = wallets.length === 0 && accounts.length === 0
   const hasValuedAssets = holdingsData.some((asset) => asset.value > 0) || (isDefiEnabled && defiTotalValue > 0)
   const isFetchingCombined = isFetching || (isDefiEnabled && isDefiFetching)
+  const isRefreshingWallets = isFetching || manualRefreshingKinds.includes('wallet')
+  const isRefreshingCex = isFetching || manualRefreshingKinds.includes('cex')
   const isUsingCachedData =
     (portfolioHydrated && !hasFetchedThisSession && !isFetching && Boolean(lastRefresh) && hasCachedSnapshots) ||
     (isDefiEnabled && isDefiUsingCachedData)
@@ -567,6 +634,10 @@ export function usePortfolioData() {
     isRestoring,
     isInitialLoading,
     refetch,
+    refetchWallets,
+    refetchCex,
     isFetching: isFetchingCombined,
+    isRefreshingWallets,
+    isRefreshingCex,
   }
 }
