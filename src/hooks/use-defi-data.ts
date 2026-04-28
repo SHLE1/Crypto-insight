@@ -55,21 +55,6 @@ function buildDefiError(snapshot: DefiSnapshot, label: string): ApiErrorState | 
   }
 }
 
-
-function buildSavedProtocolSources(snapshot: DefiSnapshot) {
-  return snapshot.positions
-    .filter((position) => position.metadata?.provider === 'bitway')
-    .map((position) => ({
-      id: `bitway:${snapshot.chainKey}:${position.protocolId}:${position.id}`,
-      chainKey: snapshot.chainKey,
-      provider: 'bitway' as const,
-      protocolId: position.protocolId,
-      protocolName: position.protocolName,
-      positionName: position.name,
-      updatedAt: new Date().toISOString(),
-    }))
-}
-
 function shouldUseCachedSnapshot(previous: DefiSnapshot | undefined, next: DefiSnapshot) {
   if (!previous) {
     return false
@@ -96,7 +81,6 @@ export function useDefiData() {
     history,
     lastRefresh,
     addManualSource,
-    upsertSavedProtocolSource,
     setLocalOnlySnapshot,
     setSnapshot,
     pruneSnapshots,
@@ -215,8 +199,6 @@ export function useDefiData() {
         setLocalOnlySnapshot(snapshot.source, true)
       }
 
-      buildSavedProtocolSources(snapshot).forEach((source) => upsertSavedProtocolSource(source))
-
       mergedSnapshots.set(snapshot.source, effectiveSnapshot)
       setSnapshot(snapshot.source, effectiveSnapshot)
 
@@ -269,7 +251,6 @@ export function useDefiData() {
     setLastRefresh,
     setLocalOnlySnapshot,
     setSnapshot,
-    upsertSavedProtocolSource,
     walletNameMap,
   ])
 

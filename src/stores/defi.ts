@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { getDefiChainKeyFromEvmChainKey } from '@/lib/defi/chains'
-import type { ApiErrorState, DefiCache, DefiHistoryPoint, DefiSnapshot, ManualDefiSource, SavedDefiProtocolSource } from '@/types'
+import type { ApiErrorState, DefiCache, DefiHistoryPoint, DefiSnapshot, ManualDefiSource } from '@/types'
 
 const MAX_HISTORY_POINTS = 120
 
@@ -11,7 +11,6 @@ interface DefiStore extends DefiCache {
   addManualSource: (source: ManualDefiSource) => void
   removeManualSource: (id: string) => void
   toggleManualSource: (id: string) => void
-  upsertSavedProtocolSource: (source: SavedDefiProtocolSource) => void
   setLocalOnlySnapshot: (id: string, enabled?: boolean) => void
   setSnapshot: (id: string, snapshot: DefiSnapshot) => void
   removeSnapshot: (id: string) => void
@@ -29,7 +28,6 @@ export const useDefiStore = create<DefiStore>()(
     (set) => ({
       snapshots: {},
       manualSources: [],
-      savedProtocolSources: [],
       localOnlySnapshotKeys: [],
       lastRefresh: null,
       errors: [],
@@ -63,13 +61,6 @@ export const useDefiStore = create<DefiStore>()(
           manualSources: state.manualSources.map((source) =>
             source.id === id ? { ...source, enabled: !source.enabled } : source
           ),
-        })),
-      upsertSavedProtocolSource: (source) =>
-        set((state) => ({
-          savedProtocolSources: [
-            ...state.savedProtocolSources.filter((item) => item.id !== source.id),
-            source,
-          ].sort((a, b) => a.protocolName.localeCompare(b.protocolName, 'zh-Hans-CN')),
         })),
       setLocalOnlySnapshot: (id, enabled = true) =>
         set((state) => ({
@@ -137,15 +128,14 @@ export const useDefiStore = create<DefiStore>()(
 
           return { history: [...state.history, point].slice(-MAX_HISTORY_POINTS) }
         }),
-      clearAll: () => set({ snapshots: {}, manualSources: [], savedProtocolSources: [], localOnlySnapshotKeys: [], lastRefresh: null, errors: [], history: [] }),
+      clearAll: () => set({ snapshots: {}, manualSources: [], localOnlySnapshotKeys: [], lastRefresh: null, errors: [], history: [] }),
     }),
     {
       name: 'crypto-insight-defi',
-      version: 3,
+      version: 2,
       partialize: (state) => ({
         snapshots: state.snapshots,
         manualSources: state.manualSources,
-        savedProtocolSources: state.savedProtocolSources,
         localOnlySnapshotKeys: state.localOnlySnapshotKeys,
         lastRefresh: state.lastRefresh,
         history: state.history,
@@ -162,7 +152,6 @@ export const useDefiStore = create<DefiStore>()(
                 origin: source.origin ?? 'manual',
               }))
             : [],
-          savedProtocolSources: Array.isArray(state?.savedProtocolSources) ? state.savedProtocolSources : [],
           localOnlySnapshotKeys: Array.isArray(state?.localOnlySnapshotKeys) ? state.localOnlySnapshotKeys : [],
           lastRefresh: state?.lastRefresh ?? null,
           errors: [],

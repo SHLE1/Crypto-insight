@@ -41,16 +41,6 @@ export interface ManualDefiSource {
   origin?: 'manual' | 'api'
 }
 
-export interface SavedDefiProtocolSource {
-  id: string
-  chainKey: string
-  provider: 'bitway'
-  protocolId: string
-  protocolName: string
-  positionName?: string
-  updatedAt: string
-}
-
 export interface Settings {
   quoteCurrency: string
   refreshInterval: number // seconds
@@ -306,7 +296,6 @@ export interface DefiHistoryPoint {
 export interface DefiCache {
   snapshots: Record<string, DefiSnapshot> // keyed by walletId:chainKey
   manualSources: ManualDefiSource[]
-  savedProtocolSources: SavedDefiProtocolSource[]
   localOnlySnapshotKeys: string[]
   lastRefresh: string | null
   errors: ApiErrorState[]
