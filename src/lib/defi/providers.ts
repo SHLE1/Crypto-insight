@@ -1,5 +1,7 @@
-import type { DefiPosition, DefiProtocolSummary, DefiSnapshot, DefiTokenBalance, WalletInput, WalletQuoteInput } from '@/types'
+import type { DefiPosition, DefiProtocolSummary, DefiSnapshot, DefiTokenBalance, ManualDefiSource, WalletInput, WalletQuoteInput } from '@/types'
+import { getBitwayEarnSnapshot } from '@/lib/defi/bitway'
 import { getDebankFallbackSnapshot } from '@/lib/defi/debank'
+import { getManualDefiSnapshots } from '@/lib/defi/manual'
 import {
   getDefiChainKeyFromZapperChainId,
   getDefiChains,
@@ -933,6 +935,41 @@ function decorateFallbackSnapshot(snapshot: DefiSnapshot, message: string): Defi
   }
 }
 
+function mergeDefiSnapshots(primary: DefiSnapshot, supplemental: DefiSnapshot): DefiSnapshot {
+  const existingPositionIds = new Set(primary.positions.map((position) => position.id))
+  const positionsToAdd = supplemental.positions.filter((position) => !existingPositionIds.has(position.id))
+
+  if (positionsToAdd.length === 0) {
+    return primary
+  }
+
+  const protocolMap = new Map<string, DefiProtocolSummary>(
+    primary.protocols.map((protocol) => [protocol.protocolId, { ...protocol }])
+  )
+
+  supplemental.protocols.forEach((protocol) => {
+    const existing = protocolMap.get(protocol.protocolId)
+    if (existing) {
+      existing.totalValue += protocol.totalValue
+      existing.positionCount += protocol.positionCount
+      return
+    }
+
+    protocolMap.set(protocol.protocolId, { ...protocol })
+  })
+
+  return {
+    ...primary,
+    positions: [...primary.positions, ...positionsToAdd],
+    protocols: Array.from(protocolMap.values()),
+    totalValue: primary.totalValue + supplemental.totalValue,
+    totalDepositedValue: primary.totalDepositedValue + supplemental.totalDepositedValue,
+    totalBorrowedValue: primary.totalBorrowedValue + supplemental.totalBorrowedValue,
+    totalRewardsValue: primary.totalRewardsValue + supplemental.totalRewardsValue,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
 function buildFallbackMessage(
   source: 'zapper-empty' | 'zapper-error',
   fallback: 'moralis' | 'debank',
@@ -953,17 +990,36 @@ function buildFallbackMessage(
 async function resolveChainSnapshot(
   wallet: Pick<WalletInput, 'id' | 'address'>,
   chainKey: string,
-  zapperSnapshot: DefiSnapshot
+  zapperSnapshot: DefiSnapshot,
+  manualSources: ManualDefiSource[] = []
 ): Promise<DefiSnapshot> {
   const zapperFailed = zapperSnapshot.status === 'error'
   const zapperEmpty = isEmptySnapshot(zapperSnapshot)
+  const bitwaySnapshot = await getBitwayEarnSnapshot(wallet, chainKey)
+  const manualSnapshot = await getManualDefiSnapshots(wallet, chainKey, manualSources)
 
   if (!zapperFailed && !zapperEmpty) {
-    return zapperSnapshot
+    const withBitway = bitwaySnapshot ? mergeDefiSnapshots(zapperSnapshot, bitwaySnapshot) : zapperSnapshot
+    return manualSnapshot ? mergeDefiSnapshots(withBitway, manualSnapshot) : withBitway
   }
 
   if (chainKey === 'solana') {
     return zapperSnapshot
+  }
+
+  if (bitwaySnapshot) {
+    const withManual = manualSnapshot ? mergeDefiSnapshots(bitwaySnapshot, manualSnapshot) : bitwaySnapshot
+    return decorateFallbackSnapshot(
+      withManual,
+      'Zapper 未识别到该链 DeFi 仓位，已补充 Bitway Earn 链上读取结果。'
+    )
+  }
+
+  if (manualSnapshot) {
+    return decorateFallbackSnapshot(
+      manualSnapshot,
+      'Zapper 未识别到该链 DeFi 仓位，已补充手动链上读取结果。'
+    )
   }
 
   const moralisSnapshot = await getMoralisSnapshot(wallet, chainKey)
@@ -1004,8 +1060,13 @@ async function resolveChainSnapshot(
   return zapperSnapshot
 }
 
-export async function getDefiSnapshots(wallet: WalletQuoteInput): Promise<DefiSnapshot[]> {
-  const chainKeys = getDefiChains(wallet.chainType, wallet.evmChains)
+export async function getDefiSnapshots(wallet: WalletQuoteInput, manualSources: ManualDefiSource[] = []): Promise<DefiSnapshot[]> {
+  const chainKeys = Array.from(
+    new Set([
+      ...getDefiChains(wallet.chainType, wallet.evmChains),
+      ...manualSources.filter((source) => source.enabled).map((source) => source.chainKey),
+    ])
+  )
 
   if (wallet.chainType === 'btc' || chainKeys.length === 0) {
     return []
@@ -1027,7 +1088,7 @@ export async function getDefiSnapshots(wallet: WalletQuoteInput): Promise<DefiSn
   return Promise.all(
     chainKeys.map(async (chainKey) => {
       const zapperSnapshot = zapperSnapshots.get(chainKey) ?? buildEmptySnapshot(wallet.id, chainKey, 'zapper')
-      return resolveChainSnapshot(wallet, chainKey, zapperSnapshot)
+      return resolveChainSnapshot(wallet, chainKey, zapperSnapshot, manualSources)
     })
   )
 }

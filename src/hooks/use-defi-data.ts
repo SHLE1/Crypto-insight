@@ -74,6 +74,7 @@ export function useDefiData() {
   const {
     hydrated,
     snapshots,
+    manualSources,
     errors,
     history,
     lastRefresh,
@@ -90,7 +91,11 @@ export function useDefiData() {
     [wallets]
   )
   const activeWalletIds = useMemo(() => enabledWallets.map((wallet) => wallet.id), [enabledWallets])
-  const activeSourceKey = useMemo(() => activeWalletIds.join('|'), [activeWalletIds])
+  const enabledManualSources = useMemo(() => manualSources.filter((source) => source.enabled), [manualSources])
+  const activeSourceKey = useMemo(
+    () => `${activeWalletIds.join('|')}::${enabledManualSources.map((source) => `${source.chainKey}:${source.contractAddress}`).join('|')}`,
+    [activeWalletIds, enabledManualSources]
+  )
   const walletNameMap = useMemo(
     () => new Map(wallets.map((wallet) => [wallet.id, wallet.name || wallet.address.slice(0, 6)])),
     [wallets]
@@ -98,9 +103,14 @@ export function useDefiData() {
   const expectedSnapshotKeys = useMemo(
     () =>
       enabledWallets.flatMap((wallet) =>
-        getDefiChains(wallet.chainType, wallet.evmChains).map((chainKey) => `${wallet.id}:${chainKey}`)
+        Array.from(
+          new Set([
+            ...getDefiChains(wallet.chainType, wallet.evmChains),
+            ...enabledManualSources.map((source) => source.chainKey),
+          ])
+        ).map((chainKey) => `${wallet.id}:${chainKey}`)
       ),
-    [enabledWallets]
+    [enabledManualSources, enabledWallets]
   )
   const expectedSnapshotKeySet = useMemo(() => new Set(expectedSnapshotKeys), [expectedSnapshotKeys])
 
@@ -147,6 +157,7 @@ export function useDefiData() {
           address: wallet.address,
           evmChains: wallet.evmChains,
         })),
+        manualSources: enabledManualSources,
       }),
     })
 
@@ -218,6 +229,7 @@ export function useDefiData() {
     appendHistoryPoint,
     clearErrors,
     enabledWallets,
+    enabledManualSources,
     expectedSnapshotKeySet,
     pruneSnapshots,
     setLastRefresh,

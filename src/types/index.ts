@@ -32,6 +32,14 @@ export interface WalletQuoteInput {
   evmChains?: string[]
 }
 
+export interface ManualDefiSource {
+  id: string
+  chainKey: string
+  contractAddress: string
+  label?: string
+  enabled: boolean
+}
+
 export interface Settings {
   quoteCurrency: string
   refreshInterval: number // seconds
@@ -43,7 +51,7 @@ export interface Settings {
 // ===== 资产与报价 =====
 
 export type PriceStatus = 'live' | 'stale' | 'missing'
-export type DefiProvider = 'zapper' | 'moralis' | 'debank'
+export type DefiProvider = 'zapper' | 'moralis' | 'debank' | 'bitway' | 'manual'
 export type DefiStatus = 'success' | 'partial' | 'error'
 export type DefiPositionType =
   | 'lending'
@@ -179,6 +187,17 @@ export type DefiPositionMetadata =
       provider: 'debank'
       synthetic?: boolean
     }
+  | {
+      provider: 'bitway'
+      vaultAddress: string
+      tokenAddress: string
+      lpTokenAddress: string
+    }
+  | {
+      provider: 'manual'
+      contractAddress: string
+      priceStatus: PriceStatus
+    }
 
 export interface DefiPosition {
   id: string
@@ -275,6 +294,7 @@ export interface DefiHistoryPoint {
 
 export interface DefiCache {
   snapshots: Record<string, DefiSnapshot> // keyed by walletId:chainKey
+  manualSources: ManualDefiSource[]
   lastRefresh: string | null
   errors: ApiErrorState[]
   history: DefiHistoryPoint[]

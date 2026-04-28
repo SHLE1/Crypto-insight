@@ -1,12 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ApiErrorState, DefiCache, DefiHistoryPoint, DefiSnapshot } from '@/types'
+import type { ApiErrorState, DefiCache, DefiHistoryPoint, DefiSnapshot, ManualDefiSource } from '@/types'
 
 const MAX_HISTORY_POINTS = 120
 
 interface DefiStore extends DefiCache {
   hydrated: boolean
   setHydrated: (hydrated: boolean) => void
+  addManualSource: (source: ManualDefiSource) => void
+  removeManualSource: (id: string) => void
+  toggleManualSource: (id: string) => void
   setSnapshot: (id: string, snapshot: DefiSnapshot) => void
   removeSnapshot: (id: string) => void
   pruneSnapshots: (activeIds: string[]) => void
@@ -22,11 +25,26 @@ export const useDefiStore = create<DefiStore>()(
   persist(
     (set) => ({
       snapshots: {},
+      manualSources: [],
       lastRefresh: null,
       errors: [],
       history: [],
       hydrated: false,
       setHydrated: (hydrated) => set({ hydrated }),
+      addManualSource: (source) =>
+        set((state) => ({
+          manualSources: [...state.manualSources.filter((item) => item.id !== source.id), source],
+        })),
+      removeManualSource: (id) =>
+        set((state) => ({
+          manualSources: state.manualSources.filter((source) => source.id !== id),
+        })),
+      toggleManualSource: (id) =>
+        set((state) => ({
+          manualSources: state.manualSources.map((source) =>
+            source.id === id ? { ...source, enabled: !source.enabled } : source
+          ),
+        })),
       setSnapshot: (id, snapshot) =>
         set((state) => ({
           snapshots: { ...state.snapshots, [id]: snapshot },
@@ -87,13 +105,14 @@ export const useDefiStore = create<DefiStore>()(
 
           return { history: [...state.history, point].slice(-MAX_HISTORY_POINTS) }
         }),
-      clearAll: () => set({ snapshots: {}, lastRefresh: null, errors: [], history: [] }),
+      clearAll: () => set({ snapshots: {}, manualSources: [], lastRefresh: null, errors: [], history: [] }),
     }),
     {
       name: 'crypto-insight-defi',
       version: 1,
       partialize: (state) => ({
         snapshots: state.snapshots,
+        manualSources: state.manualSources,
         lastRefresh: state.lastRefresh,
         history: state.history,
       }),
@@ -102,6 +121,7 @@ export const useDefiStore = create<DefiStore>()(
 
         return {
           snapshots: state?.snapshots ?? {},
+          manualSources: Array.isArray(state?.manualSources) ? state.manualSources : [],
           lastRefresh: state?.lastRefresh ?? null,
           errors: [],
           history: Array.isArray(state?.history) ? state.history.slice(-MAX_HISTORY_POINTS) : [],

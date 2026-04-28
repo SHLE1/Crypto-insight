@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDefiSnapshots } from '@/lib/defi/providers'
-import type { DefiQuoteResponse, DefiSnapshot, WalletQuoteInput } from '@/types'
+import type { DefiQuoteResponse, DefiSnapshot, ManualDefiSource, WalletQuoteInput } from '@/types'
 
 export const runtime = 'nodejs'
 
@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const wallets: WalletQuoteInput[] = body.wallets || []
+    const manualSources: ManualDefiSource[] = Array.isArray(body.manualSources) ? body.manualSources : []
     const cursor = typeof body.cursor === 'number' ? body.cursor : 0
     const mode = body.mode === 'full' ? 'full' : 'single'
     const maxWalletsPerRequest = 1
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     const chunkResults: DefiSnapshot[][] = []
     for (const wallet of walletChunk) {
-      chunkResults.push(await getDefiSnapshots(wallet))
+      chunkResults.push(await getDefiSnapshots(wallet, manualSources))
     }
     const results = chunkResults.flat()
 

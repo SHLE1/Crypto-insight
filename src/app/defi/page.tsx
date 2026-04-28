@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { RefreshCw, Coins, Settings, Wallet } from 'lucide-react'
 import { DefiSummary } from '@/components/dashboard/defi-summary'
+import { ManualDefiSources } from '@/components/dashboard/manual-defi-sources'
 import { EmptyState } from '@/components/layout/empty-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -76,6 +77,8 @@ export default function DefiPage() {
         />
       ) : (
         <>
+          <ManualDefiSources isFetching={isFetching} onRefresh={() => refetch()} />
+
           <DefiSummary
             isEnabled={isEnabled}
             hasDefiSources={hasDefiSources}
@@ -113,6 +116,7 @@ export default function DefiPage() {
                 <li>优先使用 Zapper；若识别失败，EVM 链路将依次尝试 Moralis 与 DeBank 公共页面补全数据。</li>
                 <li>遇到限速或短暂异常时，系统将按钱包轮转刷新，避免阻塞在单一钱包上。</li>
                 <li>若本轮未能覆盖全部钱包，系统将在后续轮次逐步补全。</li>
+                <li>手动补充会直接读取链上代币余额；若没有可用市场价格，只显示数量，不会凭空计入估值。</li>
               </ul>
             </div>
           </div>
