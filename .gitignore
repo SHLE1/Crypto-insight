@@ -23,6 +23,13 @@
 # misc
 .DS_Store
 *.pem
+/.claude-plugin/
+/config.json
+/events.jsonl
+/labels/
+/sessions/
+/statuses/
+/views.json
 
 # debug
 npm-debug.log*
