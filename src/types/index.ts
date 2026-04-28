@@ -38,7 +38,6 @@ export interface ManualDefiSource {
   contractAddress: string
   label?: string
   enabled: boolean
-  origin?: 'manual' | 'api'
 }
 
 export interface Settings {
@@ -296,7 +295,6 @@ export interface DefiHistoryPoint {
 export interface DefiCache {
   snapshots: Record<string, DefiSnapshot> // keyed by walletId:chainKey
   manualSources: ManualDefiSource[]
-  localOnlySnapshotKeys: string[]
   lastRefresh: string | null
   errors: ApiErrorState[]
   history: DefiHistoryPoint[]

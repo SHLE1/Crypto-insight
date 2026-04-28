@@ -9,9 +9,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const wallets: WalletQuoteInput[] = body.wallets || []
     const manualSources: ManualDefiSource[] = Array.isArray(body.manualSources) ? body.manualSources : []
-    const localOnlySnapshotKeys: string[] = Array.isArray(body.localOnlySnapshotKeys)
-      ? body.localOnlySnapshotKeys.filter((value: unknown): value is string => typeof value === 'string')
-      : []
     const cursor = typeof body.cursor === 'number' ? body.cursor : 0
     const mode = body.mode === 'full' ? 'full' : 'single'
     const maxWalletsPerRequest = 1
@@ -37,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     const chunkResults: DefiSnapshot[][] = []
     for (const wallet of walletChunk) {
-      chunkResults.push(await getDefiSnapshots(wallet, manualSources, localOnlySnapshotKeys))
+      chunkResults.push(await getDefiSnapshots(wallet, manualSources))
     }
     const results = chunkResults.flat()
 

@@ -1,34 +1,8 @@
-import type { DefiPosition, DefiProtocolSummary, DefiSnapshot, DefiStatus, ManualDefiSource, WalletInput } from '@/types'
-import { getEvmChainKeyForDefi } from '@/lib/defi/chains'
+import type { DefiPosition, DefiProtocolSummary, DefiSnapshot, ManualDefiSource, WalletInput } from '@/types'
 import { EVM_CHAINS } from '@/lib/evm-chains'
 import { getEvmTokenPrices } from '@/lib/market'
 
 const MANUAL_DEFI_TIMEOUT_MS = 12_000
-
-function buildManualSnapshot(
-  walletId: string,
-  chainKey: string,
-  positions: DefiPosition[],
-  protocols: DefiProtocolSummary[],
-  status: DefiStatus = 'success',
-  error?: string
-): DefiSnapshot {
-  return {
-    source: `${walletId}:${chainKey}`,
-    walletId,
-    chainKey,
-    provider: 'manual',
-    positions,
-    protocols,
-    totalValue: positions.reduce((sum, position) => sum + position.value, 0),
-    totalDepositedValue: positions.reduce((sum, position) => sum + position.value, 0),
-    totalBorrowedValue: 0,
-    totalRewardsValue: 0,
-    updatedAt: new Date().toISOString(),
-    status,
-    error,
-  }
-}
 
 function addressToAbi(address: string) {
   return address.toLowerCase().replace('0x', '').padStart(64, '0')
@@ -125,8 +99,7 @@ async function getManualSourcePosition(
   wallet: Pick<WalletInput, 'id' | 'address'>,
   source: ManualDefiSource
 ) {
-  const evmChainKey = getEvmChainKeyForDefi(source.chainKey)
-  const chain = evmChainKey ? EVM_CHAINS[evmChainKey] : null
+  const chain = EVM_CHAINS[source.chainKey]
   if (!chain || !source.enabled) {
     return null
   }
@@ -197,8 +170,7 @@ async function getManualSourcePosition(
 export async function getManualDefiSnapshots(
   wallet: Pick<WalletInput, 'id' | 'address'>,
   chainKey: string,
-  manualSources: ManualDefiSource[],
-  options: { allowEmpty?: boolean } = {}
+  manualSources: ManualDefiSource[]
 ): Promise<DefiSnapshot | null> {
   const chainSources = manualSources.filter((source) => source.enabled && source.chainKey === chainKey)
   if (chainSources.length === 0) {
@@ -209,22 +181,9 @@ export async function getManualDefiSnapshots(
   const positions = results
     .filter((result): result is PromiseFulfilledResult<DefiPosition> => result.status === 'fulfilled' && Boolean(result.value))
     .map((result) => result.value)
-  const failures = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
 
   if (positions.length === 0) {
-    if (!options.allowEmpty) {
-      return null
-    }
-
-    const firstError = failures[0]?.reason
-    return buildManualSnapshot(
-      wallet.id,
-      chainKey,
-      [],
-      [],
-      failures.length > 0 ? 'error' : 'success',
-      failures.length > 0 ? (firstError instanceof Error ? firstError.message : '手动链上读取失败') : undefined
-    )
+    return null
   }
 
   const protocolMap = new Map<string, DefiProtocolSummary>()
@@ -240,12 +199,18 @@ export async function getManualDefiSnapshots(
     })
   })
 
-  return buildManualSnapshot(
-    wallet.id,
+  return {
+    source: `${wallet.id}:${chainKey}`,
+    walletId: wallet.id,
     chainKey,
+    provider: 'manual',
     positions,
-    Array.from(protocolMap.values()),
-    failures.length > 0 ? 'partial' : 'success',
-    failures.length > 0 ? '部分手动链上来源读取失败，当前仅展示可用结果。' : undefined
-  )
+    protocols: Array.from(protocolMap.values()),
+    totalValue: positions.reduce((sum, position) => sum + position.value, 0),
+    totalDepositedValue: positions.reduce((sum, position) => sum + position.value, 0),
+    totalBorrowedValue: 0,
+    totalRewardsValue: 0,
+    updatedAt: new Date().toISOString(),
+    status: 'success',
+  }
 }

@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { getDefiChainKeyFromEvmChainKey } from '@/lib/defi/chains'
 import type { ApiErrorState, DefiCache, DefiHistoryPoint, DefiSnapshot, ManualDefiSource } from '@/types'
 
 const MAX_HISTORY_POINTS = 120
@@ -11,7 +10,6 @@ interface DefiStore extends DefiCache {
   addManualSource: (source: ManualDefiSource) => void
   removeManualSource: (id: string) => void
   toggleManualSource: (id: string) => void
-  setLocalOnlySnapshot: (id: string, enabled?: boolean) => void
   setSnapshot: (id: string, snapshot: DefiSnapshot) => void
   removeSnapshot: (id: string) => void
   pruneSnapshots: (activeIds: string[]) => void
@@ -28,30 +26,15 @@ export const useDefiStore = create<DefiStore>()(
     (set) => ({
       snapshots: {},
       manualSources: [],
-      localOnlySnapshotKeys: [],
       lastRefresh: null,
       errors: [],
       history: [],
       hydrated: false,
       setHydrated: (hydrated) => set({ hydrated }),
       addManualSource: (source) =>
-        set((state) => {
-          const existing = state.manualSources.find((item) => item.id === source.id)
-
-          return {
-            manualSources: [
-              ...state.manualSources.filter((item) => item.id !== source.id),
-              existing
-                ? {
-                    ...source,
-                    label: existing.label ?? source.label,
-                    enabled: existing.enabled,
-                    origin: existing.origin === 'manual' ? 'manual' : source.origin ?? existing.origin,
-                  }
-                : source,
-            ],
-          }
-        }),
+        set((state) => ({
+          manualSources: [...state.manualSources.filter((item) => item.id !== source.id), source],
+        })),
       removeManualSource: (id) =>
         set((state) => ({
           manualSources: state.manualSources.filter((source) => source.id !== id),
@@ -61,12 +44,6 @@ export const useDefiStore = create<DefiStore>()(
           manualSources: state.manualSources.map((source) =>
             source.id === id ? { ...source, enabled: !source.enabled } : source
           ),
-        })),
-      setLocalOnlySnapshot: (id, enabled = true) =>
-        set((state) => ({
-          localOnlySnapshotKeys: enabled
-            ? Array.from(new Set([...state.localOnlySnapshotKeys, id]))
-            : state.localOnlySnapshotKeys.filter((item) => item !== id),
         })),
       setSnapshot: (id, snapshot) =>
         set((state) => ({
@@ -128,15 +105,14 @@ export const useDefiStore = create<DefiStore>()(
 
           return { history: [...state.history, point].slice(-MAX_HISTORY_POINTS) }
         }),
-      clearAll: () => set({ snapshots: {}, manualSources: [], localOnlySnapshotKeys: [], lastRefresh: null, errors: [], history: [] }),
+      clearAll: () => set({ snapshots: {}, manualSources: [], lastRefresh: null, errors: [], history: [] }),
     }),
     {
       name: 'crypto-insight-defi',
-      version: 2,
+      version: 1,
       partialize: (state) => ({
         snapshots: state.snapshots,
         manualSources: state.manualSources,
-        localOnlySnapshotKeys: state.localOnlySnapshotKeys,
         lastRefresh: state.lastRefresh,
         history: state.history,
       }),
@@ -145,14 +121,7 @@ export const useDefiStore = create<DefiStore>()(
 
         return {
           snapshots: state?.snapshots ?? {},
-          manualSources: Array.isArray(state?.manualSources)
-            ? state.manualSources.map((source) => ({
-                ...source,
-                chainKey: getDefiChainKeyFromEvmChainKey(source.chainKey),
-                origin: source.origin ?? 'manual',
-              }))
-            : [],
-          localOnlySnapshotKeys: Array.isArray(state?.localOnlySnapshotKeys) ? state.localOnlySnapshotKeys : [],
+          manualSources: Array.isArray(state?.manualSources) ? state.manualSources : [],
           lastRefresh: state?.lastRefresh ?? null,
           errors: [],
           history: Array.isArray(state?.history) ? state.history.slice(-MAX_HISTORY_POINTS) : [],

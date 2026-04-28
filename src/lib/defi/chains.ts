@@ -9,15 +9,6 @@ const DEFI_EVM_CHAIN_MAP: Record<string, string> = {
   avax: 'avalanche',
 }
 
-const DEFI_TO_EVM_CHAIN_KEY_MAP: Record<string, string> = {
-  ethereum: 'eth',
-  bsc: 'bsc',
-  arbitrum: 'arb',
-  polygon: 'polygon',
-  base: 'base',
-  avalanche: 'avax',
-}
-
 const ZAPPER_CHAIN_ID_MAP: Record<string, number> = {
   ethereum: 1,
   bsc: 56,
@@ -77,18 +68,6 @@ export function getDefiChains(chainType: 'evm' | 'solana' | 'btc', evmChains?: s
         .filter((chainId): chainId is string => Boolean(chainId))
     )
   )
-}
-
-export function getDefiChainKeyFromEvmChainKey(chainKey: string) {
-  return DEFI_EVM_CHAIN_MAP[chainKey] ?? chainKey
-}
-
-export function getEvmChainKeyForDefi(chainKey: string) {
-  if (chainKey in DEFI_EVM_CHAIN_MAP) {
-    return chainKey
-  }
-
-  return DEFI_TO_EVM_CHAIN_KEY_MAP[chainKey] ?? null
 }
 
 export function getZapperChainIds(chainKeys: string[]) {

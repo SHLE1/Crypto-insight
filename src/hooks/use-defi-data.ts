@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { formatDefiChainLabel, getDefiChains } from '@/lib/defi/chains'
-import { extractAutoPinnedSnapshotSources } from '@/lib/defi/local-pinning'
 import { useWalletStore } from '@/stores/wallets'
 import { useSettingsStore } from '@/stores/settings'
 import { useDefiStore } from '@/stores/defi'
@@ -76,12 +75,9 @@ export function useDefiData() {
     hydrated,
     snapshots,
     manualSources,
-    localOnlySnapshotKeys,
     errors,
     history,
     lastRefresh,
-    addManualSource,
-    setLocalOnlySnapshot,
     setSnapshot,
     pruneSnapshots,
     clearErrors,
@@ -97,11 +93,8 @@ export function useDefiData() {
   const activeWalletIds = useMemo(() => enabledWallets.map((wallet) => wallet.id), [enabledWallets])
   const enabledManualSources = useMemo(() => manualSources.filter((source) => source.enabled), [manualSources])
   const activeSourceKey = useMemo(
-    () =>
-      `${activeWalletIds.join('|')}::${enabledManualSources
-        .map((source) => `${source.chainKey}:${source.contractAddress}`)
-        .join('|')}::${localOnlySnapshotKeys.slice().sort().join('|')}`,
-    [activeWalletIds, enabledManualSources, localOnlySnapshotKeys]
+    () => `${activeWalletIds.join('|')}::${enabledManualSources.map((source) => `${source.chainKey}:${source.contractAddress}`).join('|')}`,
+    [activeWalletIds, enabledManualSources]
   )
   const walletNameMap = useMemo(
     () => new Map(wallets.map((wallet) => [wallet.id, wallet.name || wallet.address.slice(0, 6)])),
@@ -165,7 +158,6 @@ export function useDefiData() {
           evmChains: wallet.evmChains,
         })),
         manualSources: enabledManualSources,
-        localOnlySnapshotKeys,
       }),
     })
 
@@ -192,12 +184,6 @@ export function useDefiData() {
       const previousSnapshot = mergedSnapshots.get(snapshot.source)
       const retained = shouldUseCachedSnapshot(previousSnapshot, snapshot)
       const effectiveSnapshot = retained && previousSnapshot ? previousSnapshot : snapshot
-
-      const autoPinned = extractAutoPinnedSnapshotSources(snapshot)
-      if (autoPinned.shouldUseLocalOnly) {
-        autoPinned.sources.forEach((source) => addManualSource(source))
-        setLocalOnlySnapshot(snapshot.source, true)
-      }
 
       mergedSnapshots.set(snapshot.source, effectiveSnapshot)
       setSnapshot(snapshot.source, effectiveSnapshot)
@@ -240,16 +226,13 @@ export function useDefiData() {
     activeSourceKey,
     activeWalletIds,
     addError,
-    addManualSource,
     appendHistoryPoint,
     clearErrors,
     enabledWallets,
     enabledManualSources,
     expectedSnapshotKeySet,
-    localOnlySnapshotKeys,
     pruneSnapshots,
     setLastRefresh,
-    setLocalOnlySnapshot,
     setSnapshot,
     walletNameMap,
   ])
