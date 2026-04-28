@@ -37,6 +37,15 @@ interface BinanceCrossMarginAccountResponse {
   }>
 }
 
+interface BinancePortfolioMarginBalanceItem {
+  asset: string
+  crossMarginAsset?: string
+  crossMarginFree?: string
+  crossMarginInterest?: string
+  crossMarginLocked?: string
+  crossMarginBorrowed?: string
+}
+
 interface BinanceIsolatedMarginAccountResponse {
   assets?: Array<{
     baseAsset?: {
@@ -161,6 +170,7 @@ type BinanceWalletName =
   | 'Funding'
   | 'Earn'
   | 'Cross Margin'
+  | 'Cross Margin (PM)'
   | 'Isolated Margin'
   | 'USDⓈ-M Futures'
   | 'COIN-M Futures'
@@ -222,6 +232,7 @@ const BINANCE_WALLET_META: Record<BinanceWalletName, BinanceWalletMeta> = {
   Funding: { key: 'funding', label: '资金账户', expandable: true },
   Earn: { key: 'earn', label: '理财', expandable: true },
   'Cross Margin': { key: 'cross-margin', label: '全仓杠杆', expandable: true },
+  'Cross Margin (PM)': { key: 'cross-margin-pm', label: '全仓杠杆 (PM)', expandable: true },
   'Isolated Margin': { key: 'isolated-margin', label: '逐仓杠杆', expandable: true },
   'USDⓈ-M Futures': { key: 'usdm-futures', label: 'U 本位合约', expandable: true },
   'COIN-M Futures': { key: 'coinm-futures', label: '币本位合约', expandable: true },
@@ -1072,6 +1083,32 @@ async function fetchBinanceCrossMarginAssets(account: CexAccountInput) {
   )
 }
 
+async function fetchBinancePortfolioMarginCrossMarginAssets(account: CexAccountInput) {
+  const data = await fetchBinanceSigned<BinancePortfolioMarginBalanceItem[] | BinancePortfolioMarginBalanceItem>(
+    account,
+    {
+      path: '/papi/v1/balance',
+      baseUrl: 'https://papi.binance.com',
+    }
+  )
+  const items = Array.isArray(data) ? data : [data]
+
+  return createBinanceWalletEntries(
+    'Cross Margin (PM)',
+    items
+      .map((item) => ({
+        symbol: item.asset,
+        balance:
+          toPositiveNumber(item.crossMarginAsset) ||
+          toPositiveNumber(item.crossMarginFree) +
+            toPositiveNumber(item.crossMarginLocked) -
+            toPositiveNumber(item.crossMarginBorrowed) -
+            toPositiveNumber(item.crossMarginInterest),
+      }))
+      .filter((asset) => asset.balance > 0)
+  )
+}
+
 async function fetchBinanceIsolatedMarginAssets(account: CexAccountInput) {
   const data = await fetchBinanceSigned<BinanceIsolatedMarginAccountResponse>(account, {
     path: '/sapi/v1/margin/isolated/account',
@@ -1321,6 +1358,14 @@ async function fetchBinanceSnapshot(account: CexAccountInput): Promise<{
 
   if (shouldQueryWallet('Earn')) {
     tasks.push(fetchBinanceEarnAssets(account))
+  }
+
+  if (shouldQueryWallet('Cross Margin (PM)')) {
+    tasks.push(
+      resolveBinanceWalletQuery('Cross Margin (PM)', '全仓杠杆 (PM)', () =>
+        fetchBinancePortfolioMarginCrossMarginAssets(account)
+      )
+    )
   }
 
   if (shouldQueryWallet('Cross Margin')) {

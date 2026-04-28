@@ -68,7 +68,7 @@ export function DefiSummary({
   errors,
   refetch,
 }: DefiSummaryProps) {
-  const primaryError = errors[0]
+  const primaryError = errors[errors.length - 1]
   const hasRecoverableWarning = Boolean(
     primaryError && (
       primaryError.message.includes('额度或速率受限') ||
