@@ -19,6 +19,7 @@ interface ManualDefiSourcesProps {
 
 export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesProps) {
   const manualSources = useDefiStore((state) => state.manualSources)
+  const savedProtocolSources = useDefiStore((state) => state.savedProtocolSources)
   const addManualSource = useDefiStore((state) => state.addManualSource)
   const removeManualSource = useDefiStore((state) => state.removeManualSource)
   const toggleManualSource = useDefiStore((state) => state.toggleManualSource)
@@ -64,9 +65,9 @@ export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesPr
     <div className="border-y sm:border sm:rounded-xl border-border/40 p-4 sm:p-6">
       <div className="mb-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">手动补充</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">本地来源</h3>
           <p className="mt-2 text-xs leading-5 text-muted-foreground">
-            自动来源识别不到时，可按链和合约地址读取当前钱包的链上余额；API 成功识别且可本地化的来源也会自动固定到这里。价格缺失时只显示数量。
+            手动添加的链和 CA、API 成功固定下来的可本地化来源，以及像 Bitway Earn 这样已成功识别的链上协议来源，都会保存在浏览器本地并展示在这里。价格缺失时只显示数量。
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={onRefresh} disabled={isFetching} className="gap-2 shrink-0">
@@ -123,6 +124,7 @@ export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesPr
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium">{source.label || shortAddress(source.contractAddress)}</p>
                   <Badge variant={source.enabled ? 'secondary' : 'outline'}>{source.enabled ? '启用' : '暂停'}</Badge>
+                  <Badge variant="outline">CA</Badge>
                   {source.origin === 'api' ? <Badge variant="outline">自动固定</Badge> : null}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -136,6 +138,26 @@ export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesPr
                 <Button type="button" variant="outline" size="icon-sm" onClick={() => removeManualSource(source.id)} aria-label="删除手动来源">
                   <Trash2 className="size-3.5" />
                 </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {savedProtocolSources.length > 0 ? (
+        <div className="mt-5 divide-y divide-border/30 border-t border-border/40">
+          {savedProtocolSources.map((source) => (
+            <div key={source.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-medium">{source.positionName || source.protocolName}</p>
+                  <Badge variant="secondary">已保存</Badge>
+                  <Badge variant="outline">链上协议</Badge>
+                  <Badge variant="outline">{source.provider === 'bitway' ? 'Bitway Earn' : source.provider}</Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatDefiChainLabel(source.chainKey)} · {source.protocolName}
+                </p>
               </div>
             </div>
           ))}
