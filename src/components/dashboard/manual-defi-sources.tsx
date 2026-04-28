@@ -59,21 +59,21 @@ export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesPr
   }
 
   return (
-    <div className="border-y sm:border sm:rounded-xl border-border/40 bg-card/30 p-4 sm:p-5">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div className="border-y sm:border sm:rounded-xl border-border/40 p-4 sm:p-6">
+      <div className="mb-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold tracking-tight">手动补充</h3>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">手动补充</h3>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
             自动来源识别不到时，按链和合约地址读取当前钱包的链上余额；价格缺失时只显示数量。
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isFetching} className="gap-2">
+        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isFetching} className="gap-2 shrink-0">
           <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
           刷新
         </Button>
       </div>
 
-      <form className="mt-4 grid gap-3 lg:grid-cols-[120px_minmax(0,1fr)_minmax(160px,220px)_auto]" onSubmit={handleSubmit}>
+      <form className="grid gap-3 lg:grid-cols-[120px_minmax(0,1fr)_minmax(160px,220px)_auto]" onSubmit={handleSubmit}>
         <div className="grid gap-1.5">
           <Label htmlFor="manual-defi-chain">Chain</Label>
           <select
@@ -114,7 +114,7 @@ export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesPr
       {error ? <p className="mt-3 text-xs text-muted-foreground">{error}</p> : null}
 
       {manualSources.length > 0 ? (
-        <div className="mt-4 divide-y divide-border/30 border-t border-border/40">
+        <div className="mt-5 divide-y divide-border/30 border-t border-border/40">
           {manualSources.map((source) => (
             <div key={source.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">

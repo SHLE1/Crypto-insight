@@ -77,8 +77,6 @@ export default function DefiPage() {
         />
       ) : (
         <>
-          <ManualDefiSources isFetching={isFetching} onRefresh={() => refetch()} />
-
           <DefiSummary
             isEnabled={isEnabled}
             hasDefiSources={hasDefiSources}
@@ -103,22 +101,20 @@ export default function DefiPage() {
             refetch={() => refetch()}
           />
 
-          <div className="bg-card/40 border border-border/40 transition-colors hover:bg-muted/10 rounded-none mt-6">
-            <div className="p-4 sm:p-6 pb-2">
-              <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-widest">
-                <Coins className="size-4 opacity-70" />
-                数据说明
-              </h3>
-            </div>
-            <div className="p-4 sm:p-6 pt-0">
-              <ul className="list-disc pl-4 flex flex-col gap-1 text-xs text-muted-foreground leading-relaxed">
-                <li>DeFi 净值同步计入总资产，并在总览分布中单独展示。</li>
-                <li>优先使用 Zapper；若识别失败，EVM 链路将依次尝试 Moralis 与 DeBank 公共页面补全数据。</li>
-                <li>遇到限速或短暂异常时，系统将按钱包轮转刷新，避免阻塞在单一钱包上。</li>
-                <li>若本轮未能覆盖全部钱包，系统将在后续轮次逐步补全。</li>
-                <li>手动补充会直接读取链上代币余额；若没有可用市场价格，只显示数量，不会凭空计入估值。</li>
-              </ul>
-            </div>
+          <ManualDefiSources isFetching={isFetching} onRefresh={() => refetch()} />
+
+          <div className="border-y sm:border sm:rounded-xl border-border/40 p-4 sm:p-6">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
+              <Coins className="size-4" />
+              数据说明
+            </h3>
+            <ul className="list-disc pl-4 flex flex-col gap-1 text-xs text-muted-foreground leading-relaxed">
+              <li>DeFi 净值同步计入总资产，并在总览分布中单独展示。</li>
+              <li>优先使用 Zapper；若识别失败，EVM 链路将依次尝试 Moralis 与 DeBank 公共页面补全数据。</li>
+              <li>遇到限速或短暂异常时，系统将按钱包轮转刷新，避免阻塞在单一钱包上。</li>
+              <li>若本轮未能覆盖全部钱包，系统将在后续轮次逐步补全。</li>
+              <li>手动补充会直接读取链上代币余额；若没有可用市场价格，只显示数量，不会凭空计入估值。</li>
+            </ul>
           </div>
         </>
       )}
