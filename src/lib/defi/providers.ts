@@ -622,10 +622,13 @@ function buildZapperPosition({
   }
 }
 
-async function getZapperSnapshots(wallet: WalletQuoteInput) {
-  const chainKeys = getDefiChains(wallet.chainType, wallet.evmChains)
+async function getZapperSnapshots(wallet: WalletQuoteInput, chainKeys = getDefiChains(wallet.chainType, wallet.evmChains)) {
   const chainIds = getZapperChainIds(chainKeys)
   const apiKey = process.env.ZAPPER_API_KEY?.trim()
+
+  if (chainKeys.length === 0) {
+    return new Map<string, DefiSnapshot>()
+  }
 
   if (!apiKey) {
     return new Map<string, DefiSnapshot>(
@@ -987,6 +990,44 @@ function buildFallbackMessage(
   return `${prefix}，Moralis 未返回可用结果，已回退到 DeBank 公共页面兜底。`
 }
 
+async function resolveLocalOnlyChainSnapshot(
+  wallet: Pick<WalletInput, 'id' | 'address'>,
+  chainKey: string,
+  manualSources: ManualDefiSource[] = []
+): Promise<DefiSnapshot> {
+  const [bitwaySnapshot, manualSnapshot] = await Promise.all([
+    getBitwayEarnSnapshot(wallet, chainKey),
+    getManualDefiSnapshots(wallet, chainKey, manualSources, { allowEmpty: true }),
+  ])
+
+  if (bitwaySnapshot && manualSnapshot) {
+    return mergeDefiSnapshots(bitwaySnapshot, manualSnapshot)
+  }
+
+  if (bitwaySnapshot) {
+    return bitwaySnapshot
+  }
+
+  if (manualSnapshot) {
+    return manualSnapshot
+  }
+
+  return {
+    source: `${wallet.id}:${chainKey}`,
+    walletId: wallet.id,
+    chainKey,
+    provider: 'manual',
+    positions: [],
+    protocols: [],
+    totalValue: 0,
+    totalDepositedValue: 0,
+    totalBorrowedValue: 0,
+    totalRewardsValue: 0,
+    updatedAt: new Date().toISOString(),
+    status: 'success',
+  }
+}
+
 async function resolveChainSnapshot(
   wallet: Pick<WalletInput, 'id' | 'address'>,
   chainKey: string,
@@ -1060,7 +1101,11 @@ async function resolveChainSnapshot(
   return zapperSnapshot
 }
 
-export async function getDefiSnapshots(wallet: WalletQuoteInput, manualSources: ManualDefiSource[] = []): Promise<DefiSnapshot[]> {
+export async function getDefiSnapshots(
+  wallet: WalletQuoteInput,
+  manualSources: ManualDefiSource[] = [],
+  localOnlySnapshotKeys: string[] = []
+): Promise<DefiSnapshot[]> {
   const chainKeys = Array.from(
     new Set([
       ...getDefiChains(wallet.chainType, wallet.evmChains),
@@ -1072,21 +1117,31 @@ export async function getDefiSnapshots(wallet: WalletQuoteInput, manualSources: 
     return []
   }
 
-  let zapperSnapshots: Map<string, DefiSnapshot>
-  try {
-    zapperSnapshots = await getZapperSnapshots(wallet)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Zapper 查询失败'
-    zapperSnapshots = new Map(
-      chainKeys.map((chainKey) => [
-        chainKey,
-        buildEmptySnapshot(wallet.id, chainKey, 'zapper', 'error', message),
-      ])
-    )
+  const localOnlySnapshotKeySet = new Set(localOnlySnapshotKeys)
+  const localOnlyChainKeys = chainKeys.filter((chainKey) => localOnlySnapshotKeySet.has(`${wallet.id}:${chainKey}`))
+  const apiChainKeys = chainKeys.filter((chainKey) => !localOnlySnapshotKeySet.has(`${wallet.id}:${chainKey}`))
+
+  let zapperSnapshots: Map<string, DefiSnapshot> = new Map()
+  if (apiChainKeys.length > 0) {
+    try {
+      zapperSnapshots = await getZapperSnapshots(wallet, apiChainKeys)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Zapper 查询失败'
+      zapperSnapshots = new Map(
+        apiChainKeys.map((chainKey) => [
+          chainKey,
+          buildEmptySnapshot(wallet.id, chainKey, 'zapper', 'error', message),
+        ])
+      )
+    }
   }
 
   return Promise.all(
     chainKeys.map(async (chainKey) => {
+      if (localOnlyChainKeys.includes(chainKey)) {
+        return resolveLocalOnlyChainSnapshot(wallet, chainKey, manualSources)
+      }
+
       const zapperSnapshot = zapperSnapshots.get(chainKey) ?? buildEmptySnapshot(wallet.id, chainKey, 'zapper')
       return resolveChainSnapshot(wallet, chainKey, zapperSnapshot, manualSources)
     })

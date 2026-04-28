@@ -10,11 +10,14 @@ const STALE_PRICE_CACHE_TTL = 60 * 60 * 1000
 
 const EVM_CG_CHAINS: Record<string, string> = {
   eth: 'ethereum',
+  ethereum: 'ethereum',
   bsc: 'binance-smart-chain',
   arb: 'arbitrum-one',
+  arbitrum: 'arbitrum-one',
   polygon: 'polygon-pos',
   base: 'base',
   avax: 'avalanche',
+  avalanche: 'avalanche',
 }
 
 const STATIC_SYMBOL_TO_COINGECKO_ID = new Map<string, string>([

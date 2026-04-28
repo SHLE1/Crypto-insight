@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { formatDefiChainLabel } from '@/lib/defi/chains'
+import { formatDefiChainLabel, getDefiChainKeyFromEvmChainKey } from '@/lib/defi/chains'
 import { EVM_CHAIN_OPTIONS } from '@/lib/evm-chains'
 import { shortAddress, validateAddress } from '@/lib/validators'
 import { useDefiStore } from '@/stores/defi'
@@ -28,9 +28,10 @@ export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesPr
   const [error, setError] = useState<string | null>(null)
 
   const normalizedContract = contractAddress.trim().toLowerCase()
+  const normalizedChainKey = getDefiChainKeyFromEvmChainKey(chainKey)
   const existingSource = useMemo(
-    () => manualSources.find((source) => source.chainKey === chainKey && source.contractAddress.toLowerCase() === normalizedContract),
-    [chainKey, manualSources, normalizedContract]
+    () => manualSources.find((source) => source.chainKey === normalizedChainKey && source.contractAddress.toLowerCase() === normalizedContract),
+    [manualSources, normalizedChainKey, normalizedContract]
   )
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -48,11 +49,12 @@ export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesPr
     }
 
     addManualSource({
-      id: `${chainKey}:${normalizedContract}`,
-      chainKey,
+      id: `${normalizedChainKey}:${normalizedContract}`,
+      chainKey: normalizedChainKey,
       contractAddress: normalizedContract,
       label: label.trim() || undefined,
       enabled: true,
+      origin: 'manual',
     })
     setContractAddress('')
     setLabel('')
@@ -64,7 +66,7 @@ export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesPr
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">手动补充</h3>
           <p className="mt-2 text-xs leading-5 text-muted-foreground">
-            自动来源识别不到时，按链和合约地址读取当前钱包的链上余额；价格缺失时只显示数量。
+            自动来源识别不到时，可按链和合约地址读取当前钱包的链上余额；API 成功识别且可本地化的来源也会自动固定到这里。价格缺失时只显示数量。
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={onRefresh} disabled={isFetching} className="gap-2 shrink-0">
@@ -121,6 +123,7 @@ export function ManualDefiSources({ isFetching, onRefresh }: ManualDefiSourcesPr
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium">{source.label || shortAddress(source.contractAddress)}</p>
                   <Badge variant={source.enabled ? 'secondary' : 'outline'}>{source.enabled ? '启用' : '暂停'}</Badge>
+                  {source.origin === 'api' ? <Badge variant="outline">自动固定</Badge> : null}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {formatDefiChainLabel(source.chainKey)} · {shortAddress(source.contractAddress)}
