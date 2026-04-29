@@ -28,6 +28,7 @@ import {
   BarChart,
   Bar,
   LabelList,
+  Sector,
 } from "recharts"
 import { formatCurrency, formatPercent } from "@/lib/validators"
 import { formatDefiChainLabel } from "@/lib/defi/chains"
@@ -43,7 +44,47 @@ const C = [
 ]
 const C_MUTED = 'hsl(var(--muted-foreground) / 0.35)'
 
-// ─── Asset Donut Chart ────────────────────────────────────────────────────────
+// ─── Shared tooltip helpers ───────────────────────────────────────────────────
+const TOOLTIP_STYLE: React.CSSProperties = {
+  backgroundColor: 'hsl(var(--background))',
+  borderColor: 'hsl(var(--border))',
+  borderRadius: '8px',
+  fontSize: '12px',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+  padding: '8px 12px',
+}
+const TOOLTIP_WRAPPER: React.CSSProperties = {
+  zIndex: 50,
+  outline: 'none',
+}
+
+/** Custom tooltip rendered via `content` prop — no CSS-var issues, full control */
+function PieTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number; payload: { color?: string } }> }) {
+  if (!active || !payload?.length) return null
+  const item = payload[0]
+  return (
+    <div style={TOOLTIP_STYLE} className="border">
+      <div className="flex items-center gap-2 mb-1">
+        {item.payload.color && (
+          <span className="h-2 w-2 rounded-full shrink-0" style={{ background: item.payload.color }} />
+        )}
+        <span className="font-semibold text-foreground">{item.name}</span>
+      </div>
+      <span className="tabular-nums text-muted-foreground">{formatCurrency(item.value)}</span>
+    </div>
+  )
+}
+
+/** Stable activeShape — subtle 4px outer ring, no dramatic expansion */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const PieActiveShape = (props: any) => (
+  <Sector
+    {...props}
+    outerRadius={props.outerRadius + 5}
+    innerRadius={props.innerRadius}
+    strokeWidth={0}
+  />
+)
 function AssetDonutChart({
   assetData,
   totalValue,
@@ -84,19 +125,16 @@ function AssetDonutChart({
                     startAngle={90}
                     endAngle={-270}
                     strokeWidth={0}
+                    activeShape={PieActiveShape}
                   >
                     {chartData.map((item, i) => (
                       <Cell key={i} fill={item.color} />
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--background))',
-                      borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value) => [formatCurrency(value as number), '']}
+                    cursor={false}
+                    wrapperStyle={TOOLTIP_WRAPPER}
+                    content={<PieTooltip />}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -165,19 +203,16 @@ function SourceAndPerformanceChart({
                   startAngle={90}
                   endAngle={-270}
                   strokeWidth={0}
+                  activeShape={PieActiveShape}
                 >
                   {pieData.map((item, i) => (
                     <Cell key={i} fill={item.color} />
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)',
-                    fontSize: '12px',
-                  }}
-                  formatter={(value) => [formatCurrency(value as number), '']}
+                  cursor={false}
+                  wrapperStyle={TOOLTIP_WRAPPER}
+                  content={<PieTooltip />}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -297,14 +332,10 @@ function TopHoldingsBar({
                 style={{ fontSize: '12px', fill: 'hsl(var(--muted-foreground))' }}
               />
               <Tooltip
-                cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  borderColor: 'hsl(var(--border))',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '12px',
-                }}
-                formatter={(value) => [formatCurrency(value as number), '市值']}
+                cursor={{ fill: 'rgba(128,128,128,0.07)' }}
+                wrapperStyle={TOOLTIP_WRAPPER}
+                contentStyle={TOOLTIP_STYLE}
+                formatter={(value, name) => [formatCurrency(value as number), name]}
               />
               <Bar
                 dataKey="value"
@@ -442,12 +473,9 @@ function ChartAreaInteractive({ history }: { history: PortfolioHistoryPoint[] })
                   style={{ fontSize: '12px', fill: 'hsl(var(--muted-foreground))' }}
                 />
                 <Tooltip
-                  cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)',
-                  }}
+                  cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1.5 }}
+                  wrapperStyle={TOOLTIP_WRAPPER}
+                  contentStyle={TOOLTIP_STYLE}
                   formatter={(value) => [formatCurrency(value as number), "总价值"]}
                   labelFormatter={(label) => new Date(label).toLocaleString("zh-CN")}
                 />
@@ -457,8 +485,8 @@ function ChartAreaInteractive({ history }: { history: PortfolioHistoryPoint[] })
                   stroke="hsl(var(--chart-1))"
                   fill="url(#fillValue)"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: 'hsl(var(--chart-1))', strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: 'hsl(var(--chart-1))', strokeWidth: 0 }}
+                  dot={false}
+                  activeDot={{ r: 4, fill: 'hsl(var(--background))', stroke: 'hsl(var(--chart-1))', strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
