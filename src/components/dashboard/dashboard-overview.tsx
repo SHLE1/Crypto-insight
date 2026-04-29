@@ -25,9 +25,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
-  LabelList,
   Sector,
 } from "recharts"
 import { formatCurrency, formatPercent } from "@/lib/validators"
@@ -287,7 +284,7 @@ function SourceAndPerformanceChart({
   )
 }
 
-// ─── Top Holdings Horizontal Bar ──────────────────────────────────────────────
+// ─── Top Holdings Bar (pure CSS — no recharts layout quirks) ──────────────────
 function TopHoldingsBar({
   assetData,
   totalValue,
@@ -295,13 +292,17 @@ function TopHoldingsBar({
   assetData: Array<{ name: string; value: number }>
   totalValue: number
 }) {
-  const top7 = assetData.slice(0, 7).map(item => ({
+  const top7 = assetData.slice(0, 7).map((item, i) => ({
     name: item.name,
     value: item.value,
-    share: totalValue > 0 ? parseFloat(((item.value / totalValue) * 100).toFixed(1)) : 0,
+    share: totalValue > 0 ? (item.value / totalValue) * 100 : 0,
+    color: C[i % C.length],
   }))
 
   if (top7.length === 0) return null
+
+  // normalise bar widths relative to the largest slice so the chart fills the track
+  const maxShare = Math.max(...top7.map(d => d.share), 0.001)
 
   return (
     <Card>
@@ -309,51 +310,37 @@ function TopHoldingsBar({
         <CardTitle>持仓规模排行</CardTitle>
         <CardDescription>前 {top7.length} 大持仓按市值排序</CardDescription>
       </CardHeader>
-      <CardContent className="pt-5 px-2 sm:px-6">
-        <div style={{ height: top7.length * 42 + 16 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={top7}
-              layout="vertical"
-              margin={{ left: 8, right: 48, top: 4, bottom: 4 }}
-            >
-              <XAxis
-                type="number"
-                hide
-                domain={[0, totalValue > 0 ? totalValue : 1]}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                width={52}
-                style={{ fontSize: '12px', fill: 'hsl(var(--muted-foreground))' }}
-              />
-              <Tooltip
-                cursor={{ fill: 'rgba(128,128,128,0.07)' }}
-                wrapperStyle={TOOLTIP_WRAPPER}
-                contentStyle={TOOLTIP_STYLE}
-                formatter={(value, name) => [formatCurrency(value as number), name]}
-              />
-              <Bar
-                dataKey="value"
-                radius={[0, 4, 4, 0]}
-                maxBarSize={24}
+      <CardContent className="pt-5 px-5">
+        <div className="flex flex-col gap-3">
+          {top7.map((item, i) => (
+            <div key={i} className="flex items-center gap-3 min-w-0">
+              {/* Name — fixed width, right-aligned, truncate long names */}
+              <span
+                className="text-xs text-muted-foreground text-right truncate shrink-0"
+                style={{ width: 88 }}
+                title={item.name}
               >
-                {top7.map((_, i) => (
-                  <Cell key={i} fill={C[i % C.length]} />
-                ))}
-                <LabelList
-                  dataKey="share"
-                  position="right"
-                  formatter={(v) => `${v}%`}
-                  style={{ fontSize: '11px', fill: 'hsl(var(--muted-foreground))' }}
+                {item.name}
+              </span>
+
+              {/* Bar track */}
+              <div className="flex-1 h-[18px] rounded-sm overflow-hidden bg-muted/30 min-w-0">
+                <div
+                  className="h-full rounded-sm transition-[width] duration-500"
+                  style={{
+                    width: `${(item.share / maxShare) * 100}%`,
+                    backgroundColor: item.color,
+                  }}
                 />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+              </div>
+
+              {/* Percentage + value */}
+              <div className="shrink-0 flex items-center gap-3" style={{ minWidth: 120 }}>
+                <span className="text-xs font-semibold tabular-nums w-10 text-right">{item.share.toFixed(1)}%</span>
+                <span className="text-xs text-muted-foreground tabular-nums hidden sm:inline">{formatCurrency(item.value)}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
