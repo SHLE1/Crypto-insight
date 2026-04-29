@@ -297,7 +297,7 @@ export function DefiSummary({
               )}
             </div>
             <div className="mt-8 border-t border-border/40 pt-4 text-xs leading-relaxed text-muted-foreground space-y-2">
-              <p>当前优先使用 Zapper 作为数据源，若异常将回退至 Moralis 和 DeBank 公共接口。</p>
+              <p>EVM 优先使用 Zerion，异常时回退到 Zapper；Solana 继续使用 Zapper。手动补充会继续合并展示。</p>
               <p>净值默认合并计入顶部总资产，请注意避免与原始代币产生视觉重复计价。</p>
               <p className="pt-2">最后更新: {lastRefresh ? new Date(lastRefresh).toLocaleString('zh-CN') : '暂无'}</p>
             </div>

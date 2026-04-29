@@ -51,7 +51,7 @@ export interface Settings {
 // ===== 资产与报价 =====
 
 export type PriceStatus = 'live' | 'stale' | 'missing'
-export type DefiProvider = 'zapper' | 'moralis' | 'debank' | 'bitway' | 'manual'
+export type DefiProvider = 'zerion' | 'zapper' | 'moralis' | 'debank' | 'bitway' | 'manual'
 export type DefiStatus = 'success' | 'partial' | 'error'
 export type DefiPositionType =
   | 'lending'
@@ -166,6 +166,14 @@ export interface DefiTokenBalance {
 }
 
 export type DefiPositionMetadata =
+  | {
+      provider: 'zerion'
+      positionType?: string
+      protocolModule?: string
+      groupId?: string
+      poolAddress?: string
+      dappId?: string
+    }
   | {
       provider: 'zapper'
       kind: 'contract-position' | 'app-token-position'

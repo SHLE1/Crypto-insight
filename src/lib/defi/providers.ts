@@ -1,16 +1,19 @@
 import type { DefiPosition, DefiProtocolSummary, DefiSnapshot, DefiTokenBalance, ManualDefiSource, WalletInput, WalletQuoteInput } from '@/types'
 import { getBitwayEarnSnapshot } from '@/lib/defi/bitway'
-import { getDebankFallbackSnapshot } from '@/lib/defi/debank'
 import { getManualDefiSnapshots } from '@/lib/defi/manual'
 import {
+  getDefiChainKeyFromZerionChainId,
   getDefiChainKeyFromZapperChainId,
   getDefiChains,
   getMoralisChainId,
+  getZerionChainIds,
   getZapperChainIds,
 } from '@/lib/defi/chains'
 
+const ZERION_API_URL = 'https://api.zerion.io/v1'
 const ZAPPER_API_URL = 'https://public.zapper.xyz/graphql'
 const MORALIS_API_URL = 'https://deep-index.moralis.io/api/v2.2'
+const ZERION_TIMEOUT_MS = 15_000
 const ZAPPER_TIMEOUT_MS = 15_000
 const MORALIS_TIMEOUT_MS = 15_000
 const ZAPPER_PAGE_SIZE = 50
@@ -156,6 +159,58 @@ interface MoralisPositionItem {
     address?: string
     position_details?: MoralisPositionDetails
   }
+}
+
+interface ZerionQuantity {
+  float?: number
+  numeric?: string
+}
+
+interface ZerionPositionItem {
+  id?: string
+  attributes?: {
+    name?: string
+    quantity?: ZerionQuantity
+    protocol?: string
+    protocol_module?: string
+    pool_address?: string
+    group_id?: string
+    position_type?: string
+    value?: number | null
+    price?: number | null
+    fungible_info?: {
+      name?: string
+      symbol?: string
+      implementations?: Array<{
+        chain_id?: string
+        address?: string
+      }>
+    }
+    application_metadata?: {
+      name?: string
+      url?: string
+    }
+  }
+  relationships?: {
+    chain?: {
+      data?: {
+        id?: string
+      }
+    }
+    dapp?: {
+      data?: {
+        id?: string
+      }
+    }
+  }
+}
+
+interface ZerionPositionsResponse {
+  links?: {
+    next?: string | null
+  }
+  data?: ZerionPositionItem[]
+  errors?: Array<{ title?: string; detail?: string }>
 }
 
 const ZAPPER_DEFI_QUERY = `
@@ -380,7 +435,7 @@ function toNumber(value: string | number | undefined | null) {
 function buildEmptySnapshot(
   walletId: string,
   chainKey: string,
-  provider: 'zapper' | 'moralis',
+  provider: 'zerion' | 'zapper' | 'moralis',
   status: 'success' | 'error' = 'success',
   error?: string
 ): DefiSnapshot {
@@ -469,6 +524,229 @@ function dedupeDefiTokens(tokens: DefiTokenBalance[]) {
   })
 
   return Array.from(aggregated.values())
+}
+
+function normalizeZerionPositionType(positionType?: string, protocolModule?: string): DefiPosition['type'] {
+  const text = `${positionType ?? ''} ${protocolModule ?? ''}`.toLowerCase()
+
+  if (text.includes('reward')) {
+    return 'reward'
+  }
+  if (text.includes('stake')) {
+    return 'stake'
+  }
+  if (text.includes('liquidity') || text.includes('pool')) {
+    return 'liquidity'
+  }
+  if (text.includes('lend') || text.includes('loan') || text.includes('borrow')) {
+    return 'lending'
+  }
+  if (text.includes('locked') || text.includes('vesting')) {
+    return 'stake'
+  }
+
+  return 'unknown'
+}
+
+function getZerionTokenAddress(item: ZerionPositionItem, chainId: string | undefined) {
+  const implementations = item.attributes?.fungible_info?.implementations ?? []
+  return implementations.find((implementation) => implementation.chain_id === chainId)?.address ?? implementations[0]?.address
+}
+
+function getZerionAuthHeader(apiKey: string) {
+  return `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`
+}
+
+function buildZerionError(response: Response) {
+  if (response.status === 401 || response.status === 403) {
+    return 'Zerion 鉴权失败'
+  }
+  if (response.status === 429) {
+    return 'Zerion 额度或速率受限'
+  }
+  if (response.status >= 500) {
+    return `Zerion 服务暂时不可用（HTTP ${response.status}）`
+  }
+  return `Zerion 请求失败（HTTP ${response.status}）`
+}
+
+async function getZerionSnapshots(wallet: WalletQuoteInput) {
+  const chainKeys = getDefiChains(wallet.chainType, wallet.evmChains).filter((chainKey) => chainKey !== 'solana')
+  const chainIds = getZerionChainIds(chainKeys)
+  const apiKey = process.env.ZERION_API_KEY?.trim()
+
+  if (chainKeys.length === 0) {
+    return new Map<string, DefiSnapshot>()
+  }
+
+  if (!apiKey) {
+    return new Map<string, DefiSnapshot>(
+      chainKeys.map((chainKey) => [
+        chainKey,
+        buildEmptySnapshot(wallet.id, chainKey, 'zerion', 'error', '尚未配置 ZERION_API_KEY'),
+      ])
+    )
+  }
+
+  let nextUrl: string | null = `${ZERION_API_URL}/wallets/${wallet.address}/positions/?currency=usd&filter[positions]=only_complex&filter[trash]=only_non_trash&sort=-value`
+  if (chainIds.length > 0) {
+    nextUrl += `&filter[chain_ids]=${chainIds.join(',')}`
+  }
+
+  const positions: ZerionPositionItem[] = []
+  for (let page = 0; nextUrl && page < 10; page += 1) {
+    const response = await fetchWithTimeout(
+      nextUrl,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: getZerionAuthHeader(apiKey),
+        },
+      },
+      ZERION_TIMEOUT_MS
+    )
+
+    if (!response.ok) {
+      throw new Error(buildZerionError(response))
+    }
+
+    const payload = (await response.json()) as ZerionPositionsResponse
+    if (payload.errors?.length) {
+      throw new Error(payload.errors.map((item) => item.detail || item.title).filter(Boolean).join('；') || 'Zerion 查询失败')
+    }
+
+    positions.push(...(payload.data ?? []))
+    nextUrl = payload.links?.next ?? null
+  }
+
+  const snapshotMap = new Map(
+    chainKeys.map((chainKey) => [
+      chainKey,
+      buildEmptySnapshot(wallet.id, chainKey, 'zerion'),
+    ])
+  )
+  const protocolMap = new Map<string, DefiProtocolSummary>()
+  const groupedPositions = new Map<
+    string,
+    {
+      position: DefiPosition
+      depositedValue: number
+      borrowedValue: number
+      rewardsValue: number
+    }
+  >()
+
+  positions.forEach((item, index) => {
+    const attributes = item.attributes
+    const zerionChainId = item.relationships?.chain?.data?.id
+    const chainKey = getDefiChainKeyFromZerionChainId(zerionChainId)
+    if (!attributes || !chainKey || !snapshotMap.has(chainKey)) {
+      return
+    }
+
+    const value = toNumber(attributes.value)
+    if (value <= 0) {
+      return
+    }
+
+    const dappId = item.relationships?.dapp?.data?.id
+    const protocolId = dappId || attributes.protocol || `${chainKey}-zerion-${index}`
+    const protocolName = attributes.application_metadata?.name || attributes.protocol || 'Unknown protocol'
+    const positionType = normalizeZerionPositionType(attributes.position_type, attributes.protocol_module)
+    const groupId = attributes.group_id || item.id || `${protocolId}-${index}`
+    const groupKey = `${chainKey}:${protocolId}:${groupId}:${attributes.position_type ?? ''}`
+    const token = normalizeDefiToken({
+      address: getZerionTokenAddress(item, zerionChainId),
+      symbol: attributes.fungible_info?.symbol,
+      name: attributes.fungible_info?.name || attributes.name,
+      amount: attributes.quantity?.float ?? attributes.quantity?.numeric,
+      price: typeof attributes.price === 'number' ? attributes.price : undefined,
+      value,
+    })
+    const existing = groupedPositions.get(groupKey)
+    const isBorrowed = attributes.position_type === 'loan'
+    const isReward = attributes.position_type === 'reward'
+
+    if (existing) {
+      existing.position.value += value
+      existing.position.tokens = dedupeDefiTokens([...existing.position.tokens, token])
+      if (isReward) {
+        existing.position.rewards = dedupeDefiTokens([...existing.position.rewards, token])
+        existing.rewardsValue += value
+      } else if (isBorrowed) {
+        existing.borrowedValue += value
+      } else {
+        existing.depositedValue += value
+      }
+      return
+    }
+
+    groupedPositions.set(groupKey, {
+      position: {
+        id: item.id || `${wallet.id}-${chainKey}-${protocolId}-${index}`,
+        walletId: wallet.id,
+        chainKey,
+        protocolId,
+        protocolName,
+        protocolUrl: attributes.application_metadata?.url,
+        protocolCategory: attributes.protocol_module,
+        type: positionType,
+        name: attributes.name || protocolName,
+        value,
+        tokens: [token],
+        rewards: isReward ? [token] : [],
+        metadata: {
+          provider: 'zerion',
+          positionType: attributes.position_type,
+          protocolModule: attributes.protocol_module,
+          groupId: attributes.group_id,
+          poolAddress: attributes.pool_address,
+          dappId,
+        },
+      },
+      depositedValue: !isBorrowed && !isReward ? value : 0,
+      borrowedValue: isBorrowed ? value : 0,
+      rewardsValue: isReward ? value : 0,
+    })
+  })
+
+  groupedPositions.forEach(({ position, depositedValue, borrowedValue, rewardsValue }) => {
+    const snapshot = snapshotMap.get(position.chainKey)
+    if (!snapshot) {
+      return
+    }
+
+    snapshot.positions.push(position)
+    snapshot.totalValue += position.value
+    snapshot.totalDepositedValue += depositedValue
+    snapshot.totalBorrowedValue += borrowedValue
+    snapshot.totalRewardsValue += rewardsValue
+
+    const protocolKey = `${position.chainKey}:${position.protocolId}`
+    const existingProtocol = protocolMap.get(protocolKey)
+    if (existingProtocol) {
+      existingProtocol.totalValue += position.value
+      existingProtocol.positionCount += 1
+    } else {
+      protocolMap.set(protocolKey, {
+        walletId: wallet.id,
+        chainKey: position.chainKey,
+        protocolId: position.protocolId,
+        protocolName: position.protocolName,
+        protocolCategory: position.protocolCategory,
+        totalValue: position.value,
+        positionCount: 1,
+      })
+    }
+  })
+
+  snapshotMap.forEach((snapshot, chainKey) => {
+    snapshot.protocols = Array.from(protocolMap.values()).filter((protocol) => protocol.chainKey === chainKey)
+    snapshot.updatedAt = new Date().toISOString()
+  })
+
+  return snapshotMap
 }
 
 function normalizeZapperPositionType(
@@ -971,93 +1249,96 @@ function mergeDefiSnapshots(primary: DefiSnapshot, supplemental: DefiSnapshot): 
 }
 
 function buildFallbackMessage(
-  source: 'zapper-empty' | 'zapper-error',
-  fallback: 'moralis' | 'debank',
+  source: 'primary-empty' | 'primary-error',
+  primaryProvider: 'Zerion' | 'Zapper',
+  fallback: 'zapper' | 'moralis',
   detail?: string
 ) {
   const prefix =
-    source === 'zapper-empty'
-      ? 'Zapper 未识别到该链 DeFi 仓位'
-      : `Zapper 查询失败${detail ? `（${detail}）` : ''}`
+    source === 'primary-empty'
+      ? `${primaryProvider} 未识别到该链 DeFi 仓位`
+      : `${primaryProvider} 查询失败${detail ? `（${detail}）` : ''}`
 
-  if (fallback === 'moralis') {
-    return `${prefix}，已回退到 Moralis。`
+  if (fallback === 'zapper') {
+    return `${prefix}，已回退到 Zapper。`
   }
 
-  return `${prefix}，Moralis 未返回可用结果，已回退到 DeBank 公共页面兜底。`
+  return `${prefix}，已回退到 Moralis。`
 }
 
 async function resolveChainSnapshot(
   wallet: Pick<WalletInput, 'id' | 'address'>,
   chainKey: string,
-  zapperSnapshot: DefiSnapshot,
+  primarySnapshot: DefiSnapshot,
+  zapperSnapshot: DefiSnapshot | null,
   manualSources: ManualDefiSource[] = []
 ): Promise<DefiSnapshot> {
-  const zapperFailed = zapperSnapshot.status === 'error'
-  const zapperEmpty = isEmptySnapshot(zapperSnapshot)
+  const primaryFailed = primarySnapshot.status === 'error'
+  const primaryEmpty = isEmptySnapshot(primarySnapshot)
+  const primaryName = primarySnapshot.provider === 'zerion' ? 'Zerion' : 'Zapper'
   const bitwaySnapshot = await getBitwayEarnSnapshot(wallet, chainKey)
   const manualSnapshot = await getManualDefiSnapshots(wallet, chainKey, manualSources)
 
-  if (!zapperFailed && !zapperEmpty) {
-    const withBitway = bitwaySnapshot ? mergeDefiSnapshots(zapperSnapshot, bitwaySnapshot) : zapperSnapshot
+  if (!primaryFailed && !primaryEmpty) {
+    const withBitway = bitwaySnapshot ? mergeDefiSnapshots(primarySnapshot, bitwaySnapshot) : primarySnapshot
     return manualSnapshot ? mergeDefiSnapshots(withBitway, manualSnapshot) : withBitway
   }
 
-  if (chainKey === 'solana') {
-    return zapperSnapshot
+  if (zapperSnapshot && zapperSnapshot !== primarySnapshot && zapperSnapshot.status !== 'error' && !isEmptySnapshot(zapperSnapshot)) {
+    const withBitway = bitwaySnapshot ? mergeDefiSnapshots(zapperSnapshot, bitwaySnapshot) : zapperSnapshot
+    const withManual = manualSnapshot ? mergeDefiSnapshots(withBitway, manualSnapshot) : withBitway
+    return decorateFallbackSnapshot(
+      withManual,
+      buildFallbackMessage(primaryFailed ? 'primary-error' : 'primary-empty', primaryName, 'zapper', primarySnapshot.error)
+    )
   }
 
   if (bitwaySnapshot) {
     const withManual = manualSnapshot ? mergeDefiSnapshots(bitwaySnapshot, manualSnapshot) : bitwaySnapshot
     return decorateFallbackSnapshot(
       withManual,
-      'Zapper 未识别到该链 DeFi 仓位，已补充 Bitway Earn 链上读取结果。'
+      `${primaryName} 未识别到该链 DeFi 仓位，已补充 Bitway Earn 链上读取结果。`
     )
   }
 
   if (manualSnapshot) {
     return decorateFallbackSnapshot(
       manualSnapshot,
-      'Zapper 未识别到该链 DeFi 仓位，已补充手动链上读取结果。'
+      `${primaryName} 未识别到该链 DeFi 仓位，已补充手动链上读取结果。`
     )
+  }
+
+  if (chainKey === 'solana') {
+    return primarySnapshot
   }
 
   const moralisSnapshot = await getMoralisSnapshot(wallet, chainKey)
   if (!isEmptySnapshot(moralisSnapshot) && moralisSnapshot.status !== 'error') {
     return decorateFallbackSnapshot(
       moralisSnapshot,
-      buildFallbackMessage(zapperFailed ? 'zapper-error' : 'zapper-empty', 'moralis', zapperSnapshot.error)
+      buildFallbackMessage(primaryFailed ? 'primary-error' : 'primary-empty', primaryName, 'moralis', primarySnapshot.error)
     )
   }
 
-  const debankFallback = await getDebankFallbackSnapshot({
-    walletId: wallet.id,
-    address: wallet.address,
-    chainKey,
-  })
-
-  if (debankFallback) {
-    return {
-      ...debankFallback,
-      error: buildFallbackMessage(zapperFailed ? 'zapper-error' : 'zapper-empty', 'debank', zapperSnapshot.error),
-    }
-  }
-
-  if (zapperFailed && moralisSnapshot.status === 'error') {
+  if (primaryFailed && moralisSnapshot.status === 'error') {
+    const fallbackDetail =
+      zapperSnapshot && zapperSnapshot.status === 'error'
+        ? `；Zapper 查询失败（${zapperSnapshot.error ?? '未知错误'}）`
+        : ''
     return {
       ...moralisSnapshot,
-      error: `Zapper 查询失败（${zapperSnapshot.error ?? '未知错误'}）；Moralis 查询失败（${moralisSnapshot.error ?? '未知错误'}）。`,
+      error: `${primaryName} 查询失败（${primarySnapshot.error ?? '未知错误'}）${fallbackDetail}；Moralis 查询失败（${moralisSnapshot.error ?? '未知错误'}）。`,
     }
   }
 
-  if (zapperFailed && moralisSnapshot.status === 'success') {
+  if (primaryFailed && moralisSnapshot.status === 'success') {
     return decorateFallbackSnapshot(
       moralisSnapshot,
-      `Zapper 查询失败（${zapperSnapshot.error ?? '未知错误'}），Moralis 未识别到该链可计价 DeFi 仓位。`
+      `${primaryName} 查询失败（${primarySnapshot.error ?? '未知错误'}），Moralis 未识别到该链可计价 DeFi 仓位。`
     )
   }
 
-  return zapperSnapshot
+  return primarySnapshot
 }
 
 export async function getDefiSnapshots(wallet: WalletQuoteInput, manualSources: ManualDefiSource[] = []): Promise<DefiSnapshot[]> {
@@ -1070,6 +1351,21 @@ export async function getDefiSnapshots(wallet: WalletQuoteInput, manualSources: 
 
   if (wallet.chainType === 'btc' || chainKeys.length === 0) {
     return []
+  }
+
+  let zerionSnapshots: Map<string, DefiSnapshot>
+  try {
+    zerionSnapshots = await getZerionSnapshots(wallet)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Zerion 查询失败'
+    zerionSnapshots = new Map(
+      chainKeys
+        .filter((chainKey) => chainKey !== 'solana')
+        .map((chainKey) => [
+          chainKey,
+          buildEmptySnapshot(wallet.id, chainKey, 'zerion', 'error', message),
+        ])
+    )
   }
 
   let zapperSnapshots: Map<string, DefiSnapshot>
@@ -1088,7 +1384,18 @@ export async function getDefiSnapshots(wallet: WalletQuoteInput, manualSources: 
   return Promise.all(
     chainKeys.map(async (chainKey) => {
       const zapperSnapshot = zapperSnapshots.get(chainKey) ?? buildEmptySnapshot(wallet.id, chainKey, 'zapper')
-      return resolveChainSnapshot(wallet, chainKey, zapperSnapshot, manualSources)
+      const primarySnapshot =
+        chainKey === 'solana'
+          ? zapperSnapshot
+          : zerionSnapshots.get(chainKey) ?? buildEmptySnapshot(wallet.id, chainKey, 'zerion')
+
+      return resolveChainSnapshot(
+        wallet,
+        chainKey,
+        primarySnapshot,
+        chainKey === 'solana' ? null : zapperSnapshot,
+        manualSources
+      )
     })
   )
 }

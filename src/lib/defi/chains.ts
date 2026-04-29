@@ -28,6 +28,19 @@ const MORALIS_CHAIN_MAP: Record<string, string> = {
   avalanche: 'avalanche',
 }
 
+const ZERION_CHAIN_MAP: Record<string, string> = {
+  ethereum: 'ethereum',
+  bsc: 'binance-smart-chain',
+  arbitrum: 'arbitrum',
+  polygon: 'polygon',
+  base: 'base',
+  avalanche: 'avalanche',
+}
+
+const ZERION_CHAIN_KEY_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(ZERION_CHAIN_MAP).map(([chainKey, zerionChainId]) => [zerionChainId, chainKey])
+)
+
 const DEFI_CHAIN_LABELS: Record<string, string> = {
   ethereum: 'Ethereum',
   bsc: 'BNB Chain',
@@ -87,6 +100,20 @@ export function getDefiChainKeyFromZapperChainId(chainId: number) {
 
 export function getMoralisChainId(chainKey: string) {
   return MORALIS_CHAIN_MAP[chainKey] ?? null
+}
+
+export function getZerionChainIds(chainKeys: string[]) {
+  return Array.from(
+    new Set(
+      chainKeys
+        .map((chainKey) => ZERION_CHAIN_MAP[chainKey])
+        .filter((chainId): chainId is string => Boolean(chainId))
+    )
+  )
+}
+
+export function getDefiChainKeyFromZerionChainId(chainId: string | undefined) {
+  return chainId ? (ZERION_CHAIN_KEY_MAP[chainId] ?? null) : null
 }
 
 export function formatDefiChainLabel(chainKey: string) {

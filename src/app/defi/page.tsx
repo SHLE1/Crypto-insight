@@ -110,7 +110,7 @@ export default function DefiPage() {
             </h3>
             <ul className="list-disc pl-4 flex flex-col gap-1 text-xs text-muted-foreground leading-relaxed">
               <li>DeFi 净值同步计入总资产，并在总览分布中单独展示。</li>
-              <li>优先使用 Zapper；若识别失败，EVM 链路将依次尝试 Moralis 与 DeBank 公共页面补全数据。</li>
+              <li>EVM 优先使用 Zerion；若识别失败，会回退到 Zapper 与 Moralis。Solana 继续使用 Zapper。</li>
               <li>遇到限速或短暂异常时，系统将按钱包轮转刷新，避免阻塞在单一钱包上。</li>
               <li>若本轮未能覆盖全部钱包，系统将在后续轮次逐步补全。</li>
               <li>手动补充会直接读取链上代币余额；若没有可用市场价格，只显示数量，不会凭空计入估值。</li>
