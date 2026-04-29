@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { Buildings, Wallet } from '@phosphor-icons/react'
 import {
@@ -9,11 +10,13 @@ import {
 import { EmptyState } from '@/components/layout/empty-state'
 import { Button } from '@/components/ui/button'
 import { usePortfolioData } from '@/hooks/use-portfolio-data'
+import { shortAddress } from '@/lib/validators'
 
 export default function DashboardPage() {
   const {
     wallets,
     accounts,
+    snapshots,
     history,
     errors,
     lastRefresh,
@@ -37,6 +40,20 @@ export default function DashboardPage() {
     refetch,
     isFetching,
   } = usePortfolioData()
+
+  /** Per-source breakdown for the source split pie chart */
+  const sourceSplit = useMemo(() => {
+    return Object.entries(snapshots)
+      .filter(([, snap]) => snap.totalValue > 0 && snap.status !== 'error')
+      .map(([id, snap]) => {
+        const label =
+          snap.sourceType === 'wallet'
+            ? (wallets.find(w => w.id === id)?.name ?? shortAddress(id))
+            : (accounts.find(a => a.id === id)?.label ?? id.toUpperCase())
+        return { id, label, sourceType: snap.sourceType as 'wallet' | 'cex', value: snap.totalValue }
+      })
+      .sort((a, b) => b.value - a.value)
+  }, [snapshots, wallets, accounts])
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,6 +96,7 @@ export default function DashboardPage() {
             change24hPercent={change24hPercent}
             assetData={assetData}
             analytics={analytics}
+            sourceSplit={sourceSplit}
             isUsingCachedData={isUsingCachedData}
             isFetching={isFetching}
             walletCount={wallets.filter((wallet) => wallet.enabled).length}

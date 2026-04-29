@@ -166,25 +166,26 @@ function AssetDonutChart({
 function SourceAndPerformanceChart({
   analytics,
   totalValue,
+  sourceSplit,
 }: {
   analytics: PortfolioAnalytics
   totalValue: number
+  sourceSplit: Array<{ id: string; label: string; sourceType: 'wallet' | 'cex'; value: number }>
 }) {
-  const walletValue = (analytics.walletShare / 100) * totalValue
-  const cexValue = (analytics.cexShare / 100) * totalValue
-
-  const splitData = [
-    { name: '链上钱包', value: walletValue, color: C[0] },
-    { name: '交易所账户', value: cexValue, color: C[2] },
-  ].filter(d => d.value > 0)
-
-  const pieData = splitData.length > 0 ? splitData : [{ name: '暂无数据', value: 1, color: C_MUTED }]
+  // Map each source to a color and augment with share
+  const pieData = sourceSplit.length > 0
+    ? sourceSplit.map((s, i) => ({
+        ...s,
+        name: s.label,
+        color: C[i % C.length],
+      }))
+    : [{ id: '_empty', name: '暂无数据', label: '暂无数据', sourceType: 'wallet' as const, value: 1, color: C_MUTED }]
 
   return (
     <Card>
       <CardHeader className="border-b border-border/40">
         <CardTitle>来源 & 表现</CardTitle>
-        <CardDescription>资产来源分布与 24h 涨跌榜</CardDescription>
+        <CardDescription>各钱包 / 交易所资产占比与 24h 涨跌榜</CardDescription>
       </CardHeader>
       <CardContent className="pt-5 flex flex-col gap-5">
         {/* Source donut */}
@@ -217,24 +218,20 @@ function SourceAndPerformanceChart({
               </PieChart>
             </ResponsiveContainer>
           </div>
+          {/* Legend — one row per source */}
           <div className="flex flex-col gap-2 flex-1 min-w-0">
-            {splitData.map((item, i) => {
+            {sourceSplit.map((item, i) => {
               const share = totalValue > 0 ? (item.value / totalValue) * 100 : 0
               return (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-xs font-medium flex-1 truncate">{item.name}</span>
-                  <span className="text-xs text-muted-foreground tabular-nums">{share.toFixed(1)}%</span>
+                <div key={item.id} className="flex items-center gap-2 min-w-0">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: C[i % C.length] }} />
+                  <span className="text-xs font-medium flex-1 truncate" title={item.label}>{item.label}</span>
+                  <span className="text-[10px] text-muted-foreground tabular-nums ml-1">{share.toFixed(1)}%</span>
                 </div>
               )
             })}
-            {/* Concentration */}
-            {analytics.topHolding && (
-              <div className="mt-1 rounded-lg bg-muted/40 px-3 py-2">
-                <p className="text-[10px] text-muted-foreground">最大持仓</p>
-                <p className="text-sm font-semibold">{analytics.topHolding.symbol}</p>
-                <p className="text-xs text-muted-foreground">{analytics.topHolding.share.toFixed(1)}% 占比</p>
-              </div>
+            {sourceSplit.length === 0 && (
+              <span className="text-xs text-muted-foreground">暂无来源数据</span>
             )}
           </div>
         </div>
@@ -634,6 +631,7 @@ export function DashboardOverview({
   change24hPercent,
   assetData,
   analytics,
+  sourceSplit,
   isUsingCachedData,
   isFetching,
   walletCount,
@@ -654,6 +652,7 @@ export function DashboardOverview({
   change24hPercent: number
   assetData: Array<{ name: string; value: number }>
   analytics: PortfolioAnalytics
+  sourceSplit: Array<{ id: string; label: string; sourceType: 'wallet' | 'cex'; value: number }>
   isUsingCachedData: boolean
   isFetching: boolean
   walletCount: number
@@ -711,7 +710,7 @@ export function DashboardOverview({
         <>
           <div className="grid gap-4 md:grid-cols-2">
             <AssetDonutChart assetData={assetData} totalValue={totalValue} />
-            <SourceAndPerformanceChart analytics={analytics} totalValue={totalValue} />
+            <SourceAndPerformanceChart analytics={analytics} totalValue={totalValue} sourceSplit={sourceSplit} />
           </div>
           <TopHoldingsBar assetData={assetData} totalValue={totalValue} />
         </>
