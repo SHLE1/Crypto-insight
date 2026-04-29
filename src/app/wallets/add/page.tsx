@@ -81,20 +81,18 @@ export default function AddWalletPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 max-w-3xl">
-      <div className="flex items-center justify-between">
-         <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-               <Link href="/wallets">
-                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <ArrowLeft className="h-4 w-4" />
-                 </Button>
-               </Link>
-               <h2 className="text-2xl font-bold tracking-tight">添加地址</h2>
-            </div>
-            <p className="text-sm text-muted-foreground pl-10">
-               配置您要追踪的区块链钱包地址。该数据仅加密保存在本地。
-            </p>
-         </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+           <Link href="/wallets">
+             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <ArrowLeft className="size-4" />
+             </Button>
+           </Link>
+           <h2 className="text-2xl font-bold tracking-tight">添加地址</h2>
+        </div>
+        <p className="text-sm text-muted-foreground ml-10">
+           配置您要追踪的区块链钱包地址，数据仅加密保存在本地。
+        </p>
       </div>
 
       <Card>
@@ -187,7 +185,7 @@ export default function AddWalletPage() {
               />
             </div>
 
-            {error && <p className="text-sm font-medium text-foreground">{error}</p>}
+            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
             <div className="pt-4 flex gap-3">
               <Button type="button" variant="outline" onClick={() => router.push('/wallets')}>

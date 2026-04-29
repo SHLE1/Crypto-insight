@@ -53,21 +53,21 @@ function DefiProtocolSection({
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-px border border-border/40 bg-border/40 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           ['净值', formatCurrency(totalValue)],
           ['总存入', formatCurrency(depositedValue)],
           ['总借出', formatCurrency(borrowedValue)],
           ['待领取奖励', formatCurrency(rewardsValue)],
         ].map(([label, value]) => (
-          <div key={label} className="bg-background px-4 py-3">
+          <div key={label} className="metric-tile">
             <p className="muted-kicker">{label}</p>
             <p className="mt-2 text-base font-semibold tabular-nums">{value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid gap-6 border-x border-b border-border/40 p-4 lg:grid-cols-2">
+      <div className="grid gap-6 rounded-xl border border-border/40 p-4 lg:grid-cols-2">
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">协议分布</h4>
           <div className="mt-3 divide-y divide-border/30">
@@ -125,7 +125,7 @@ export default function HoldingsPage() {
   } = usePortfolioData()
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold tracking-tight">资产明细</h2>
@@ -159,9 +159,9 @@ export default function HoldingsPage() {
       ) : (
         <>
           {!isFetching && !hasValuedAssets && hasSources ? (
-             <div className="border-y border-dashed border-border/40 bg-zinc-50/30 dark:bg-zinc-950/20 py-6">
+             <div className="rounded-xl border border-dashed border-border/50 py-6">
                <p className="text-sm text-muted-foreground text-center">
-                 暂无可估值的资产。可能原因：地址余额为零、交易所 API 权限不足， 或第三方报价暂时不可用。
+                 暂无可估值的资产。可能原因：地址余额为零、交易所 API 权限不足，或第三方报价暂时不可用。
                </p>
              </div>
           ) : null}
@@ -197,7 +197,7 @@ export default function HoldingsPage() {
             </div>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-0">
              <HoldingsOverview data={holdingsData} analytics={analytics} totalValue={totalValue} />
           </div>
 

@@ -119,7 +119,7 @@ export default function CexPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold tracking-tight">交易所账户</h2>
@@ -148,8 +148,8 @@ export default function CexPage() {
       </div>
 
       {showForm ? (
-        <Card className="max-w-3xl mt-4">
-          <CardHeader className="flex flex-row items-center justify-between gap-0">
+        <Card className="max-w-3xl">
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>
                <CardTitle>{editingAccountId ? '重新填写或更新密钥' : '添加交易所账户'}</CardTitle>
                <CardDescription>配置您的只读 API 密钥，请勿授予交易或提现权限。</CardDescription>
@@ -254,14 +254,14 @@ export default function CexPage() {
           />
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {accounts.map((account) => {
             const snapshot = snapshots[account.id]
             return (
               <Card key={account.id} className={!account.enabled ? 'opacity-60' : ''}>
                 <CardHeader className="flex flex-row items-start justify-between gap-0 pb-2">
                   <div className="flex items-center gap-2">
-                     <Building2 className="w-5 h-5 text-muted-foreground" />
+                     <Building2 className="size-5 text-muted-foreground" />
                      <div className="flex flex-col gap-1">
                        <CardTitle className="text-base">{account.label}</CardTitle>
                        <CardDescription className="text-xs uppercase font-mono">
@@ -290,7 +290,7 @@ export default function CexPage() {
                       <Button variant="secondary" size="sm" className="flex-1 gap-2" onClick={() => startEditing(account.id)}>
                         <Key className="size-4" />更新密钥
                       </Button>
-                      <Button variant="destructive" size="sm" className="px-3" onClick={() => handleRemove(account.id, account.label)}>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => handleRemove(account.id, account.label)}>
                         <Trash className="size-4" />
                       </Button>
                     </div>

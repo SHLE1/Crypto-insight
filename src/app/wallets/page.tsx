@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Check, Pencil, Plus, RefreshCw, Trash2, X, Wallet as WalletIcon } from 'lucide-react'
 import { EmptyState } from '@/components/layout/empty-state'
-import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -64,7 +63,7 @@ export default function WalletsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold tracking-tight">我的钱包</h2>
@@ -93,7 +92,7 @@ export default function WalletsPage() {
       </div>
 
       {wallets.length === 0 ? (
-        <div className="mt-4">
+        <div>
            <EmptyState
             title="暂无钱包地址"
             description="添加后将自动参与总资产统计、持仓明细和净值趋势计算。"
@@ -105,7 +104,7 @@ export default function WalletsPage() {
           />
         </div>
       ) : (
-        <div className="grid gap-3 mt-4">
+        <div className="grid gap-3">
           {wallets.map((w) => {
             const snapshot = snapshots[w.id]
             const isEditing = editingWalletId === w.id
@@ -134,10 +133,10 @@ export default function WalletsPage() {
                              }}
                            />
                            <Button size="icon" variant="ghost" className="h-8 w-8 text-foreground" onClick={() => handleRename(w.id, w.name ?? '')}>
-                              <Check className="h-4 w-4" />
+                              <Check className="size-4" />
                            </Button>
                            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={cancelRenaming}>
-                              <X className="h-4 w-4" />
+                              <X className="size-4" />
                            </Button>
                         </div>
                       ) : (
@@ -150,7 +149,7 @@ export default function WalletsPage() {
                             className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
                             onClick={() => startRenaming(w.id, w.name ?? '')}
                           >
-                            <Pencil className="h-3 w-3" />
+                            <Pencil className="size-3" />
                           </button>
                         </div>
                       )}
@@ -175,8 +174,8 @@ export default function WalletsPage() {
                           {snapshot ? new Date(snapshot.updatedAt).toLocaleString('zh-CN') : '尚未拉取'}
                         </div>
                      </div>
-                     <Button variant="ghost" size="icon" className="text-foreground hover:text-foreground hover:bg-muted/10" onClick={() => handleRemove(w.id, w.name ?? '')}>
-                        <Trash2 className="h-4 w-4" />
+                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => handleRemove(w.id, w.name ?? '')}>
+                        <Trash2 className="size-4" />
                      </Button>
                   </div>
                 </CardContent>

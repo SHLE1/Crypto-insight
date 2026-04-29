@@ -5,7 +5,6 @@ import { RefreshCw, Coins, Settings, Wallet } from 'lucide-react'
 import { DefiSummary } from '@/components/dashboard/defi-summary'
 import { ManualDefiSources } from '@/components/dashboard/manual-defi-sources'
 import { EmptyState } from '@/components/layout/empty-state'
-import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { useDefiData } from '@/hooks/use-defi-data'
 
@@ -35,7 +34,7 @@ export default function DefiPage() {
   } = useDefiData()
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold tracking-tight">DeFi 仓位</h2>
@@ -103,7 +102,7 @@ export default function DefiPage() {
 
           <ManualDefiSources isFetching={isFetching} onRefresh={() => refetch()} />
 
-          <div className="border-y sm:border sm:rounded-xl border-border/40 p-4 sm:p-6">
+          <div className="rounded-xl border border-border/40 p-4 sm:p-6">
             <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
               <Coins className="size-4" />
               数据说明

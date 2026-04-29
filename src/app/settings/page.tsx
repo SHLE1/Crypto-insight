@@ -4,13 +4,11 @@ import { useRef, useState, type ReactNode } from 'react'
 import {
   Cloud,
   Download,
-  Lock,
   Trash2,
   Upload,
   AlertTriangle,
   MonitorCog
 } from 'lucide-react'
-import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -152,14 +150,14 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <MonitorCog className="w-5 h-5 text-muted-foreground" />
+              <MonitorCog className="size-5 text-muted-foreground" />
               <CardTitle>基础配置</CardTitle>
             </div>
             <CardDescription>配置看板的显示与刷新逻辑。</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
-              <div className="gap-0.5">
+              <div className="flex flex-col gap-0.5">
                 <Label>计价货币</Label>
                 <div className="text-sm text-muted-foreground">所有的资产换算基础单位</div>
               </div>
@@ -171,7 +169,7 @@ export default function SettingsPage() {
             </div>
             <Separator />
             <div className="flex items-center justify-between">
-              <div className="gap-0.5">
+              <div className="flex flex-col gap-0.5">
                 <Label>后台刷新间隔</Label>
                 <div className="text-sm text-muted-foreground">静默同步数据（秒）</div>
               </div>
@@ -189,7 +187,7 @@ export default function SettingsPage() {
             </div>
             <Separator />
             <div className="flex items-center justify-between">
-               <div className="gap-0.5">
+               <div className="flex flex-col gap-0.5">
                 <Label>DeFi 查询开关</Label>
                 <div className="text-sm text-muted-foreground">开启后可同步预言机仓位</div>
               </div>
@@ -200,7 +198,7 @@ export default function SettingsPage() {
             </div>
             <Separator />
             <div className="flex items-center justify-between">
-               <div className="gap-0.5">
+               <div className="flex flex-col gap-0.5">
                 <Label>隐藏微小资产</Label>
                 <div className="text-sm text-muted-foreground">过滤价值极低的尘埃代币</div>
               </div>
@@ -216,7 +214,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Cloud className="w-5 h-5 text-muted-foreground" />
+                <Cloud className="size-5 text-muted-foreground" />
                 <CardTitle>数据备份与恢复</CardTitle>
               </div>
               <CardDescription>导出不包含私钥的安全 JSON 用于多端迁移。</CardDescription>
@@ -244,8 +242,8 @@ export default function SettingsPage() {
 
           <Card className="border-border/40">
             <CardHeader>
-               <div className="flex items-center gap-2 text-foreground">
-                <AlertTriangle className="w-5 h-5" />
+               <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="size-5" />
                 <CardTitle>危险操作</CardTitle>
               </div>
               <CardDescription>清空本地 IndexedDB 数据，恢复出厂状态。</CardDescription>
