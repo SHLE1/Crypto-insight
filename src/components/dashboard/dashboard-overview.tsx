@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { ArrowClockwise } from "@phosphor-icons/react"
-import { TrendingUp, TrendingDown, AlertCircle, Navigation, Trophy, Flame, Minus } from "lucide-react"
+import { TrendingUp, TrendingDown, AlertCircle, Navigation, Minus } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -162,13 +162,11 @@ function AssetDonutChart({
   )
 }
 
-// ─── Source Split + Performance ────────────────────────────────────────────────
+// ─── Source Split ─────────────────────────────────────────────────────────────
 function SourceAndPerformanceChart({
-  analytics,
   totalValue,
   sourceSplit,
 }: {
-  analytics: PortfolioAnalytics
   totalValue: number
   sourceSplit: Array<{ id: string; label: string; sourceType: 'wallet' | 'cex'; value: number }>
 }) {
@@ -184,8 +182,8 @@ function SourceAndPerformanceChart({
   return (
     <Card>
       <CardHeader className="border-b border-border/40">
-        <CardTitle>来源 & 表现</CardTitle>
-        <CardDescription>各钱包 / 交易所资产占比与 24h 涨跌榜</CardDescription>
+        <CardTitle>资产来源</CardTitle>
+        <CardDescription>各钱包 / 交易所持仓占比</CardDescription>
       </CardHeader>
       <CardContent className="pt-5 flex flex-col gap-5">
         {/* Source donut */}
@@ -235,50 +233,10 @@ function SourceAndPerformanceChart({
             )}
           </div>
         </div>
-
-        {/* Performance row */}
-        <div className="grid grid-cols-2 gap-3 border-t border-border/40 pt-4">
-          <div className="rounded-lg border border-border/60 px-3 py-3">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Trophy className="h-3 w-3 text-muted-foreground" />
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">24h 最涨</p>
-            </div>
-            {analytics.bestPerformer ? (
-              <>
-                <p className="text-sm font-bold truncate">{analytics.bestPerformer.symbol}</p>
-                <p className="text-xs font-medium text-foreground">+{analytics.bestPerformer.change24h?.toFixed(2)}%</p>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">—</p>
-            )}
-          </div>
-          <div className="rounded-lg border border-border/60 px-3 py-3">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Flame className="h-3 w-3 text-muted-foreground" />
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">24h 最跌</p>
-            </div>
-            {analytics.worstPerformer ? (
-              <>
-                <p className="text-sm font-bold truncate">{analytics.worstPerformer.symbol}</p>
-                <p className="text-xs font-medium text-muted-foreground">{analytics.worstPerformer.change24h?.toFixed(2)}%</p>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">—</p>
-            )}
-          </div>
-          {analytics.historyHigh !== null && (
-            <div className="rounded-lg border border-border/60 px-3 py-2">
-              <p className="text-[10px] text-muted-foreground">历史最高</p>
-              <p className="text-xs font-semibold tabular-nums mt-0.5">{formatCurrency(analytics.historyHigh)}</p>
-            </div>
-          )}
-          {analytics.historyLow !== null && (
-            <div className="rounded-lg border border-border/60 px-3 py-2">
-              <p className="text-[10px] text-muted-foreground">历史最低</p>
-              <p className="text-xs font-semibold tabular-nums mt-0.5">{formatCurrency(analytics.historyLow)}</p>
-            </div>
-          )}
-        </div>
+      </CardContent>
+    </Card>
+  )
+}
       </CardContent>
     </Card>
   )
@@ -710,7 +668,7 @@ export function DashboardOverview({
         <>
           <div className="grid gap-4 md:grid-cols-2">
             <AssetDonutChart assetData={assetData} totalValue={totalValue} />
-            <SourceAndPerformanceChart analytics={analytics} totalValue={totalValue} sourceSplit={sourceSplit} />
+            <SourceAndPerformanceChart totalValue={totalValue} sourceSplit={sourceSplit} />
           </div>
           <TopHoldingsBar assetData={assetData} totalValue={totalValue} />
         </>
