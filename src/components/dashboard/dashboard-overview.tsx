@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { ArrowClockwise } from "@phosphor-icons/react"
-import { TrendingUp, TrendingDown, AlertCircle, Navigation } from "lucide-react"
+import { TrendingUp, TrendingDown, AlertCircle, Navigation, Trophy, Flame, Minus } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -22,11 +22,314 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  LabelList,
 } from "recharts"
 import { formatCurrency, formatPercent } from "@/lib/validators"
 import { formatDefiChainLabel } from "@/lib/defi/chains"
 import type { PortfolioHistoryPoint, PortfolioAnalytics, ApiErrorState } from "@/types"
 
+// ─── Chart palette ────────────────────────────────────────────────────────────
+const C = [
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+]
+const C_MUTED = 'hsl(var(--muted-foreground) / 0.35)'
+
+// ─── Asset Donut Chart ────────────────────────────────────────────────────────
+function AssetDonutChart({
+  assetData,
+  totalValue,
+}: {
+  assetData: Array<{ name: string; value: number }>
+  totalValue: number
+}) {
+  const MAX = 5
+  const top = assetData.slice(0, MAX)
+  const restValue = assetData.slice(MAX).reduce((s, i) => s + i.value, 0)
+  const chartData = [
+    ...top.map((item, i) => ({ ...item, color: C[i] })),
+    ...(restValue > 0 ? [{ name: '其他', value: restValue, color: C_MUTED }] : []),
+  ]
+  const hasData = chartData.some(d => d.value > 0)
+
+  return (
+    <Card>
+      <CardHeader className="border-b border-border/40">
+        <CardTitle>资产分布</CardTitle>
+        <CardDescription>前 {Math.min(MAX, assetData.length)} 大持仓占比</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-5">
+        {hasData ? (
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            {/* Donut */}
+            <div className="h-[180px] w-[180px] shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={52}
+                    outerRadius={82}
+                    paddingAngle={2}
+                    dataKey="value"
+                    startAngle={90}
+                    endAngle={-270}
+                    strokeWidth={0}
+                  >
+                    {chartData.map((item, i) => (
+                      <Cell key={i} fill={item.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      borderColor: 'hsl(var(--border))',
+                      borderRadius: 'var(--radius)',
+                      fontSize: '12px',
+                    }}
+                    formatter={(value) => [formatCurrency(value as number), '']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Legend */}
+            <div className="flex flex-col gap-2.5 flex-1 min-w-0 w-full">
+              {chartData.map((item, i) => {
+                const share = totalValue > 0 ? (item.value / totalValue) * 100 : 0
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-xs font-medium truncate flex-1">{item.name}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums w-10 text-right">{share.toFixed(1)}%</span>
+                    <span className="text-xs font-semibold tabular-nums w-[72px] text-right">{formatCurrency(item.value)}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">暂无资产数据</div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Source Split + Performance ────────────────────────────────────────────────
+function SourceAndPerformanceChart({
+  analytics,
+  totalValue,
+}: {
+  analytics: PortfolioAnalytics
+  totalValue: number
+}) {
+  const walletValue = (analytics.walletShare / 100) * totalValue
+  const cexValue = (analytics.cexShare / 100) * totalValue
+
+  const splitData = [
+    { name: '链上钱包', value: walletValue, color: C[0] },
+    { name: '交易所账户', value: cexValue, color: C[2] },
+  ].filter(d => d.value > 0)
+
+  const pieData = splitData.length > 0 ? splitData : [{ name: '暂无数据', value: 1, color: C_MUTED }]
+
+  return (
+    <Card>
+      <CardHeader className="border-b border-border/40">
+        <CardTitle>来源 & 表现</CardTitle>
+        <CardDescription>资产来源分布与 24h 涨跌榜</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-5 flex flex-col gap-5">
+        {/* Source donut */}
+        <div className="flex items-center gap-4">
+          <div className="h-[120px] w-[120px] shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={30}
+                  outerRadius={52}
+                  paddingAngle={2}
+                  dataKey="value"
+                  startAngle={90}
+                  endAngle={-270}
+                  strokeWidth={0}
+                >
+                  {pieData.map((item, i) => (
+                    <Cell key={i} fill={item.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--background))',
+                    borderColor: 'hsl(var(--border))',
+                    borderRadius: 'var(--radius)',
+                    fontSize: '12px',
+                  }}
+                  formatter={(value) => [formatCurrency(value as number), '']}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex flex-col gap-2 flex-1 min-w-0">
+            {splitData.map((item, i) => {
+              const share = totalValue > 0 ? (item.value / totalValue) * 100 : 0
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-xs font-medium flex-1 truncate">{item.name}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">{share.toFixed(1)}%</span>
+                </div>
+              )
+            })}
+            {/* Concentration */}
+            {analytics.topHolding && (
+              <div className="mt-1 rounded-lg bg-muted/40 px-3 py-2">
+                <p className="text-[10px] text-muted-foreground">最大持仓</p>
+                <p className="text-sm font-semibold">{analytics.topHolding.symbol}</p>
+                <p className="text-xs text-muted-foreground">{analytics.topHolding.share.toFixed(1)}% 占比</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Performance row */}
+        <div className="grid grid-cols-2 gap-3 border-t border-border/40 pt-4">
+          <div className="rounded-lg border border-border/60 px-3 py-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Trophy className="h-3 w-3 text-muted-foreground" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">24h 最涨</p>
+            </div>
+            {analytics.bestPerformer ? (
+              <>
+                <p className="text-sm font-bold truncate">{analytics.bestPerformer.symbol}</p>
+                <p className="text-xs font-medium text-foreground">+{analytics.bestPerformer.change24h?.toFixed(2)}%</p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">—</p>
+            )}
+          </div>
+          <div className="rounded-lg border border-border/60 px-3 py-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Flame className="h-3 w-3 text-muted-foreground" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">24h 最跌</p>
+            </div>
+            {analytics.worstPerformer ? (
+              <>
+                <p className="text-sm font-bold truncate">{analytics.worstPerformer.symbol}</p>
+                <p className="text-xs font-medium text-muted-foreground">{analytics.worstPerformer.change24h?.toFixed(2)}%</p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">—</p>
+            )}
+          </div>
+          {analytics.historyHigh !== null && (
+            <div className="rounded-lg border border-border/60 px-3 py-2">
+              <p className="text-[10px] text-muted-foreground">历史最高</p>
+              <p className="text-xs font-semibold tabular-nums mt-0.5">{formatCurrency(analytics.historyHigh)}</p>
+            </div>
+          )}
+          {analytics.historyLow !== null && (
+            <div className="rounded-lg border border-border/60 px-3 py-2">
+              <p className="text-[10px] text-muted-foreground">历史最低</p>
+              <p className="text-xs font-semibold tabular-nums mt-0.5">{formatCurrency(analytics.historyLow)}</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Top Holdings Horizontal Bar ──────────────────────────────────────────────
+function TopHoldingsBar({
+  assetData,
+  totalValue,
+}: {
+  assetData: Array<{ name: string; value: number }>
+  totalValue: number
+}) {
+  const top7 = assetData.slice(0, 7).map(item => ({
+    name: item.name,
+    value: item.value,
+    share: totalValue > 0 ? parseFloat(((item.value / totalValue) * 100).toFixed(1)) : 0,
+  }))
+
+  if (top7.length === 0) return null
+
+  return (
+    <Card>
+      <CardHeader className="border-b border-border/40">
+        <CardTitle>持仓规模排行</CardTitle>
+        <CardDescription>前 {top7.length} 大持仓按市值排序</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-5 px-2 sm:px-6">
+        <div style={{ height: top7.length * 42 + 16 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={top7}
+              layout="vertical"
+              margin={{ left: 8, right: 48, top: 4, bottom: 4 }}
+            >
+              <XAxis
+                type="number"
+                hide
+                domain={[0, totalValue > 0 ? totalValue : 1]}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                width={52}
+                style={{ fontSize: '12px', fill: 'hsl(var(--muted-foreground))' }}
+              />
+              <Tooltip
+                cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--background))',
+                  borderColor: 'hsl(var(--border))',
+                  borderRadius: 'var(--radius)',
+                  fontSize: '12px',
+                }}
+                formatter={(value) => [formatCurrency(value as number), '市值']}
+              />
+              <Bar
+                dataKey="value"
+                radius={[0, 4, 4, 0]}
+                maxBarSize={24}
+              >
+                {top7.map((_, i) => (
+                  <Cell key={i} fill={C[i % C.length]} />
+                ))}
+                <LabelList
+                  dataKey="share"
+                  position="right"
+                  formatter={(v) => `${v}%`}
+                  style={{ fontSize: '11px', fill: 'hsl(var(--muted-foreground))' }}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── MetricsBand ──────────────────────────────────────────────────────────────
 function MetricsBand({
   totalValue,
   change24hPercent,
@@ -384,6 +687,17 @@ export function DashboardOverview({
       />
 
       <ChartAreaInteractive history={history} />
+
+      {/* ── 新增：资产分析图表区 ── */}
+      {assetData.length > 0 && (
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            <AssetDonutChart assetData={assetData} totalValue={totalValue} />
+            <SourceAndPerformanceChart analytics={analytics} totalValue={totalValue} />
+          </div>
+          <TopHoldingsBar assetData={assetData} totalValue={totalValue} />
+        </>
+      )}
 
       <DataTable assetData={assetData} />
 
