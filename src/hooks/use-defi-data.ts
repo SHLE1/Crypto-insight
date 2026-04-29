@@ -6,7 +6,7 @@ import { formatDefiChainLabel, getDefiChains } from '@/lib/defi/chains'
 import { useWalletStore } from '@/stores/wallets'
 import { useSettingsStore } from '@/stores/settings'
 import { useDefiStore } from '@/stores/defi'
-import type { ApiErrorState, DefiQuoteResponse, DefiSnapshot } from '@/types'
+import type { ApiErrorState, DefiPosition, DefiProtocolSummary, DefiQuoteResponse, DefiSnapshot } from '@/types'
 
 const DEFI_SWEEP_INTERVAL_MS = 20 * 1000
 const DEFI_STEADY_INTERVAL_MS = 30 * 60 * 1000
@@ -68,6 +68,111 @@ function shouldUseCachedSnapshot(previous: DefiSnapshot | undefined, next: DefiS
 
 function normalizeProtocolName(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function findProtocolForPosition(snapshot: DefiSnapshot, position: DefiPosition) {
+  return snapshot.protocols.find((protocol) => protocol.protocolId === position.protocolId)
+}
+
+function buildDedupedDefiData(snapshotsToDedupe: DefiSnapshot[]) {
+  const strongestPositions = new Map<
+    string,
+    {
+      snapshot: DefiSnapshot
+      position: DefiPosition
+      protocol?: DefiProtocolSummary
+    }
+  >()
+
+  snapshotsToDedupe.forEach((snapshot) => {
+    snapshot.positions.forEach((position) => {
+      const protocol = findProtocolForPosition(snapshot, position)
+      const protocolName = protocol?.protocolName ?? position.protocolName
+      const key = `${snapshot.walletId}:${snapshot.chainKey}:${normalizeProtocolName(protocolName)}`
+      const existing = strongestPositions.get(key)
+
+      if (existing && existing.position.value >= position.value) {
+        return
+      }
+
+      strongestPositions.set(key, { snapshot, position, protocol })
+    })
+  })
+
+  const entries = Array.from(strongestPositions.values())
+  const totalValue = entries.reduce((sum, entry) => sum + entry.position.value, 0)
+  const totalDepositedValue = entries.reduce((sum, entry) => {
+    if (entry.position.type === 'reward') {
+      return sum
+    }
+
+    return sum + entry.position.value
+  }, 0)
+  const totalBorrowedValue = entries.reduce(
+    (sum, entry) => sum + (entry.position.type === 'lending' && entry.position.value < 0 ? Math.abs(entry.position.value) : 0),
+    0
+  )
+  const totalRewardsValue = entries.reduce(
+    (sum, entry) => sum + entry.position.rewards.reduce((rewardSum, reward) => rewardSum + (reward.value ?? 0), 0),
+    0
+  )
+
+  const chainValueMap = new Map<string, number>()
+  const walletIds = new Set<string>()
+  const protocolMap = new Map<
+    string,
+    {
+      protocolId: string
+      protocolName: string
+      chainKey: string
+      category?: string
+      value: number
+      positionCount: number
+    }
+  >()
+
+  entries.forEach(({ snapshot, position, protocol }) => {
+    walletIds.add(snapshot.walletId)
+    chainValueMap.set(snapshot.chainKey, (chainValueMap.get(snapshot.chainKey) ?? 0) + position.value)
+
+    const protocolName = protocol?.protocolName ?? position.protocolName
+    const key = `${snapshot.chainKey}:${normalizeProtocolName(protocolName)}`
+    const existing = protocolMap.get(key)
+
+    if (existing) {
+      const shouldUseProtocolIdentity = position.value > existing.value
+      existing.value += position.value
+      existing.positionCount += 1
+      if (shouldUseProtocolIdentity) {
+        existing.protocolId = protocol?.protocolId ?? position.protocolId
+        existing.protocolName = protocolName
+        existing.category = protocol?.protocolCategory ?? position.protocolCategory
+      }
+      return
+    }
+
+    protocolMap.set(key, {
+      protocolId: protocol?.protocolId ?? position.protocolId,
+      protocolName,
+      chainKey: snapshot.chainKey,
+      category: protocol?.protocolCategory ?? position.protocolCategory,
+      value: position.value,
+      positionCount: 1,
+    })
+  })
+
+  return {
+    totalValue,
+    totalDepositedValue,
+    totalBorrowedValue,
+    totalRewardsValue,
+    protocolData: Array.from(protocolMap.values()).sort((a, b) => b.value - a.value),
+    chainData: Array.from(chainValueMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value),
+    positionCount: entries.length,
+    walletCount: walletIds.size,
+  }
 }
 
 export function useDefiData() {
@@ -211,12 +316,14 @@ export function useDefiData() {
     const effectiveSnapshots = Array.from(mergedSnapshots.values()).filter((snapshot) => expectedSnapshotKeySet.has(snapshot.source))
 
     if (effectiveSnapshots.length > 0) {
+      const dedupedData = buildDedupedDefiData(effectiveSnapshots)
+
       appendHistoryPoint({
         timestamp: new Date().toISOString(),
-        totalValue: effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalValue, 0),
-        depositedValue: effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalDepositedValue, 0),
-        borrowedValue: effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalBorrowedValue, 0),
-        rewardsValue: effectiveSnapshots.reduce((sum, snapshot) => sum + snapshot.totalRewardsValue, 0),
+        totalValue: dedupedData.totalValue,
+        depositedValue: dedupedData.totalDepositedValue,
+        borrowedValue: dedupedData.totalBorrowedValue,
+        rewardsValue: dedupedData.totalRewardsValue,
         sourceCount: new Set(effectiveSnapshots.map((snapshot) => snapshot.walletId)).size,
       })
     }
@@ -280,99 +387,17 @@ export function useDefiData() {
     }
   }, [defiEnabled, hasCachedSnapshots, hasDefiSources, isRestoring, isSweepRefreshing, refetch])
 
-  const protocolMap = useMemo(() => {
-    const strongestByWalletAndName = new Map<
-      string,
-      {
-        protocolId: string
-        protocolName: string
-        chainKey: string
-        category?: string
-        value: number
-        positionCount: number
-      }
-    >()
-
-    activeSnapshots.forEach((snapshot) => {
-      snapshot.protocols.forEach((protocol) => {
-        const normalizedName = normalizeProtocolName(protocol.protocolName)
-        const key = `${protocol.walletId}:${protocol.chainKey}:${normalizedName}`
-        const existing = strongestByWalletAndName.get(key)
-
-        if (existing && existing.value >= protocol.totalValue) {
-          return
-        }
-
-        strongestByWalletAndName.set(key, {
-          protocolId: protocol.protocolId,
-          protocolName: protocol.protocolName,
-          chainKey: protocol.chainKey,
-          category: protocol.protocolCategory,
-          value: protocol.totalValue,
-          positionCount: protocol.positionCount,
-        })
-      })
-    })
-
-    const aggregated = new Map<string, NonNullable<ReturnType<typeof strongestByWalletAndName.get>>>()
-
-    strongestByWalletAndName.forEach((protocol) => {
-      const key = `${protocol.chainKey}:${normalizeProtocolName(protocol.protocolName)}`
-      const existing = aggregated.get(key)
-      if (existing) {
-        const shouldUseProtocolIdentity = protocol.value > existing.value
-        existing.value += protocol.value
-        existing.positionCount += protocol.positionCount
-        if (shouldUseProtocolIdentity) {
-          existing.protocolId = protocol.protocolId
-          existing.protocolName = protocol.protocolName
-          existing.category = protocol.category
-        }
-        return
-      }
-
-      aggregated.set(key, { ...protocol })
-    })
-
-    return Array.from(aggregated.values()).sort((a, b) => b.value - a.value)
-  }, [activeSnapshots])
-
-  const chainData = useMemo(() => {
-    const aggregated = new Map<string, number>()
-
-    activeSnapshots.forEach((snapshot) => {
-      aggregated.set(snapshot.chainKey, (aggregated.get(snapshot.chainKey) ?? 0) + snapshot.totalValue)
-    })
-
-    return Array.from(aggregated.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-  }, [activeSnapshots])
-
-  const totalValue = useMemo(
-    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.totalValue, 0),
-    [activeSnapshots]
-  )
-  const totalDepositedValue = useMemo(
-    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.totalDepositedValue, 0),
-    [activeSnapshots]
-  )
-  const totalBorrowedValue = useMemo(
-    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.totalBorrowedValue, 0),
-    [activeSnapshots]
-  )
-  const totalRewardsValue = useMemo(
-    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.totalRewardsValue, 0),
-    [activeSnapshots]
-  )
-  const positionCount = useMemo(
-    () => activeSnapshots.reduce((sum, snapshot) => sum + snapshot.positions.length, 0),
-    [activeSnapshots]
-  )
-  const walletCount = useMemo(
-    () => new Set(activeSnapshots.map((snapshot) => snapshot.walletId)).size,
-    [activeSnapshots]
-  )
+  const dedupedData = useMemo(() => buildDedupedDefiData(activeSnapshots), [activeSnapshots])
+  const {
+    totalValue,
+    totalDepositedValue,
+    totalBorrowedValue,
+    totalRewardsValue,
+    protocolData,
+    chainData,
+    positionCount,
+    walletCount,
+  } = dedupedData
   const completedCount = useMemo(
     () => expectedSnapshotKeys.filter((snapshotKey) => completedSnapshotKeySet.has(snapshotKey)).length,
     [completedSnapshotKeySet, expectedSnapshotKeys]
@@ -413,7 +438,7 @@ export function useDefiData() {
     totalDepositedValue,
     totalBorrowedValue,
     totalRewardsValue,
-    protocolData: protocolMap,
+    protocolData,
     chainData,
     positionCount,
     walletCount,
