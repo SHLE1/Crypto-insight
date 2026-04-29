@@ -32,19 +32,22 @@ import { formatDefiChainLabel } from "@/lib/defi/chains"
 import type { PortfolioHistoryPoint, PortfolioAnalytics, ApiErrorState } from "@/types"
 
 // ─── Chart palette ────────────────────────────────────────────────────────────
+// Use var(--chart-N) directly — the CSS variables are full oklch values,
+// wrapping them in hsl() is invalid and makes SVG fill default to black
+// and CSS backgroundColor default to transparent.
 const C = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
 ]
-const C_MUTED = 'hsl(var(--muted-foreground) / 0.35)'
+const C_MUTED = 'oklch(0.7 0 0 / 0.35)'
 
 // ─── Shared tooltip helpers ───────────────────────────────────────────────────
 const TOOLTIP_STYLE: React.CSSProperties = {
-  backgroundColor: 'hsl(var(--background))',
-  borderColor: 'hsl(var(--border))',
+  backgroundColor: 'var(--background)',
+  borderColor: 'var(--border)',
   borderRadius: '8px',
   fontSize: '12px',
   boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
@@ -438,11 +441,11 @@ function ChartAreaInteractive({ history }: { history: PortfolioHistoryPoint[] })
               <AreaChart data={visibleHistory} margin={{ left: 12, right: 12, top: 12, bottom: 0 }}>
                 <defs>
                   <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                 <XAxis
                   dataKey="timestamp"
                   tickLine={false}
@@ -450,17 +453,17 @@ function ChartAreaInteractive({ history }: { history: PortfolioHistoryPoint[] })
                   tickMargin={8}
                   minTickGap={48}
                   tickFormatter={formatTick}
-                  style={{ fontSize: '12px', fill: 'hsl(var(--muted-foreground))' }}
+                  style={{ fontSize: '12px', fill: 'var(--muted-foreground)' }}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
                   tickFormatter={(value) => `$${value.toLocaleString()}`}
-                  style={{ fontSize: '12px', fill: 'hsl(var(--muted-foreground))' }}
+                  style={{ fontSize: '12px', fill: 'var(--muted-foreground)' }}
                 />
                 <Tooltip
-                  cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1.5 }}
+                  cursor={{ stroke: 'var(--border)', strokeWidth: 1.5 }}
                   wrapperStyle={TOOLTIP_WRAPPER}
                   contentStyle={TOOLTIP_STYLE}
                   formatter={(value) => [formatCurrency(value as number), "总价值"]}
@@ -469,11 +472,11 @@ function ChartAreaInteractive({ history }: { history: PortfolioHistoryPoint[] })
                 <Area
                   type="monotone"
                   dataKey="totalValue"
-                  stroke="hsl(var(--chart-1))"
+                  stroke="var(--chart-1)"
                   fill="url(#fillValue)"
                   strokeWidth={2}
                   dot={false}
-                  activeDot={{ r: 4, fill: 'hsl(var(--background))', stroke: 'hsl(var(--chart-1))', strokeWidth: 2 }}
+                  activeDot={{ r: 4, fill: 'var(--background)', stroke: 'var(--chart-1)', strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -507,7 +510,7 @@ function DataTable({ assetData }: { assetData: Array<{ name: string; value: numb
                   <div className="flex items-center gap-3 min-w-0">
                     <span
                       className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: `hsl(var(--chart-${(index % 5) + 1}))` }}
+                      style={{ backgroundColor: `var(--chart-${(index % 5) + 1})` }}
                     />
                     <span className="text-sm font-medium truncate">{item.name}</span>
                   </div>
