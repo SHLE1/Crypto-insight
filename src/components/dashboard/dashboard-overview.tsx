@@ -237,10 +237,6 @@ function SourceAndPerformanceChart({
     </Card>
   )
 }
-      </CardContent>
-    </Card>
-  )
-}
 
 // ─── Top Holdings Bar (pure CSS — no recharts layout quirks) ──────────────────
 function TopHoldingsBar({
