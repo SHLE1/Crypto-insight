@@ -66,6 +66,10 @@ function shouldUseCachedSnapshot(previous: DefiSnapshot | undefined, next: DefiS
   return next.status === 'partial' && next.totalValue === 0 && previous.totalValue > 0
 }
 
+function normalizeProtocolName(name: string) {
+  return name.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
 export function useDefiData() {
   const wallets = useWalletStore((s) => s.wallets)
   const walletsHydrated = useWalletStore((s) => s.hydrated)
@@ -277,7 +281,7 @@ export function useDefiData() {
   }, [defiEnabled, hasCachedSnapshots, hasDefiSources, isRestoring, isSweepRefreshing, refetch])
 
   const protocolMap = useMemo(() => {
-    const aggregated = new Map<
+    const strongestByWalletAndName = new Map<
       string,
       {
         protocolId: string
@@ -291,15 +295,15 @@ export function useDefiData() {
 
     activeSnapshots.forEach((snapshot) => {
       snapshot.protocols.forEach((protocol) => {
-        const key = `${protocol.chainKey}:${protocol.protocolId}`
-        const existing = aggregated.get(key)
-        if (existing) {
-          existing.value += protocol.totalValue
-          existing.positionCount += protocol.positionCount
+        const normalizedName = normalizeProtocolName(protocol.protocolName)
+        const key = `${protocol.walletId}:${protocol.chainKey}:${normalizedName}`
+        const existing = strongestByWalletAndName.get(key)
+
+        if (existing && existing.value >= protocol.totalValue) {
           return
         }
 
-        aggregated.set(key, {
+        strongestByWalletAndName.set(key, {
           protocolId: protocol.protocolId,
           protocolName: protocol.protocolName,
           chainKey: protocol.chainKey,
@@ -308,6 +312,26 @@ export function useDefiData() {
           positionCount: protocol.positionCount,
         })
       })
+    })
+
+    const aggregated = new Map<string, NonNullable<ReturnType<typeof strongestByWalletAndName.get>>>()
+
+    strongestByWalletAndName.forEach((protocol) => {
+      const key = `${protocol.chainKey}:${normalizeProtocolName(protocol.protocolName)}`
+      const existing = aggregated.get(key)
+      if (existing) {
+        const shouldUseProtocolIdentity = protocol.value > existing.value
+        existing.value += protocol.value
+        existing.positionCount += protocol.positionCount
+        if (shouldUseProtocolIdentity) {
+          existing.protocolId = protocol.protocolId
+          existing.protocolName = protocol.protocolName
+          existing.category = protocol.category
+        }
+        return
+      }
+
+      aggregated.set(key, { ...protocol })
     })
 
     return Array.from(aggregated.values()).sort((a, b) => b.value - a.value)
