@@ -500,6 +500,7 @@ const BITGET_EARN_BALANCE_KEYS = [
 ]
 
 const BITGET_EARN_VALUE_KEYS = [
+  'value',
   'usdtAmount',
   'usdAmount',
   'usdValue',
@@ -1826,18 +1827,19 @@ async function fetchBitgetClassicSnapshot(account: CexAccountInput): Promise<{
   assets: AssetBalance[]
   warning?: string
 }> {
-  const [spotResult, usdtResult, usdcResult, coinResult, totalResult] = await Promise.allSettled([
+  const [spotResult, usdtResult, usdcResult, coinResult, totalResult, earnResult] = await Promise.allSettled([
     fetchBitgetSpotAssets(account),
     fetchBitgetMixAccounts(account, 'USDT-FUTURES'),
     fetchBitgetMixAccounts(account, 'USDC-FUTURES'),
     fetchBitgetMixAccounts(account, 'COIN-FUTURES'),
     fetchBitgetAllAccountBalances(account),
+    fetchBitgetEarnAssets(account),
   ])
 
   const warnings: string[] = []
   const entries: ExchangeAssetEntry[] = []
   const failedGroups = new Set<string>()
-  const firstFailure = [spotResult, usdtResult, usdcResult, coinResult, totalResult].find(
+  const firstFailure = [spotResult, usdtResult, usdcResult, coinResult, totalResult, earnResult].find(
     (result): result is PromiseRejectedResult => result.status === 'rejected'
   )
 
@@ -1859,6 +1861,12 @@ async function fetchBitgetClassicSnapshot(account: CexAccountInput): Promise<{
     failedGroups.add('futures')
     warnings.push(`Bitget ${productType} 查询失败：${normalizeCexError(account, result.reason)}`)
   })
+
+  if (earnResult.status === 'fulfilled') {
+    entries.push(...earnResult.value)
+  } else {
+    warnings.push(`Bitget 理财接口查询失败：${normalizeCexError(account, earnResult.reason)}`)
+  }
 
   if (entries.length === 0 && totalResult.status === 'rejected') {
     throw firstFailure?.reason ?? totalResult.reason
