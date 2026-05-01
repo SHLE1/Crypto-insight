@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Key, Plus, RefreshCw, Trash, X, Building2, ExternalLink } from 'lucide-react'
+import { Key, Pencil, Plus, RefreshCw, Trash, X, Building2, ExternalLink } from 'lucide-react'
 import { EmptyState } from '@/components/layout/empty-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -17,6 +17,7 @@ import type { ExchangeType } from '@/types'
 import { toast } from 'sonner'
 
 const EXCHANGE_OPTIONS: ExchangeType[] = ['binance', 'okx', 'bitget', 'gate']
+type FormMode = 'add' | 'rename' | 'keys'
 
 export default function CexPage() {
   const { accounts, addAccount, removeAccount, toggleAccount, updateAccount } = useCexStore()
@@ -25,6 +26,7 @@ export default function CexPage() {
   const removeSnapshot = usePortfolioStore((s) => s.removeSnapshot)
   const [showForm, setShowForm] = useState(false)
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null)
+  const [formMode, setFormMode] = useState<FormMode>('add')
   const [exchange, setExchange] = useState<ExchangeType>('binance')
   const [label, setLabel] = useState('')
   const [apiKey, setApiKey] = useState('')
@@ -38,10 +40,17 @@ export default function CexPage() {
     setApiSecret('')
     setPassphrase('')
     setEditingAccountId(null)
+    setFormMode('add')
     setShowForm(false)
   }
 
-  const startEditing = (accountId: string) => {
+  const openAddForm = () => {
+    resetForm()
+    setFormMode('add')
+    setShowForm(true)
+  }
+
+  const startRenaming = (accountId: string) => {
     const account = accounts.find((item) => item.id === accountId)
     if (!account) return
 
@@ -51,11 +60,41 @@ export default function CexPage() {
     setApiKey('')
     setApiSecret('')
     setPassphrase('')
+    setFormMode('rename')
+    setShowForm(true)
+  }
+
+  const startUpdatingKeys = (accountId: string) => {
+    const account = accounts.find((item) => item.id === accountId)
+    if (!account) return
+
+    setEditingAccountId(account.id)
+    setExchange(account.exchange)
+    setLabel(account.label)
+    setApiKey('')
+    setApiSecret('')
+    setPassphrase('')
+    setFormMode('keys')
     setShowForm(true)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (formMode === 'rename') {
+      if (!editingAccountId) return
+
+      const currentAccount = accounts.find((account) => account.id === editingAccountId)
+      if (!currentAccount) return
+
+      updateAccount(editingAccountId, {
+        label: label.trim() || getExchangeLabel(currentAccount.exchange),
+      })
+      toast.success('账户名称已更新。')
+      resetForm()
+      return
+    }
+
     if (!apiKey.trim() || !apiSecret.trim()) {
       toast.error('请先填写 API Key 和 API Secret。')
       return
@@ -79,13 +118,15 @@ export default function CexPage() {
     }
 
     if (editingAccountId) {
+      const currentAccount = accounts.find((account) => account.id === editingAccountId)
+      if (!currentAccount) return
+
       updateAccount(editingAccountId, {
-        ...accounts.find(a => a.id === editingAccountId)!,
-        exchange,
-        label: label.trim() || getExchangeLabel(exchange),
+        exchange: currentAccount.exchange,
+        label: currentAccount.label,
         apiKey: apiKey.trim(),
         apiSecret: apiSecret.trim(),
-        passphrase: requiresPassphrase ? passphrase.trim() : undefined,
+        passphrase: exchangeRequiresPassphrase(currentAccount.exchange) ? passphrase.trim() : undefined,
       })
       removeSnapshot(editingAccountId)
       toast.success('密钥已更新，下次刷新会重新拉取这个账户的数据。')
@@ -139,7 +180,7 @@ export default function CexPage() {
             仅刷新交易所
           </Button>
           {!showForm ? (
-            <Button size="sm" onClick={() => setShowForm(true)} className="gap-2">
+            <Button size="sm" onClick={openAddForm} className="gap-2">
               <Plus className="size-4" />
               添加账户
             </Button>
@@ -151,8 +192,14 @@ export default function CexPage() {
         <Card className="max-w-3xl">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>
-               <CardTitle>{editingAccountId ? '重新填写或更新密钥' : '添加交易所账户'}</CardTitle>
-               <CardDescription>配置您的只读 API 密钥，请勿授予交易或提现权限。</CardDescription>
+               <CardTitle>
+                 {formMode === 'rename' ? '编辑账户名称' : formMode === 'keys' ? '更新账户密钥' : '添加交易所账户'}
+               </CardTitle>
+               <CardDescription>
+                 {formMode === 'rename'
+                   ? '只修改本地显示名称，不会更新密钥或清理资产快照。'
+                   : '配置您的只读 API 密钥，请勿授予交易或提现权限。'}
+               </CardDescription>
             </div>
             <Button variant="ghost" size="icon" onClick={resetForm}>
               <X className="size-4" />
@@ -160,82 +207,98 @@ export default function CexPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-              <div className="flex flex-col gap-3">
-                <Label>交易所</Label>
-                <div className="flex flex-wrap gap-2">
-                  {EXCHANGE_OPTIONS.map((ex) => (
-                    <Button
-                      key={ex}
-                      type="button"
-                      variant={exchange === ex ? 'default' : 'outline'}
-                      size="sm"
-                      disabled={editingAccountId !== null}
-                      onClick={() => setExchange(ex)}
+              {formMode !== 'rename' ? (
+                <div className="flex flex-col gap-3">
+                  <Label>交易所</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {EXCHANGE_OPTIONS.map((ex) => (
+                      <Button
+                        key={ex}
+                        type="button"
+                        variant={exchange === ex ? 'default' : 'outline'}
+                        size="sm"
+                        disabled={editingAccountId !== null}
+                        onClick={() => setExchange(ex)}
+                      >
+                        {getExchangeLabel(ex)}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    获取入口：
+                    <a
+                      href={getExchangeApiSetupUrl(exchange)}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="ml-1 inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
                     >
-                      {getExchangeLabel(ex)}
-                    </Button>
-                  ))}
+                      前往 {getExchangeLabel(exchange)} 官方入口
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  获取入口：
-                  <a
-                    href={getExchangeApiSetupUrl(exchange)}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="ml-1 inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
-                  >
-                    前往 {getExchangeLabel(exchange)} 官方入口
-                    <ExternalLink className="size-3.5" />
-                  </a>
-                </p>
-              </div>
+              ) : null}
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="label">备注名称（可选）</Label>
-                <Input id="label" placeholder="例如：主账户 / 量化账户" value={label} onChange={(e) => setLabel(e.target.value)} />
-              </div>
+              {formMode !== 'keys' ? (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="label">备注名称（可选）</Label>
+                  <Input id="label" placeholder="例如：主账户 / 量化账户" value={label} onChange={(e) => setLabel(e.target.value)} />
+                </div>
+              ) : null}
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="apiKey">API Key (Access Key)</Label>
-                  <Input
-                    id="apiKey"
-                    type="password"
-                    placeholder="输入只读权限的 API Key"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="apiSecret">API Secret</Label>
-                  <Input
-                    id="apiSecret"
-                    type="password"
-                    placeholder="输入对应的 API Secret"
-                    value={apiSecret}
-                    onChange={(e) => setApiSecret(e.target.value)}
-                  />
-                </div>
-              </div>
+              {formMode !== 'rename' ? (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="apiKey">API Key (Access Key)</Label>
+                      <Input
+                        id="apiKey"
+                        type="password"
+                        placeholder="输入只读权限的 API Key"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="apiSecret">API Secret</Label>
+                      <Input
+                        id="apiSecret"
+                        type="password"
+                        placeholder="输入对应的 API Secret"
+                        value={apiSecret}
+                        onChange={(e) => setApiSecret(e.target.value)}
+                      />
+                    </div>
+                  </div>
 
-              {requiresPassphrase && (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="passphrase">Passphrase</Label>
-                  <Input
-                    id="passphrase"
-                    type="password"
-                    placeholder={`${getExchangeLabel(exchange)} API 创建时设置的 Passphrase`}
-                    value={passphrase}
-                    onChange={(e) => setPassphrase(e.target.value)}
-                  />
+                  {requiresPassphrase && (
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="passphrase">Passphrase</Label>
+                      <Input
+                        id="passphrase"
+                        type="password"
+                        placeholder={`${getExchangeLabel(exchange)} API 创建时设置的 Passphrase`}
+                        value={passphrase}
+                        onChange={(e) => setPassphrase(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : null}
+
+              {formMode === 'keys' ? (
+                <div className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                  当前账户名称不会改变。密钥更新后，会清理该账户旧快照，下次刷新重新拉取数据。
                 </div>
-              )}
+              ) : null}
 
               <Separator className="my-4" />
               
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={resetForm}>取消</Button>
-                <Button type="submit">{editingAccountId ? '更新密钥' : '保存配置'}</Button>
+                <Button type="submit">
+                  {formMode === 'rename' ? '保存名称' : formMode === 'keys' ? '更新密钥' : '保存配置'}
+                </Button>
               </div>
             </form>
           </CardContent>
@@ -246,7 +309,7 @@ export default function CexPage() {
             title="没有绑定的交易所账户"
             description="添加只读权限的 API 密钥以追踪汇集所有加密资产。"
             action={
-              <Button onClick={() => setShowForm(true)} className="gap-2">
+              <Button onClick={openAddForm} className="gap-2">
                 <Plus className="size-4" />
                 添加账户
               </Button>
@@ -287,7 +350,10 @@ export default function CexPage() {
                     </div>
                     
                     <div className="flex flex-wrap gap-2 pt-2 border-t">
-                      <Button variant="secondary" size="sm" className="flex-1 gap-2" onClick={() => startEditing(account.id)}>
+                      <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={() => startRenaming(account.id)}>
+                        <Pencil className="size-4" />编辑名称
+                      </Button>
+                      <Button variant="secondary" size="sm" className="flex-1 gap-2" onClick={() => startUpdatingKeys(account.id)}>
                         <Key className="size-4" />更新密钥
                       </Button>
                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => handleRemove(account.id, account.label)}>
