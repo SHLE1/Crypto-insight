@@ -97,6 +97,15 @@ function getGroupPrice(value: number, balance: number) {
   return value / balance
 }
 
+function getDisplayName(names: string[]) {
+  const cleanNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)))
+
+  if (cleanNames.length === 0) return ''
+  if (cleanNames.length === 1) return cleanNames[0]
+
+  return '多链同名资产'
+}
+
 function getChangeColor(change24h: number | null) {
   if (change24h === null) return 'text-muted-foreground/50'
   return change24h < 0 ? 'text-muted-foreground' : 'text-foreground'
@@ -245,17 +254,11 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
   })
 
   if (mode === 'token') {
-    return data.map((holding) => ({
-      key: holding.symbol,
-      title: holding.symbol,
-      subtitle: holding.name,
-      balance: holding.balance,
-      price: holding.price,
-      value: holding.value,
-      change24h: holding.change24h,
-      priceStatus: holding.priceStatus,
-      badge: `${holding.sourceCount} 个来源`,
-      details: (holding.sources ?? []).map((source, index) => ({
+    const tokenMap = new Map<string, GroupRow & { names: string[]; sourceIds: Set<string> }>()
+
+    data.forEach((holding) => {
+      const key = holding.symbol.trim().toUpperCase()
+      const details = (holding.sources ?? []).map((source, index) => ({
         key: `${holding.assetId}-${source.sourceId}-${source.chainLabel ?? 'unknown'}-${index}`,
         title: source.sourceLabel,
         subtitle: source.sourceType === 'cex' ? '交易所账户' : '钱包地址',
@@ -265,8 +268,48 @@ function buildGroupedRows(data: HoldingRow[], mode: GroupMode) {
         change24h: holding.change24h,
         priceStatus: holding.priceStatus,
         meta: source.chainLabel,
-      })),
-    }))
+      }))
+      const existing = tokenMap.get(key)
+
+      if (existing) {
+        existing.balance += holding.balance
+        existing.value += holding.value
+        existing.names.push(holding.name)
+        existing.sourceIds = new Set([...existing.sourceIds, ...(holding.sources ?? []).map((source) => source.sourceId)])
+        existing.details.push(...details)
+        return
+      }
+
+      tokenMap.set(key, {
+        key,
+        title: holding.symbol,
+        subtitle: holding.name,
+        balance: holding.balance,
+        price: holding.price,
+        value: holding.value,
+        change24h: holding.change24h,
+        priceStatus: holding.priceStatus,
+        badge: `${holding.sourceCount} 个来源`,
+        details,
+        names: [holding.name],
+        sourceIds: new Set((holding.sources ?? []).map((source) => source.sourceId)),
+      })
+    })
+
+    return Array.from(tokenMap.values())
+      .map(({ names, sourceIds, ...group }) => ({
+        ...group,
+        subtitle: getDisplayName(names),
+        price: getGroupPrice(group.value, group.balance),
+        change24h: getWeightedChange(group.details),
+        priceStatus: group.details.reduce<PriceStatus>(
+          (status, detail) => mergePriceStatus(status, detail.priceStatus),
+          'live'
+        ),
+        badge: `${sourceIds.size} 个来源`,
+        details: group.details.sort((a, b) => b.value - a.value),
+      }))
+      .sort((a, b) => b.value - a.value)
   }
 
   if (mode === 'wallet') {

@@ -1,5 +1,4 @@
 import { EVM_CHAINS } from '@/lib/evm-chains'
-import { getChainLabel } from '@/lib/validators'
 import type {
   HoldingRow,
   PortfolioAnalytics,
@@ -16,26 +15,6 @@ function getPriceStatusRank(status: PriceStatus | undefined) {
 
 export function mergePriceStatus(current: PriceStatus | undefined, next: PriceStatus | undefined): PriceStatus {
   return getPriceStatusRank(next) > getPriceStatusRank(current) ? (next ?? 'live') : (current ?? 'live')
-}
-
-function getAssetChainLabel(chainKey?: string) {
-  if (!chainKey) return null
-  if (chainKey in EVM_CHAINS) {
-    return EVM_CHAINS[chainKey]?.name ?? chainKey
-  }
-  if (chainKey === 'solana' || chainKey === 'btc' || chainKey === 'evm') {
-    return getChainLabel(chainKey)
-  }
-  return chainKey
-}
-
-function getAssetDisplayName(snapshot: PortfolioSnapshot, asset: PortfolioSnapshot['assets'][number]) {
-  if (snapshot.sourceType === 'cex') {
-    return asset.symbol
-  }
-
-  const chainLabel = getAssetChainLabel(asset.chainKey)
-  return chainLabel ? `${asset.symbol} · ${chainLabel}` : asset.symbol
 }
 
 export function buildHoldingsData({
@@ -86,9 +65,9 @@ export function buildHoldingsData({
 
     snap.assets.forEach((a) => {
       const assetKey = a.assetId ?? `${snap.source}:${a.symbol}`
-      const displaySymbol = getAssetDisplayName(snap, a)
+      const distributionSymbol = a.symbol
 
-      assetMap.set(displaySymbol, (assetMap.get(displaySymbol) ?? 0) + (a.value ?? 0))
+      assetMap.set(distributionSymbol, (assetMap.get(distributionSymbol) ?? 0) + (a.value ?? 0))
       if (a.value && a.change24h !== null) {
         weightedChange += a.value * (a.change24h / 100)
       }
@@ -146,7 +125,7 @@ export function buildHoldingsData({
       } else {
         holdingsMap.set(assetKey, {
           assetId: assetKey,
-          symbol: displaySymbol,
+          symbol: a.symbol,
           name: a.name,
           balance: a.balance,
           price: a.price,
