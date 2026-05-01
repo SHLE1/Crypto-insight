@@ -165,6 +165,18 @@ interface GateTotalBalanceResponse {
   details?: Record<string, GateTotalBalanceDetail | undefined>
 }
 
+interface GateStakingAssetResponseItem {
+  mortgage_coin?: string
+  mortgage_amount?: string
+  freeze_amount?: string
+  defi_income?: {
+    total?: Array<{
+      coin?: string
+      amount?: string
+    }>
+  }
+}
+
 type BinanceWalletName =
   | 'Spot'
   | 'Funding'
@@ -2048,6 +2060,51 @@ async function fetchGateSpotAccounts(account: CexAccountInput) {
     .filter((item): item is ExchangeAssetEntry => Boolean(item))
 }
 
+async function fetchGateStakingAssets(account: CexAccountInput) {
+  const data = await fetchGateSigned<GateStakingAssetResponseItem[]>(account, {
+    path: '/earn/staking/assets',
+  })
+
+  if (!Array.isArray(data)) {
+    throw new Error('Gate 链上赚币返回格式异常')
+  }
+
+  return data.flatMap<ExchangeAssetEntry>((item) => {
+    const entries: ExchangeAssetEntry[] = []
+    const symbol = item.mortgage_coin?.trim().toUpperCase()
+    const principal = toPositiveNumber(item.mortgage_amount) + toPositiveNumber(item.freeze_amount)
+
+    if (symbol && principal > 0) {
+      entries.push({
+        symbol,
+        balance: principal,
+        sourceKey: 'earn-staking',
+        sourceLabel: '链上赚币',
+        reconciliationGroup: 'earn-staking',
+      })
+    }
+
+    item.defi_income?.total?.forEach((reward) => {
+      const rewardSymbol = reward.coin?.trim().toUpperCase()
+      const rewardAmount = toPositiveNumber(reward.amount)
+
+      if (!rewardSymbol || rewardAmount <= 0) {
+        return
+      }
+
+      entries.push({
+        symbol: rewardSymbol,
+        balance: rewardAmount,
+        sourceKey: 'earn-staking-reward',
+        sourceLabel: '链上赚币收益',
+        reconciliationGroup: 'earn-staking',
+      })
+    })
+
+    return entries
+  })
+}
+
 async function fetchGateTotalBalance(account: CexAccountInput) {
   const data = await fetchGateSigned<GateTotalBalanceResponse>(account, {
     path: '/wallet/total_balance',
@@ -2067,22 +2124,29 @@ async function fetchGateSnapshot(account: CexAccountInput): Promise<{
   assets: AssetBalance[]
   warning?: string
 }> {
-  const [spotResult, totalResult] = await Promise.allSettled([
+  const [spotResult, stakingResult, totalResult] = await Promise.allSettled([
     fetchGateSpotAccounts(account),
+    fetchGateStakingAssets(account),
     fetchGateTotalBalance(account),
   ])
   const warnings: string[] = []
-  const firstFailure = [spotResult, totalResult].find(
+  const firstFailure = [spotResult, stakingResult, totalResult].find(
     (result): result is PromiseRejectedResult => result.status === 'rejected'
   )
 
-  if (spotResult.status === 'rejected' && totalResult.status === 'rejected') {
+  if (spotResult.status === 'rejected' && stakingResult.status === 'rejected' && totalResult.status === 'rejected') {
     throw firstFailure?.reason ?? totalResult.reason
   }
 
-  const detailedEntries = spotResult.status === 'fulfilled' ? mergeExchangeEntries(spotResult.value) : []
+  const detailedEntries = mergeExchangeEntries([
+    ...(spotResult.status === 'fulfilled' ? spotResult.value : []),
+    ...(stakingResult.status === 'fulfilled' ? stakingResult.value : []),
+  ])
   if (spotResult.status === 'rejected') {
     warnings.push(`Gate 现货账户查询失败：${normalizeCexError(account, spotResult.reason)}`)
+  }
+  if (stakingResult.status === 'rejected') {
+    warnings.push(`Gate 链上赚币查询失败：${normalizeCexError(account, stakingResult.reason)}`)
   }
 
   const pricedEntries = await priceExchangeEntries(detailedEntries)
